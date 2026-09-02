@@ -2,7 +2,10 @@
 
 [![smithery badge](https://smithery.ai/badge/tokenectomy)](https://smithery.ai/server/tokenectomy)
 [![glama badge](https://glama.ai/badge/tokenectomy)](https://glama.ai/server/tokenectomy)
-[![Gumroad](https://img.shields.io/badge/Download_Binaries-Gumroad-ff90e8?style=flat&logo=gumroad)](https://gumroad.com)
+
+> 👑 **UPGRADE TO TOKENECTOMY PRO**  
+> Want automatic patch applying (Auto-Fixer), AST Guard (Tree-sitter validation), True Ectomy (99% token reduction), and Jira Sync?  
+> **[Get Tokenectomy Pro (Enterprise Edition) here ➡️](https://daffaanan.gumroad.com/l/kiznsu)**
 
 **Tokenectomy** is an intelligent, Rust-based Command Line Interface (CLI) that explains application errors using AI. It goes beyond simple log analysis by functioning as a fully featured **Model Context Protocol (MCP) Server**, seamlessly integrating with AI IDEs and assistants like Claude Desktop and Cursor.
 
