@@ -1,5 +1,9 @@
 # Tokenectomy 🕵️‍♂️
 
+[![smithery badge](https://smithery.ai/badge/tokenectomy)](https://smithery.ai/server/tokenectomy)
+[![glama badge](https://glama.ai/badge/tokenectomy)](https://glama.ai/server/tokenectomy)
+[![Gumroad](https://img.shields.io/badge/Download_Binaries-Gumroad-ff90e8?style=flat&logo=gumroad)](https://gumroad.com)
+
 **Tokenectomy** is an intelligent, Rust-based Command Line Interface (CLI) that explains application errors using AI. It goes beyond simple log analysis by functioning as a fully featured **Model Context Protocol (MCP) Server**, seamlessly integrating with AI IDEs and assistants like Claude Desktop and Cursor.
 
 ---
@@ -13,18 +17,30 @@
   - **Secret Redaction**: Advanced Regex engine sanitizes API Keys, AWS Secrets, and JWTs before transmission.
   - **Path Traversal Protection**: MCP edits and reads are strictly locked to your Current Working Directory (CWD).
 - **🤖 MCP Server Mode**: Attach `Tokenectomy` to Claude Desktop or Cursor, enabling the AI to read your local logs, browse context, and apply code patches directly to your machine.
+- **💅 Hermes-Style UI**: A beautifully crafted, color-graded terminal dashboard with REPL slash commands.
 
 ---
 
 ## 📦 Installation
 
-This project is built with Rust for maximum performance and memory safety. Ensure you have [Rust](https://rustup.rs/) installed.
+### 🛍️ Pre-compiled Binaries (Recommended)
+You can download ready-to-use binaries for Windows, macOS, and Linux from our **[Gumroad Store (Pay What You Want)](https://gumroad.com)**. No compilation required!
+
+### ⚙️ Installing via Smithery (For Claude Desktop)
+To install Tokenectomy for Claude Desktop automatically via [Smithery](https://smithery.ai/server/tokenectomy):
+
+```bash
+npx -y @smithery/cli install tokenectomy --client claude
+```
+
+### 🦀 Build from Source
+This project is built with Rust for maximum performance and memory safety.
 
 ```bash
 git clone https://github.com/daffa2555/Tokenectomy.git tokenectomy
 cd tokenectomy
 cargo build --release
-sudo cp target/release/tokenectomy /usr/local/bin/tokenectomy
+sudo cp target/release/tokenectomy /usr/local/bin/tkmy
 ```
 
 ## 🚀 Usage (CLI Mode)
