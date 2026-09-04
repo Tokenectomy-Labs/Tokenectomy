@@ -61,6 +61,9 @@ No buzzwords or artificial benchmarks. Every developer can verify the core funct
 cargo test
 ```
 
+> 💡 **"Don't trust marketing claims — run the proof on your own machine."**  
+> We believe in code over claims. Clone this repo and verify the exact test suite in 0.13 seconds in your terminal.
+
 ### 👑 Need Deep Log Surgery & Auto-Rollback? (Tokenectomy Pro)
 | Enterprise Feature | Real-World Benchmark Outcome | Edition |
 |---|---|:---:|
