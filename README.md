@@ -1,78 +1,163 @@
+
 # Tokenectomy 🕵️‍♂️
 
-[![smithery badge](https://smithery.ai/badge/tokenectomy)](https://smithery.ai/server/tokenectomy)
-[![glama badge](https://glama.ai/badge/tokenectomy)](https://glama.ai/server/tokenectomy)
+[![Built with Rust](https://img.shields.io/badge/Built%20with-Rust-orange?logo=rust)](https://www.rust-lang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![MCP Compatible](https://img.shields.io/badge/MCP-Compatible-blue?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9zdmc+)](https://modelcontextprotocol.io)
 
-> 👑 **UPGRADE TO TOKENECTOMY PRO**  
-> Want automatic patch applying (Auto-Fixer), AST Guard (Tree-sitter validation), True Ectomy (99% token reduction), and Jira Sync?  
-> **[Get Tokenectomy Pro (Enterprise Edition) here ➡️](https://tokenectomy.gumroad.com/l/kiznsu)**
+> 👑 **Looking for Auto-Fixer, AST Guard, and DB Inspector?**
+> **[Get Tokenectomy Pro (Enterprise Edition) →](https://tokenectomy.gumroad.com/l/kiznsu)**
 
-**Tokenectomy** is an intelligent, Rust-based Command Line Interface (CLI) that explains application errors using AI. It goes beyond simple log analysis by functioning as a fully featured **Model Context Protocol (MCP) Server**, seamlessly integrating with AI IDEs and assistants like Claude Desktop and Cursor.
+**Tokenectomy** is a high-performance Rust CLI and MCP server that scrubs 90%+ of framework noise from error logs before they reach your AI assistant's context window. It strips `node_modules`, `site-packages`, and vendor stack frames, redacts secrets, injects StackOverflow solutions, and caches responses locally — so your AI spends tokens on *your* code, not framework internals.
+
+```
+                     ┌──────────────────┐
+  Raw Error Log      │   TOKENECTOMY    │      Clean Context
+  (38K tokens)  ───► │   🕵️‍♂️ OSS       │ ───►  (2K tokens)  ───► LLM
+                     │                  │
+  node_modules/      │  🔍 Smart Filter │      Only YOUR code
+  site-packages/     │  🛡️ Redact       │      + error message
+  .cargo/registry/   │  💾 Cache        │      + StackOverflow refs
+                     └──────────────────┘
+```
 
 ---
 
 ## ✨ Key Features
 
-- **🔍 Smart Framework Filter**: Automatically bypasses thousands of lines of noisy internal logs (e.g., `node_modules`, `site-packages`) to instantly pinpoint the source code you actually wrote.
-- **🌐 Automated Stack Overflow Search**: When encountering obscure errors, the CLI silently queries StackExchange APIs in the background and injects the top community solutions directly into the AI's context.
-- **⚡ Blazing Fast Caching**: Error payloads are locally hashed and cached. Recurring errors are resolved instantly without consuming your OpenAI or Anthropic API quotas.
-- **🛡️ Enterprise-Grade Security**: 
-  - **Secret Redaction**: Advanced Regex engine sanitizes API Keys, AWS Secrets, and JWTs before transmission.
-  - **Path Traversal Protection**: MCP edits and reads are strictly locked to your Current Working Directory (CWD).
-- **🤖 MCP Server Mode**: Attach `Tokenectomy` to Claude Desktop or Cursor, enabling the AI to read your local logs, browse context, and apply code patches directly to your machine.
-- **💅 Hermes-Style UI**: A beautifully crafted, color-graded terminal dashboard with REPL slash commands.
+- **🔍 Smart Framework Filter** — Strips thousands of lines of noisy internal stack frames (`node_modules`, `site-packages`, `.cargo/registry`, `__pycache__`) and keeps only the code *you* wrote.
+- **🌐 Stack Overflow Search** — Silently queries StackExchange APIs and injects top community solutions into the AI's context.
+- **⚡ SHA-256 Response Cache** — Identical errors hit local cache (24h TTL). Recurring CI/CD failures cost $0.00 in API calls.
+- **🛡️ Secret Redaction** — Regex engine strips API keys, AWS secrets, JWTs, and database connection strings before any data leaves your machine (ReDoS-safe, linear-time).
+- **🔒 Path Traversal Protection** — MCP file operations are canonicalized and locked to your current working directory.
+- **🤖 MCP Server Mode** — Full JSON-RPC 2.0 over stdio. Works with Claude Desktop, Cursor, VS Code, Google Antigravity, and any MCP-compatible client.
+- **🔌 Multi-Provider** — Supports OpenAI, Anthropic, and Ollama (100% offline mode).
+- **💅 Hermes-Style Terminal UI** — Color-graded REPL with slash commands and a boxed layout.
 
 ---
 
 ## 📦 Installation
 
-### 🛍️ Pre-compiled Binaries (Recommended)
-You can download ready-to-use binaries for Windows, macOS, and Linux from our **[Gumroad Store (Pay What You Want)](https://gumroad.com)**. No compilation required!
+### 🦀 Build from Source (Recommended)
 
-### ⚙️ Installing via Smithery (For Claude Desktop)
-To install Tokenectomy for Claude Desktop automatically via [Smithery](https://smithery.ai/server/tokenectomy):
+```bash
+git clone https://github.com/daffa2555/Tokenectomy.git
+cd Tokenectomy
+cargo build --release
+sudo cp target/release/tokenectomy /usr/local/bin/tkmy
+```
+
+### ⚙️ Install via Smithery (for Claude Desktop)
 
 ```bash
 npx -y @smithery/cli install tokenectomy --client claude
 ```
 
-### 🦀 Build from Source
-This project is built with Rust for maximum performance and memory safety.
+---
+
+## 🚀 Usage
+
+### Pipe errors directly
 
 ```bash
-git clone https://github.com/daffa2555/Tokenectomy.git tokenectomy
-cd tokenectomy
-cargo build --release
-sudo cp target/release/tokenectomy /usr/local/bin/tkmy
+python3 app.py 2>&1 | tkmy
+cargo build 2>&1 | tkmy
+node server.js 2>&1 | tkmy
 ```
 
-## 🚀 Usage (CLI Mode)
+### Read from a log file
 
-You can pipe error output directly from your application into `tokenectomy`, or read from an existing log file.
-
-### Reading from a Pipe
 ```bash
-python3 app.py 2>&1 | tokenectomy
+tkmy --file /var/log/app/error.log
 ```
 
-### Reading from a File
+### Advanced options
+
 ```bash
-tokenectomy --file /var/log/nginx/error.log
+tkmy --local-only            # 100% offline via Ollama ($0 cost)
+tkmy --provider openai       # Use OpenAI GPT-4o
+tkmy --provider anthropic    # Use Claude 3.5 Sonnet
+tkmy --context-lines 20      # Extract 20 lines of surrounding context
+tkmy --yes                   # Skip interactive prompts (CI/CD mode)
 ```
 
-### Advanced Options
+---
+
+## 🔌 MCP Server Integration
+
+Register Tokenectomy with your AI editor to grant it autonomous debugging capabilities.
+
 ```bash
-tokenectomy --local-only        # Force local execution via Ollama (100% offline)
-tokenectomy --context-lines 20  # Extract 20 lines of context above and below the error
-tokenectomy --yes               # Bypass interactive security prompts
+tkmy --mcp
 ```
 
-## 🧠 Configuration (`.tokenectomy.toml`)
+### Claude Desktop
 
-Store your API keys and default preferences globally in `~/.tokenectomy.toml` or locally within your project directory.
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "tokenectomy": {
+      "command": "tkmy",
+      "args": ["--mcp"]
+    }
+  }
+}
+```
+
+### Cursor
+
+Add to `.cursor/mcp.json` in your project root:
+
+```json
+{
+  "mcpServers": {
+    "tokenectomy": {
+      "command": "tkmy",
+      "args": ["--mcp"]
+    }
+  }
+}
+```
+
+### Google Antigravity CLI
+
+```bash
+agy mcp add tokenectomy -- tkmy --mcp
+```
+
+### VS Code / Windsurf
+
+Add to your `settings.json`:
+
+```json
+{
+  "mcp.servers": {
+    "tokenectomy": {
+      "command": "tkmy",
+      "args": ["--mcp"]
+    }
+  }
+}
+```
+
+### Available MCP Tools
+
+| Tool | Description |
+|------|-------------|
+| `get_error_context` | Performs log surgery: strips framework noise, redacts secrets, extracts source context and git diff |
+| `search_stack_overflow` | Searches Stack Overflow for a specific error (query is auto-sanitized of secrets) |
+| `apply_code_patch` | Applies a code patch to a file by search-and-replace |
+
+---
+
+## 🧠 Configuration
+
+Create `~/.tokenectomy.toml`:
 
 ```toml
-default_provider = "openai" # Options: openai, anthropic, ollama, mock
+default_provider = "openai"  # openai | anthropic | ollama | mock
 openai_api_key = "sk-..."
 anthropic_api_key = "sk-ant-..."
 ollama_base_url = "http://localhost:11434"
@@ -82,26 +167,56 @@ max_context_chars = 10000
 
 ---
 
-## 🔌 MCP Server Integration
+## 🔒 Security
 
-The true power of `Tokenectomy` lies in its Model Context Protocol (MCP) capabilities. Register it with **Claude Desktop** or **Cursor** to grant your AI assistant the ability to autonomously read error logs, fetch Stack Overflow references, and automatically apply code patches.
+- **No secrets leave your machine.** Regex engine redacts API keys, JWTs, AWS credentials, and database URLs before any data is sent to an LLM.
+- **No path traversal.** MCP file operations are canonicalized and locked to CWD.
+- **No stdin bombs.** Input is capped at 10MB (CLI) / 50MB (MCP) via `.take()`.
+- **No weak hashing.** Cache uses `sha2::Sha256`, never `DefaultHasher`.
 
-### Integrating with Claude Desktop
-1. Open the Claude Desktop configuration file on Mac/Linux:
-   `~/Library/Application Support/Claude/claude_desktop_config.json`
-2. Append the following configuration:
+---
 
-```json
-{
-  "mcpServers": {
-    "tokenectomy": {
-      "command": "tokenectomy",
-      "args": ["--mcp"]
-    }
-  }
-}
+## 🏗️ Architecture
+
 ```
-3. Restart Claude Desktop and experience autonomous debugging!
+src/
+├── main.rs          # Entry point, CLI args, REPL, pipeline orchestration
+├── mcp.rs           # JSON-RPC 2.0 over stdio MCP server
+├── extractor/       # Language-specific context extraction (Rust, Python, JS)
+├── provider/        # AI backends (OpenAI, Anthropic, Ollama, Mock)
+├── redact.rs        # Secret redaction (linear-time regex, ReDoS-safe)
+├── cache.rs         # SHA-256 response cache (24h TTL, 0700 perms)
+├── search.rs        # Stack Overflow API integration
+└── git.rs           # Recent git diff extraction
+```
+
+---
+
+## 🆓 vs 👑 — OSS vs Pro
+
+| Feature | OSS (Free) | Pro ($9) |
+|---------|:---:|:---:|
+| Smart Framework Filter | ✅ | ✅ |
+| Stack Overflow Search | ✅ | ✅ |
+| SHA-256 Response Cache | ✅ | ✅ |
+| Secret Redaction | ✅ | ✅ |
+| MCP Server Mode | ✅ | ✅ |
+| Multi-Provider (OpenAI, Anthropic, Ollama) | ✅ | ✅ |
+| **Auto-Fixer** (AI patch → auto-apply) | ❌ | ✅ |
+| **AST Guard** (Tree-sitter syntax validation) | ❌ | ✅ |
+| **Test Rollback** (auto-rollback on test fail) | ❌ | ✅ |
+| **True Ectomy Engine** (99% token reduction) | ❌ | ✅ |
+| **DB Inspector** (TCP port probe) | ❌ | ✅ |
+| **Docker Diagnostics** (OOMKilled detection) | ❌ | ✅ |
+| **`--benchmark` Mode** | ❌ | ✅ |
+
+👉 **[Get Tokenectomy Pro →](https://tokenectomy.gumroad.com/l/kiznsu)**
+
+---
+
+## 📜 License
+
+MIT — see [LICENSE](LICENSE) for details.
 
 ---
 
