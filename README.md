@@ -39,7 +39,6 @@
 - **🔒 Path Traversal Protection** — MCP file operations are canonicalized and locked to your current working directory.
 - **🤖 MCP Server Mode** — Full JSON-RPC 2.0 over stdio. Works with Claude Desktop, Cursor, VS Code, Google Antigravity, and any MCP-compatible client.
 - **🔌 Multi-Provider** — Supports OpenAI, Anthropic, and Ollama (100% offline mode).
-- **💅 Hermes-Style Terminal UI** — Color-graded REPL with slash commands and a boxed layout.
 
 ---
 
