@@ -8,6 +8,8 @@
 
 > 👑 **Looking for Auto-Fixer, AST Smart Healer, Anti-Halu, and Time Machine Undo?**
 > **[Get Tokenectomy Pro (Enterprise Edition) →](https://tokenectomy.gumroad.com/l/kiznsu)**
+>
+> 🔀 **Pair with [Tokenectomy Git (OSS)](https://github.com/daffa2555/tokenectomy-git)** for autonomous Git branch, commit, and Pull Request creation!
 
 <p align="center">
   <img src="demo.gif" alt="Tokenectomy OSS Demo" width="100%" />
@@ -155,6 +157,30 @@ Add to your `settings.json`:
 | `get_error_context` | Performs log surgery: strips framework noise, redacts secrets, extracts source context and git diff |
 | `search_stack_overflow` | Searches Stack Overflow for a specific error (query is auto-sanitized of secrets) |
 | `apply_code_patch` | Applies a code patch to a file by search-and-replace |
+ 
+### 🔀 Companion MCP Server: Tokenectomy Git
+
+Close the autonomous loop from error diagnosis all the way to a published GitHub Pull Request! Pair Tokenectomy with our official companion MCP server: **[Tokenectomy Git](https://github.com/daffa2555/tokenectomy-git)**.
+
+```json
+{
+  "mcpServers": {
+    "tokenectomy": {
+      "command": "tkmy",
+      "args": ["--mcp"]
+    },
+    "tokenectomy-git": {
+      "command": "tkmy-git",
+      "args": ["--mcp"]
+    }
+  }
+}
+```
+
+Together, they enable your AI coding assistant to:
+1. Scrub noisy error logs & redact credentials (`tokenectomy`)
+2. Generate an accurate fix patch
+3. Create a branch, commit files, and open a GitHub PR autonomously (`tokenectomy-git`)
 
 ---
 
