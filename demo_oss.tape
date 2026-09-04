@@ -28,10 +28,10 @@ Type "python3 server.py 2>&1 | tokenectomy"
 Enter
 Sleep 3.5s
 
-# 3. Apply the recommended fix
-Type "sed -i 's/active_users/max(active_users, 1)/' server.py"
+# 3. Agent applies patch via Tokenectomy MCP Server
+Type "cat mcp_call.json | tokenectomy --mcp"
 Enter
-Sleep 1.5s
+Sleep 2.5s
 
 # 4. Rerun server -> Problem Solved!
 Type "python3 server.py"

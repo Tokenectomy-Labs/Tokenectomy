@@ -63,4 +63,7 @@ Traceback (most recent call last):
 ZeroDivisionError: division by zero
 LOG
 
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"apply_code_patch","arguments":{"file_path":"server.py","original_code":"per_user = total_tokens / active_users","new_code":"per_user = total_tokens / max(active_users, 1)"}}}' > mcp_call.json
+
 chmod +x setup_demo.sh
+
