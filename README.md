@@ -225,6 +225,17 @@ src/
 
 ---
 
+## 🧠 Bundled Open Source Agent Skills
+
+Tokenectomy OSS includes 2 native **Antigravity & Coding Agent Skills** in `.agents/skills/` to elevate your AI assistant's engineering discipline:
+
+| Skill | Description | Location |
+|---|---|---|
+| **`adversary-bug-hunter`** | Red-team fuzzer that stress-tests edge cases, catches unhandled unwraps/ReDoS, and hardens code. | [`.agents/skills/adversary-bug-hunter/`](.agents/skills/adversary-bug-hunter/SKILL.md) |
+| **`spec-first-architect`** | Enforces strict Test-Driven Development (TDD) & state machine invariants to eliminate AI hallucinations. | [`.agents/skills/spec-first-architect/`](.agents/skills/spec-first-architect/SKILL.md) |
+
+---
+
 ## 🆓 vs 👑 — OSS vs Pro
 
 | Feature | OSS (Free) | Pro ($9) |
@@ -237,6 +248,7 @@ src/
 | **AST Syntax Validation** (Tree-sitter) | ✅ | ✅ |
 | MCP Server Mode | ✅ | ✅ |
 | Multi-Provider (OpenAI, Anthropic, Ollama) | ✅ | ✅ |
+| **Bundled Agent Skills** | 2 Skills | **4 Full Skills Suite** |
 | **Auto-Fixer** (AI patch → auto-apply) | ❌ | ✅ |
 | **AST Smart Healer** (auto-repair syntax errors) | ❌ | ✅ |
 | **Code Integrity Guard** (Anti-Halu & Anti-Ngide) | ❌ | ✅ |
@@ -247,6 +259,8 @@ src/
 | **DB Inspector** (real TCP port probe) | ❌ | ✅ |
 | **Docker Diagnostics** (OOMKilled detection) | ❌ | ✅ |
 | **`--benchmark` Mode** | ❌ | ✅ |
+| **SRE Incident Commander Skill** (OOM 137 triage & 5-Whys RCA) | ❌ | **✅ Included** |
+| **Refactor Sentinel Skill** (Zero-regression blast radius refactor) | ❌ | **✅ Included** |
 
 👉 **[Get Tokenectomy Pro →](https://tokenectomy.gumroad.com/l/kiznsu)**
 
