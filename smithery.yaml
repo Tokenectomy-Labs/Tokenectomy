@@ -1,4 +1,5 @@
 version: 1
+dockerfile: Dockerfile
 startCommand:
   type: stdio
   config:

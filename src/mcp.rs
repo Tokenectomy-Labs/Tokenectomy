@@ -91,11 +91,12 @@ pub async fn run_server() -> anyhow::Result<()> {
                     },
                     "serverInfo": {
                         "name": "tokenectomy",
-                        "version": "1.5.0"
+                        "version": env!("CARGO_PKG_VERSION")
                     }
                 })))
             }
             "notifications/initialized" => None,
+            "ping" => Some(success_response(id.unwrap_or(Value::Null), json!({}))),
             "tools/list" => {
                 Some(success_response(id.unwrap_or(Value::Null), json!({
                     "tools": [

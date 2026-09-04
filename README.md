@@ -4,6 +4,7 @@
 [![Built with Rust](https://img.shields.io/badge/Built%20with-Rust-orange?logo=rust)](https://www.rust-lang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![MCP Compatible](https://img.shields.io/badge/MCP-Compatible-blue?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9zdmc+)](https://modelcontextprotocol.io)
+[![Glama](https://img.shields.io/badge/Glama-MCP%20Server-blueviolet)](https://glama.ai/mcp/servers)
 
 > 👑 **Looking for Auto-Fixer, AST Smart Healer, Anti-Halu, and Time Machine Undo?**
 > **[Get Tokenectomy Pro (Enterprise Edition) →](https://tokenectomy.gumroad.com/l/kiznsu)**
