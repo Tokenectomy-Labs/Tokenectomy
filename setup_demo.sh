@@ -16,7 +16,9 @@ def calculate_metrics():
 
 def start_server():
     print("🚀 [Production API] Starting services on port 8080...")
-    calculate_metrics()
+    per_user = calculate_metrics()
+    print(f"✨ Metrics computed: {per_user} tokens/user")
+    print("🌟 Production server initialized successfully!")
 
 if __name__ == "__main__":
     start_server()

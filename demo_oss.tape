@@ -18,7 +18,7 @@ Enter
 Sleep 600ms
 Show
 
-# 1. Unfiltered Crash Dump (The Pain)
+# 1. Unfiltered Crash Dump (The Problem)
 Type "python3 server.py"
 Enter
 Sleep 2.5s
@@ -28,7 +28,12 @@ Type "python3 server.py 2>&1 | tokenectomy"
 Enter
 Sleep 3.5s
 
-# 3. Repeat to demonstrate Local SHA-256 Caching ($0 cost)
-Type "python3 server.py 2>&1 | tokenectomy"
+# 3. Apply the recommended fix
+Type "sed -i 's/active_users/max(active_users, 1)/' server.py"
 Enter
-Sleep 3.5s
+Sleep 1.5s
+
+# 4. Rerun server -> Problem Solved!
+Type "python3 server.py"
+Enter
+Sleep 4.0s
