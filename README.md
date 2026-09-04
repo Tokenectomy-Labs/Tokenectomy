@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![MCP Compatible](https://img.shields.io/badge/MCP-Compatible-blue?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9zdmc+)](https://modelcontextprotocol.io)
 
-> 👑 **Looking for Auto-Fixer, AST Guard, and DB Inspector?**
+> 👑 **Looking for Auto-Fixer, AST Smart Healer, Anti-Halu, and Time Machine Undo?**
 > **[Get Tokenectomy Pro (Enterprise Edition) →](https://tokenectomy.gumroad.com/l/kiznsu)**
 
 **Tokenectomy** is a high-performance Rust CLI and MCP server that scrubs 90%+ of framework noise from error logs before they reach your AI assistant's context window. It strips `node_modules`, `site-packages`, and vendor stack frames, redacts secrets, injects StackOverflow solutions, and caches responses locally — so your AI spends tokens on *your* code, not framework internals.
@@ -29,6 +29,8 @@
 - **🌐 Stack Overflow Search** — Silently queries StackExchange APIs and injects top community solutions into the AI's context.
 - **⚡ SHA-256 Response Cache** — Identical errors hit local cache (24h TTL). Recurring CI/CD failures cost $0.00 in API calls.
 - **🛡️ Secret Redaction** — Regex engine strips API keys, AWS secrets, JWTs, and database connection strings before any data leaves your machine (ReDoS-safe, linear-time).
+- **🔒 Anti-Hardcode Secret Shield** — Automatically detects and blocks AI patches that attempt to hardcode raw API keys, passwords, or credentials into your source code.
+- **📐 AST Syntax Validation** — In-memory Tree-sitter AST parser ensures AI patches never write broken syntax to your repository.
 - **🔒 Path Traversal Protection** — MCP file operations are canonicalized and locked to your current working directory.
 - **🤖 MCP Server Mode** — Full JSON-RPC 2.0 over stdio. Works with Claude Desktop, Cursor, VS Code, Google Antigravity, and any MCP-compatible client.
 - **🔌 Multi-Provider** — Supports OpenAI, Anthropic, and Ollama (100% offline mode).
@@ -195,18 +197,23 @@ src/
 ## 🆓 vs 👑 — OSS vs Pro
 
 | Feature | OSS (Free) | Pro ($9) |
-|---------|:---:|:---:|
+|---|:---:|:---:|
 | Smart Framework Filter | ✅ | ✅ |
 | Stack Overflow Search | ✅ | ✅ |
 | SHA-256 Response Cache | ✅ | ✅ |
-| Secret Redaction | ✅ | ✅ |
+| Secret Redaction (ReDoS-safe) | ✅ | ✅ |
+| **Anti-Hardcode Secret Shield** | ✅ | ✅ |
+| **AST Syntax Validation** (Tree-sitter) | ✅ | ✅ |
 | MCP Server Mode | ✅ | ✅ |
 | Multi-Provider (OpenAI, Anthropic, Ollama) | ✅ | ✅ |
 | **Auto-Fixer** (AI patch → auto-apply) | ❌ | ✅ |
-| **AST Guard** (Tree-sitter syntax validation) | ❌ | ✅ |
-| **Test Rollback** (auto-rollback on test fail) | ❌ | ✅ |
+| **AST Smart Healer** (auto-repair syntax errors) | ❌ | ✅ |
+| **Code Integrity Guard** (Anti-Halu & Anti-Ngide) | ❌ | ✅ |
+| **Test Verification Loop** (auto-rollback on test fail) | ❌ | ✅ |
+| **Multi-File Atomic Transactions** | ❌ | ✅ |
+| **Time Machine Undo Engine** (1-sec revert via `tkmy --undo`) | ❌ | ✅ |
 | **True Ectomy Engine** (99% token reduction) | ❌ | ✅ |
-| **DB Inspector** (TCP port probe) | ❌ | ✅ |
+| **DB Inspector** (real TCP port probe) | ❌ | ✅ |
 | **Docker Diagnostics** (OOMKilled detection) | ❌ | ✅ |
 | **`--benchmark` Mode** | ❌ | ✅ |
 
