@@ -60,10 +60,12 @@ You don't need to buy anything to test this. Clone this repository right now and
 | **High Concurrency Torture** | 100 concurrent OS threads hammering redaction & extractor | **100/100 in 265 ms (752.2 ops/sec)**. Zero race conditions. | ✅ Verified |
 | **Kernel Memory Footprint** | Peak Resident Memory during 25K-line stress test | **14.11 MB VmRSS** via Linux `/proc/self/status`. Zero ballooning. | ✅ Verified |
 
-*Run this heavy stress benchmark yourself in your terminal right now:*
-```bash
-cargo test --release --test stress_benchmark -- --nocapture
-```
+> 💡 **"Skeptical about these numbers? Don't take our word for it."**  
+> We hate marketing fluff and sweet talk as much as you do. You don't need to take our word for it or pay a single cent. Clone this repository, run the benchmark on your own machine, watch your CPU blaze through 25,000 lines of logs in milliseconds, and verify the exact telemetry in your own terminal:
+>
+> ```bash
+> cargo test --release --test stress_benchmark -- --nocapture
+> ```
 
 ### 👑 Tokenectomy Pro — Industrial-Grade Heavy Production Torture Benchmark
 
