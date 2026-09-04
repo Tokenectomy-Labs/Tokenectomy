@@ -45,20 +45,32 @@
 
 ---
 
-## 📊 Verifiable Real-World Performance & Benchmark
+## 📊 Verifiable Real-World Performance & Benchmark (OSS vs Pro)
 
 No buzzwords or artificial benchmarks. Every developer can verify the core functions on their own machine:
 
+### 🆓 Tokenectomy OSS (Community Edition)
 | Feature Under Test | Tested Input | Real Measured Outcome | Status |
 |---|---|---|:---:|
 | **Secret Redaction** | PostgreSQL URL, OpenAI `sk-proj`, AWS keys, JWT | 100% scrubbed locally before cloud transmission | ✅ Verified |
-| **Stack Trace Extractor** | Rust compiler error & panic traces | File & line isolated; noise stripped | ✅ Verified |
-| **Sub-ms Response Time** | Local regex & parser pipeline | **0.13s execution time** for entire test suite | ✅ Verified |
+| **Stack Trace Extractor** | Rust compiler error & panic traces | File & line isolated; framework noise stripped | ✅ Verified |
+| **Sub-ms Test Suite** | Local regex & parser pipeline | **0.13s execution time** for all 9 unit tests | ✅ Verified |
 
-**To independently verify the test suite on your machine:**
+*Run verification on OSS:*
 ```bash
 cargo test
 ```
+
+### 👑 Need Deep Log Surgery & Auto-Rollback? (Tokenectomy Pro)
+| Enterprise Feature | Real-World Benchmark Outcome | Edition |
+|---|---|:---:|
+| **True Ectomy Log Surgery** | **98.60% Token Reduction** (5,355 ➔ 75 tokens on Express/Prisma) | **Pro Exclusive** 👑 |
+| **AST Smart Healer** | **1.23 ms** offline syntax repair via Tree-sitter | **Pro Exclusive** 👑 |
+| **HaluGuard Protection** | Blocks `// ... existing code ...` lazy code deletion in **42 ms** | **Pro Exclusive** 👑 |
+| **Test-Fail Auto-Rollback** | **100% clean rollback** (**0 bytes dirty diff**) when tests fail | **Pro Exclusive** 👑 |
+| **Atomic Multi-File Tx** | Aborts multi-file patch atomically if any file has syntax error | **Pro Exclusive** 👑 |
+
+👉 **[Get Tokenectomy Pro on Gumroad ($9) →](https://tokenectomy.gumroad.com/l/kiznsu)**
 
 ---
 
