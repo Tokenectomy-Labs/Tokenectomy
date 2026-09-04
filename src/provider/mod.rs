@@ -15,10 +15,24 @@ pub struct MockProvider;
 
 #[async_trait]
 impl AiProvider for MockProvider {
-    async fn explain(&self, log: &str, context: &str) -> Result<String> {
-        Ok(format!(
-            "[MOCK RESPONSE]\nRoot Cause: An error was found in the log related to the source code above.\nSolution: Ensure all variables are properly initialized and the logic handles edge cases."
-        ))
+    async fn explain(&self, log: &str, _context: &str) -> Result<String> {
+        if log.contains("server.py") || log.contains("ZeroDivisionError") {
+            Ok(r#"💡 Root Cause Analysis:
+ZeroDivisionError detected in server.py:10
+The variable `active_users` evaluates to 0, causing division by zero inside `calculate_metrics()`.
+
+🔧 Recommended Fix:
+Guard division by zero with a fallback default:
+```python
+per_user = total_tokens / max(active_users, 1)
+```"#.to_string())
+        } else {
+            Ok(r#"💡 Root Cause Analysis:
+Unhandled exception detected in application execution.
+
+🔧 Recommended Fix:
+Validate input parameters and handle boundary conditions before execution."#.to_string())
+        }
     }
 }
 

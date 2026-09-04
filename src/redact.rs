@@ -3,9 +3,26 @@ use regex::Regex;
 pub fn redact_secrets(input: &str) -> String {
     let mut redacted = input.to_string();
 
-    // 1. Generic Key/Token patterns (env vars, JSON, etc)
-    let re_generic = Regex::new(r#"(?i)(api_key|token|password|secret|auth|bearer)[\s:="']+([a-zA-Z0-9_\-\.]{10,})"#).unwrap();
-    redacted = re_generic.replace_all(&redacted, "$1 = [REDACTED]").to_string();
+    // 1. Specific Token Prefixes (run first so specific format tags are matched)
+    // 1a. GitHub tokens (ghp_, gho_, ghs_, ghr_, github_pat_)
+    let re_github = Regex::new(r"\b(ghp_|gho_|ghs_|ghr_|github_pat_)[a-zA-Z0-9_]{20,}\b").unwrap();
+    redacted = re_github.replace_all(&redacted, "[GITHUB_TOKEN_REDACTED]").to_string();
+
+    // 1b. Slack tokens (xoxb-, xoxp-, xoxa-, xoxr-)
+    let re_slack = Regex::new(r"\bxox[bparo]-[a-zA-Z0-9\-]{20,}\b").unwrap();
+    redacted = re_slack.replace_all(&redacted, "[SLACK_TOKEN_REDACTED]").to_string();
+
+    // 1c. Google API keys (AIza...)
+    let re_google = Regex::new(r"\bAIza[a-zA-Z0-9_\-]{35}\b").unwrap();
+    redacted = re_google.replace_all(&redacted, "[GOOGLE_API_KEY_REDACTED]").to_string();
+
+    // 1d. Anthropic API keys (must run before OpenAI because Anthropic keys start with sk-ant-)
+    let re_anthropic = Regex::new(r"\bsk-ant-[a-zA-Z0-9_\-]{20,}\b").unwrap();
+    redacted = re_anthropic.replace_all(&redacted, "[ANTHROPIC_KEY_REDACTED]").to_string();
+
+    // 1e. OpenAI API keys
+    let re_openai = Regex::new(r"\bsk-(?:proj-)?[a-zA-Z0-9_\-]{20,}\b").unwrap();
+    redacted = re_openai.replace_all(&redacted, "[OPENAI_KEY_REDACTED]").to_string();
 
     // 2. AWS Access Key ID
     let re_aws_key = Regex::new(r"(?i)\b(AKIA|ASIA)[0-9A-Z]{16}\b").unwrap();
@@ -19,31 +36,26 @@ pub fn redact_secrets(input: &str) -> String {
     let re_jwt = Regex::new(r"eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+").unwrap();
     redacted = re_jwt.replace_all(&redacted, "[JWT_REDACTED]").to_string();
 
-    // VULN-06: Additional secret patterns
-
-    // 5. GitHub tokens (ghp_, gho_, ghs_, ghr_, github_pat_)
-    let re_github = Regex::new(r"\b(ghp_|gho_|ghs_|ghr_|github_pat_)[a-zA-Z0-9_]{20,}\b").unwrap();
-    redacted = re_github.replace_all(&redacted, "[GITHUB_TOKEN_REDACTED]").to_string();
-
-    // 6. Slack tokens (xoxb-, xoxp-, xoxa-, xoxr-)
-    let re_slack = Regex::new(r"\bxox[bparo]-[a-zA-Z0-9\-]{20,}\b").unwrap();
-    redacted = re_slack.replace_all(&redacted, "[SLACK_TOKEN_REDACTED]").to_string();
-
-    // 7. Google API keys (AIza...)
-    let re_google = Regex::new(r"\bAIza[a-zA-Z0-9_\-]{35}\b").unwrap();
-    redacted = re_google.replace_all(&redacted, "[GOOGLE_API_KEY_REDACTED]").to_string();
-
-    // 8. Private keys (PEM format)
+    // 5. Private keys (PEM format)
     let re_pem = Regex::new(r"-----BEGIN[A-Z ]*PRIVATE KEY-----[\s\S]*?-----END[A-Z ]*PRIVATE KEY-----").unwrap();
     redacted = re_pem.replace_all(&redacted, "[PRIVATE_KEY_REDACTED]").to_string();
 
-    // 9. Connection strings (postgresql://, mysql://, mongodb://, redis://)
-    let re_connstr = Regex::new(r"(?i)(postgresql|mysql|mongodb|redis|amqp)://[^\s]+").unwrap();
+    // 6. Connection strings (postgresql://, postgres://, mysql://, mongodb://, redis://, mssql://, amqp://)
+    let re_connstr = Regex::new(r##"(?i)(postgresql|postgres|mysql|mongodb|redis|mssql|amqp)://[^\s"'<>]+"##).unwrap();
     redacted = re_connstr.replace_all(&redacted, "[CONNECTION_STRING_REDACTED]").to_string();
 
-    // 10. Authorization header with Bearer token
+    // 7. Authorization header with Bearer token
     let re_bearer = Regex::new(r"(?i)Authorization:\s*Bearer\s+[a-zA-Z0-9_\-\.]+").unwrap();
     redacted = re_bearer.replace_all(&redacted, "Authorization: Bearer [REDACTED]").to_string();
+
+    // 8. Generic Key/Token patterns (fallback for other credentials)
+    // 8a. Quoted values with complex special characters
+    let re_generic_quoted = Regex::new(r#"(?i)(api_key|token|password|secret|auth|bearer)[\s:="']+["']([^"'\r\n]{4,})["']"#).unwrap();
+    redacted = re_generic_quoted.replace_all(&redacted, "$1 = \"[REDACTED]\"").to_string();
+
+    // 8b. Unquoted words
+    let re_generic = Regex::new(r#"(?i)(api_key|token|password|secret|auth|bearer)[\s:="']+([a-zA-Z0-9_\-\.]{10,})"#).unwrap();
+    redacted = re_generic.replace_all(&redacted, "$1 = [REDACTED]").to_string();
 
     redacted
 }
@@ -93,5 +105,26 @@ mod tests {
         let res = redact_secrets(log);
         assert!(res.contains("[CONNECTION_STRING_REDACTED]"));
         assert!(!res.contains("secretpass"));
+    }
+
+    #[test]
+    fn test_redact_complex_quoted_password() {
+        let log = r#"let conn = connect("postgres", password = "P@ssw0rd!#123$Secure", host = "localhost");"#;
+        let res = redact_secrets(log);
+        assert!(res.contains(r#"password = "[REDACTED]""#));
+        assert!(!res.contains("P@ssw0rd"));
+    }
+
+    #[test]
+    fn test_redact_ai_api_keys() {
+        let log_openai = "Error calling API with key sk-proj-1234567890abcdef1234567890";
+        let res_openai = redact_secrets(log_openai);
+        assert!(res_openai.contains("[OPENAI_KEY_REDACTED]"));
+        assert!(!res_openai.contains("1234567890abcdef"));
+
+        let log_anthropic = "Anthropic auth failed: sk-ant-api03-abcdef1234567890abcdef12345";
+        let res_anthropic = redact_secrets(log_anthropic);
+        assert!(res_anthropic.contains("[ANTHROPIC_KEY_REDACTED]"));
+        assert!(!res_anthropic.contains("abcdef1234567890"));
     }
 }

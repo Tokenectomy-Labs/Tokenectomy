@@ -34,7 +34,6 @@ async fn main() -> anyhow::Result<()> {
     let provider_choice = args.provider.unwrap_or(app_config.default_provider.clone().unwrap_or(ProviderChoice::Ollama));
 
 use std::io::IsTerminal;
-use clap::CommandFactory;
 
     let mut log = String::new();
     if let Some(file_path) = &args.file {

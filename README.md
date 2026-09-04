@@ -8,6 +8,10 @@
 > 👑 **Looking for Auto-Fixer, AST Smart Healer, Anti-Halu, and Time Machine Undo?**
 > **[Get Tokenectomy Pro (Enterprise Edition) →](https://tokenectomy.gumroad.com/l/kiznsu)**
 
+<p align="center">
+  <img src="demo.gif" alt="Tokenectomy OSS Demo" width="100%" />
+</p>
+
 **Tokenectomy** is a high-performance Rust CLI and MCP server that scrubs 90%+ of framework noise from error logs before they reach your AI assistant's context window. It strips `node_modules`, `site-packages`, and vendor stack frames, redacts secrets, injects StackOverflow solutions, and caches responses locally — so your AI spends tokens on *your* code, not framework internals.
 
 ```
