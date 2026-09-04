@@ -1,5 +1,4 @@
-
-# Tokenectomy 🕵️‍♂️ — Smart Log Surgery & Context Reducer for LLMs (MCP Server & CLI)
+# Tokenectomy 🕵️‍♂️ — Autonomous Context Surgery & Secret Shield for AI Agents (M2M MCP Server)
 
 [![Built with Rust](https://img.shields.io/badge/Built%20with-Rust-orange?logo=rust)](https://www.rust-lang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -16,16 +15,16 @@
   <img src="demo.gif" alt="Tokenectomy OSS Demo" width="100%" />
 </p>
 
-**Tokenectomy** is a high-performance Rust CLI and MCP server that scrubs 90%+ of framework noise from error logs before they reach your AI assistant's context window. It strips `node_modules`, `site-packages`, and vendor stack frames, redacts secrets, injects StackOverflow solutions, and caches responses locally — so your AI spends tokens on *your* code, not framework internals.
+**Tokenectomy** is an agent-native **Machine-to-Machine (M2M) MCP server** built with Rust. Designed specifically as a background sidecar for autonomous coding agents (Claude Desktop, Cursor, Cline, Roo Code, Windsurf, Google Antigravity), it acts as an autonomous sub-cortex: surgically scrubbing 90%+ of internal framework noise (`node_modules`, `site-packages`, `.cargo/registry`) from error logs, auto-redacting sensitive credentials before cloud transmission, and enforcing AST syntax safety—**with zero human babysitting**.
 
 ```
                      ┌──────────────────┐
-  Raw Error Log      │   TOKENECTOMY    │      Clean Context
-  (38K tokens)  ───► │   🕵️‍♂️ OSS       │ ───►  (2K tokens)  ───► LLM
+   Agent Error Dump  │   TOKENECTOMY    │      Clean Agent Context
+   (38K tokens) ───► │   🕵️‍♂️ OSS (M2M)  │ ───►  (2K tokens)  ───► LLM Brain
                      │                  │
-  node_modules/      │  🔍 Smart Filter │      Only YOUR code
-  site-packages/     │  🛡️ Redact       │      + error message
-  .cargo/registry/   │  💾 Cache        │      + StackOverflow refs
+   node_modules/     │  🔍 Smart Filter │      Only YOUR code
+   site-packages/    │  🛡️ Redact       │      + error message
+   .cargo/registry/  │  💾 Cache        │      + StackOverflow refs
                      └──────────────────┘
 ```
 
@@ -105,37 +104,9 @@ npx -y @smithery/cli install tokenectomy --client claude
 
 ---
 
-## 🚀 Usage
+## 🔌 M2M Agent Setup (1-Minute Integration)
 
-### Pipe errors directly
-
-```bash
-python3 app.py 2>&1 | tkmy
-cargo build 2>&1 | tkmy
-node server.js 2>&1 | tkmy
-```
-
-### Read from a log file
-
-```bash
-tkmy --file /var/log/app/error.log
-```
-
-### Advanced options
-
-```bash
-tkmy --local-only            # 100% offline via Ollama ($0 cost)
-tkmy --provider openai       # Use OpenAI GPT-4o
-tkmy --provider anthropic    # Use Claude 3.5 Sonnet
-tkmy --context-lines 20      # Extract 20 lines of surrounding context
-tkmy --yes                   # Skip interactive prompts (CI/CD mode)
-```
-
----
-
-## 🔌 MCP Server Integration
-
-Register Tokenectomy with your AI editor to grant it autonomous debugging capabilities.
+Tokenectomy is architected to run silently between your AI Coding Agent and your repository over **JSON-RPC 2.0 stdio**. You configure it once, and your agent autonomously invokes Tokenectomy in the background during debugging and refactoring loops—**no manual copy-pasting or piping required**.
 
 ```bash
 tkmy --mcp
@@ -171,19 +142,13 @@ Add to `.cursor/mcp.json` in your project root:
 }
 ```
 
-### Google Antigravity CLI
+### Cline / Roo Code / Windsurf / VS Code
 
-```bash
-agy mcp add tokenectomy -- tkmy --mcp
-```
-
-### VS Code / Windsurf
-
-Add to your `settings.json`:
+Add to your MCP settings (`settings.json` or `cline_mcp_settings.json`):
 
 ```json
 {
-  "mcp.servers": {
+  "mcpServers": {
     "tokenectomy": {
       "command": "tkmy",
       "args": ["--mcp"]
@@ -192,11 +157,17 @@ Add to your `settings.json`:
 }
 ```
 
-### Available MCP Tools
+### Google Antigravity CLI
 
-| Tool | Description |
+```bash
+agy mcp add tokenectomy -- tkmy --mcp
+```
+
+### 🤖 Available M2M MCP Tools
+
+| Tool | Autonomous Agent Role |
 |------|-------------|
-| `get_error_context` | Performs log surgery: strips framework noise, redacts secrets, extracts source context and git diff |
+| `get_error_context` | Performs deep log surgery: strips framework noise, redacts secrets, extracts source context and git diff |
 | `search_stack_overflow` | Searches Stack Overflow for a specific error (query is auto-sanitized of secrets) |
 | `apply_code_patch` | Applies a code patch to a file by search-and-replace |
  
@@ -223,6 +194,36 @@ Together, they enable your AI coding assistant to:
 1. Scrub noisy error logs & redact credentials (`tokenectomy`)
 2. Generate an accurate fix patch
 3. Create a branch, commit files, and open a GitHub PR autonomously (`tokenectomy-git`)
+
+---
+
+## 🛠️ Standalone / Local CLI Mode (Optional)
+
+While Tokenectomy is architected for autonomous machine-to-machine agent operation, it also provides a standalone CLI binary if you want to pipe logs in CI/CD pipelines, local shell scripts, or manual debugging:
+
+### Pipe errors directly
+
+```bash
+python3 app.py 2>&1 | tkmy
+cargo build 2>&1 | tkmy
+node server.js 2>&1 | tkmy
+```
+
+### Read from a log file
+
+```bash
+tkmy --file /var/log/app/error.log
+```
+
+### Advanced options
+
+```bash
+tkmy --local-only            # 100% offline via Ollama ($0 cost)
+tkmy --provider openai       # Use OpenAI GPT-4o
+tkmy --provider anthropic    # Use Claude 3.5 Sonnet
+tkmy --context-lines 20      # Extract 20 lines of surrounding context
+tkmy --yes                   # Skip interactive prompts (CI/CD mode)
+```
 
 ---
 
