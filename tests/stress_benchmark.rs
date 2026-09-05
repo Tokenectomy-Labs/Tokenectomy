@@ -41,11 +41,11 @@ fn test_oss_heavy_stress_benchmark() {
     println!("{}", "=".repeat(85));
 
     // =========================================================================
-    // TEST 1: Massive 25,000-Line Log (2.5MB) Redaction Torture
+    // TEST 1: Quarter-Million Lines (250,000 Lines / ~25MB) Redaction Torture
     // =========================================================================
-    println!("\n🔥 [TEST 1/3] MASSIVE LOG REDACTION TORTURE (25,000+ LINES / 2.5MB BUFFER)");
-    let mut massive_log = String::with_capacity(3 * 1024 * 1024);
-    for i in 1..=6250 {
+    println!("\n🔥 [TEST 1/3] QUARTER-MILLION LINES LOG REDACTION TORTURE (250,000 LINES / 25MB+ BUFFER)");
+    let mut massive_log = String::with_capacity(32 * 1024 * 1024);
+    for i in 1..=62500 {
         massive_log.push_str(&format!(
             "2026-09-05T02:{:02}:{:02}.109Z [INFO] Worker-{} connected to postgresql://admin_user:Sup3rS3cr3t_{}@db.internal:5432/app_db\n",
             (i / 60) % 60, i % 60, i, i
@@ -81,7 +81,7 @@ fn test_oss_heavy_stress_benchmark() {
     println!("  ├── Total Waktu Redaksi: {:.2?} ({:.1} MB/sec)", redact_elapsed, data_size_mb / redact_elapsed.as_secs_f64());
     println!("  ├── Throughput Baris: {:.0} lines/sec", line_count as f64 / redact_elapsed.as_secs_f64());
     println!("  ├── Peak Memory (VmRSS): {:.2} MB (Delta: +{:.2} MB)", post_redact_rss, post_redact_rss - initial_rss);
-    println!("  └── Status: ✅ PASSED (100% of 25,000 lines sanitized, zero memory balloon)");
+    println!("  └── Status: ✅ PASSED (100% of 250,000 lines sanitized, zero memory balloon)");
 
     // =========================================================================
     // TEST 2: ReDoS Catastrophic Backtracking Torture (50,000 Chars)
