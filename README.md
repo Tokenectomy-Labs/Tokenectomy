@@ -75,11 +75,13 @@ To prove stability under enterprise workloads, we hammered **Tokenectomy Pro** w
 
 | Stress Vector | Tested Workload | Measured Kernel / CPU Telemetry | Status |
 |---|---|---|:---:|
+| **Half-Million Line Surgery** | **500,000 lines (41.49 MB / 9.75M tokens)** massive cluster dump | **9,750,032 raw tokens processed & scrubbed** (38,207 lines/sec). Zero crash, zero buffer overflow. | ✅ Passed |
 | **Sustained Stream** | 100 consecutive microservice crash incidents (2.16 MB) | **604,490 ➔ 6,490 tokens (98.93% reduction)** at **41,752 tokens/sec**. | ✅ Passed |
 | **K8s Crash Avalanche** | 6,506-line dump combining Spring Boot, PyTorch OOM, & Go | **Processed in 514 ms (1.6 MB/sec)**. User code preserved across 3 languages. | ✅ Passed |
 | **Monorepo Parallel AST** | 100 multi-language files (Rust, TS, Python, Go) parsed simultaneously | **2.68 ms total (0.027 ms / file)** = **37,379 files/sec**. Zero memory leak. | ✅ Passed |
 | **Extreme Concurrency** | 250 parallel OS threads hammering AST, Redact, & HaluGuard | **250/250 passed in 865 ms** (**867 ops/sec**). Zero deadlock or race condition. | ✅ Passed |
 | **Memory Footprint (VmRSS)** | Full 600K-token & 250-thread torture test | **Peak RAM capped at 83.77 MB** via Linux `/proc/self/status`. Zero leak. | ✅ Controlled |
+
 
 > 💡 **"Skeptical about these enterprise numbers? Don't take our word for it."**  
 > Every purchaser of Tokenectomy Pro receives the full, standalone benchmark and torture test suite (`tests/heavy_production_torture.rs`) bundled in the package. You can run `cargo test --release --test heavy_production_torture -- --nocapture` on your own infrastructure to verify every metric before deployment.
