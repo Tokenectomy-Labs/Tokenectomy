@@ -8,7 +8,7 @@
 [![MCP Compatible](https://img.shields.io/badge/MCP-Compatible-blue?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9zdmc+)](https://modelcontextprotocol.io)
 [![Glama](https://img.shields.io/badge/Glama-MCP%20Server-blueviolet)](https://glama.ai/mcp/servers)
 [![GitHub Stars](https://img.shields.io/github/stars/daffa2555/Tokenectomy?style=social)](https://github.com/daffa2555/Tokenectomy)
-[![Benchmark History](https://img.shields.io/badge/Benchmarks-100%25%20Verifiable%20History-blue?logo=github)](https://github.com/daffa2555/tokenectomy-bechmark-history)
+[![Benchmark History](https://img.shields.io/badge/Benchmarks-100%25%20Verifiable%20History-blue?logo=github)]#(https://github.com/daffa2555/tokenectomy-bechmark-history)
 
 > 👑 **Looking for Auto-Fixer, AST Smart Healer, Anti-Halu, and Time Machine Undo?**
 > **[Get Tokenectomy Pro (Enterprise Edition) →](https://tokenectomy.gumroad.com/l/kiznsu)**
