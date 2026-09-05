@@ -8,11 +8,15 @@
 [![MCP Compatible](https://img.shields.io/badge/MCP-Compatible-blue?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9zdmc+)](https://modelcontextprotocol.io)
 [![Glama](https://img.shields.io/badge/Glama-MCP%20Server-blueviolet)](https://glama.ai/mcp/servers)
 [![GitHub Stars](https://img.shields.io/github/stars/daffa2555/Tokenectomy?style=social)](https://github.com/daffa2555/Tokenectomy)
+[![Benchmark History](https://img.shields.io/badge/Benchmarks-100%25%20Verifiable%20History-blue?logo=github)](https://github.com/daffa2555/tokenectomy-bechmark-history)
 
 > 👑 **Looking for Auto-Fixer, AST Smart Healer, Anti-Halu, and Time Machine Undo?**
 > **[Get Tokenectomy Pro (Enterprise Edition) →](https://tokenectomy.gumroad.com/l/kiznsu)**
 >
-> 🔀 **Pair with [Tokenectomy Git (OSS)](https://github.com/daffa2555/tokenectomy-git)** for autonomous Git branch, commit, and Pull Request creation!
+> 🔀 **Pair with [Tokenectomy Git (OSS)](https://github.com/daffa2555/tokenectomy-git)** for autonomous Git PR creation!
+>
+> 📊 **Full Historical Telemetry Receipts (25K ➔ 1M Lines):** Check out the transparent **[Tokenectomy Benchmark History](https://github.com/daffa2555/tokenectomy-bechmark-history)** repository.
+
 
 <p align="center">
   <img src="demo.gif" alt="Tokenectomy OSS Demo" width="100%" />
@@ -51,7 +55,11 @@
 
 No buzzwords or artificial benchmarks. Every developer can verify the core functions on their own machine:
 
+> 🔍 **100% Transparent Benchmark History & Industry Standards (ISO/IEC 25010 & OWASP):**  
+> We track our complete scaling timeline (from 25K to 1 Million lines) and hardware telemetry logs in the **[tokenectomy-bechmark-history](https://github.com/daffa2555/tokenectomy-bechmark-history)** repository.
+
 ### 🆓 Tokenectomy OSS (Community Edition) — Verifiable Heavy Stress Benchmark
+
 
 You don't need to buy anything to test this. Clone this repository right now and verify these heavy load benchmarks directly on your hardware:
 
