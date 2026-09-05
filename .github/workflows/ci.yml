@@ -45,3 +45,15 @@ jobs:
 
       - name: Run Heavy Stress Benchmark
         run: cargo test --release --test stress_benchmark -- --nocapture
+
+  security-audit:
+    name: Security Audit (RustSec)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run Cargo Audit
+        uses: rustsec/audit-check@v2.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
