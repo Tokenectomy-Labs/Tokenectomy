@@ -75,7 +75,7 @@ To prove stability under enterprise workloads, we hammered **Tokenectomy Pro** w
 
 | Stress Vector | Tested Workload | Measured Kernel / CPU Telemetry | Status |
 |---|---|---|:---:|
-| **Half-Million Line Surgery** | **500,000 lines (41.49 MB / 9.75M tokens)** massive cluster dump | **9,750,032 raw tokens processed & scrubbed** (38,207 lines/sec). Zero crash, zero buffer overflow. | ✅ Passed |
+| **One Million Line Surgery** | **1,000,002 lines (82.99 MB / 19.5M tokens)** massive cluster dump | **19,500,032 raw tokens processed & scrubbed** (36,549 lines/sec). Zero crash, zero buffer overflow. | ✅ Passed |
 | **Sustained Stream** | 100 consecutive microservice crash incidents (2.16 MB) | **604,490 ➔ 6,490 tokens (98.93% reduction)** at **41,752 tokens/sec**. | ✅ Passed |
 | **K8s Crash Avalanche** | 6,506-line dump combining Spring Boot, PyTorch OOM, & Go | **Processed in 514 ms (1.6 MB/sec)**. User code preserved across 3 languages. | ✅ Passed |
 | **Monorepo Parallel AST** | 100 multi-language files (Rust, TS, Python, Go) parsed simultaneously | **2.68 ms total (0.027 ms / file)** = **37,379 files/sec**. Zero memory leak. | ✅ Passed |
