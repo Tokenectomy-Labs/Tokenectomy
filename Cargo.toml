@@ -2,13 +2,17 @@
 name = "tokenectomy"
 version = "1.0.0"
 edition = "2024"
-description = "Autonomous context surgery & secret shield for AI coding agents (M2M MCP Server & CLI)"
+description = "Autonomous M2M Model Context Protocol (MCP) server & log surgery engine for AI coding agents (Claude, Cursor, Cline, Antigravity)"
 license = "MIT"
 repository = "https://github.com/daffa2555/Tokenectomy"
 homepage = "https://github.com/daffa2555/Tokenectomy"
+documentation = "https://docs.rs/tokenectomy"
 readme = "README.md"
-keywords = ["mcp", "ai-agent", "token-reducer", "context-window", "devtools"]
-categories = ["development-tools", "command-line-utilities"]
+keywords = ["mcp", "mcp-server", "ai-agent", "context-window", "llm"]
+categories = ["development-tools", "command-line-utilities", "text-processing"]
+
+[package.metadata.docs.rs]
+all-features = true
 
 [dependencies]
 anyhow = "1.0.104"
