@@ -1,5 +1,7 @@
 # Tokenectomy 🕵️‍♂️ — Autonomous Context Surgery & Secret Shield for AI Agents (M2M MCP Server)
 
+[![CI](https://github.com/daffa2555/Tokenectomy/actions/workflows/ci.yml/badge.svg)](https://github.com/daffa2555/Tokenectomy/actions/workflows/ci.yml)
+[![Crates.io](https://img.shields.io/crates/v/tokenectomy.svg?logo=rust)](https://crates.io/crates/tokenectomy)
 [![Built with Rust](https://img.shields.io/badge/Built%20with-Rust-orange?logo=rust)](https://www.rust-lang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![MCP Compatible](https://img.shields.io/badge/MCP-Compatible-blue?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9zdmc+)](https://modelcontextprotocol.io)
@@ -87,7 +89,13 @@ To prove stability under enterprise workloads, we hammered **Tokenectomy Pro** w
 
 ## 📦 Installation
 
-### 🦀 Build from Source (Recommended)
+### ⚡ Install via Cargo (crates.io)
+
+```bash
+cargo install tokenectomy
+```
+
+### 🦀 Build from Source
 
 ```bash
 git clone https://github.com/daffa2555/Tokenectomy.git
