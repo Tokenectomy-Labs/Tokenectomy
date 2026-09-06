@@ -30,6 +30,7 @@ pub mod formatter;
 pub mod git;
 pub mod mcp;
 pub mod provider;
+pub mod proxy;
 pub mod redact;
 pub mod search;
 

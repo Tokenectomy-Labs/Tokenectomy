@@ -1,31 +1,43 @@
 pub mod python;
 pub mod js;
 pub mod rust;
+pub mod go;
+pub mod java;
+pub mod cpp;
+pub mod php;
 
 pub struct CodeLocation {
     pub file: String,
     pub line: usize,
 }
 
-pub trait TraceParser {
+pub trait TraceParser: Send + Sync {
     fn detect(&self, log: &str) -> bool;
     fn extract_locations(&self, log: &str) -> Vec<CodeLocation>;
 }
 
-fn is_dependency_file(path: &str) -> bool {
+pub fn is_dependency_file(path: &str) -> bool {
     let lower_path = path.to_lowercase();
     
     let ignores = [
-        "node_modules",     // JS/Node
-        "site-packages",    // Python/Django
-        "dist-packages",    // Python
-        "venv",             // Python VirtualEnv
-        ".venv",            // Python VirtualEnv
-        "lib/python",       // Python built-ins
-        ".cargo/registry",  // Rust
-        ".rustup",          // Rust toolchain
-        "vendor",           // PHP/Go/Ruby
-        "gems",             // Ruby
+        "node_modules",        // JS/Node/TS
+        "site-packages",       // Python
+        "dist-packages",       // Python
+        "venv",                // Python VirtualEnv
+        ".venv",               // Python VirtualEnv
+        "lib/python",          // Python built-ins
+        ".cargo/registry",     // Rust
+        ".rustup",             // Rust toolchain
+        "vendor",              // PHP/Go/Ruby
+        "gems",                // Ruby
+        "pkg/mod",             // Go modules cache
+        "go/src",              // Go standard library
+        ".gradle",             // Java Gradle cache
+        ".m2/repository",      // Java Maven repo
+        "usr/include",         // C/C++ system headers
+        "usr/lib",             // C/C++ system libraries
+        "vcpkg_installed",     // C++ vcpkg
+        "target/debug/build",  // Rust build scripts
     ];
 
     for ignore in ignores.iter() {
@@ -41,6 +53,10 @@ pub fn extract_context(log: &str, context_lines: usize, strict_cwd: bool) -> (St
         Box::new(rust::RustTraceParser),
         Box::new(python::PythonTraceParser),
         Box::new(js::JsTraceParser),
+        Box::new(go::GoTraceParser),
+        Box::new(java::JavaTraceParser),
+        Box::new(cpp::CppTraceParser),
+        Box::new(php::PhpTraceParser),
     ];
 
     let mut context_output = String::new();
@@ -51,7 +67,7 @@ pub fn extract_context(log: &str, context_lines: usize, strict_cwd: bool) -> (St
         if parser.detect(log) {
             let locations = parser.extract_locations(log);
             for loc in locations {
-                // Filter cerdas: Abaikan file internal framework/database
+                // Filter cerdas: Abaikan file internal framework/library/dependency
                 if is_dependency_file(&loc.file) {
                     log::debug!("Ignoring framework/dependency file: {}", loc.file);
                     continue;

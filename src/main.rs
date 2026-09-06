@@ -5,6 +5,7 @@ mod extractor;
 mod git;
 mod mcp;
 mod provider;
+mod proxy;
 mod redact;
 mod search;
 mod formatter;
@@ -22,6 +23,10 @@ async fn main() -> anyhow::Result<()> {
     
     if args.mcp {
         return mcp::run_server().await;
+    }
+
+    if args.proxy {
+        return proxy::run_reverse_proxy(&args.proxy_bind, &args.upstream_url).await;
     }
 
 

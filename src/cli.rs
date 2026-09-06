@@ -42,4 +42,13 @@ pub struct Cli {
 
     #[arg(long, value_enum, help = "AI provider to use [possible values: anthropic, openai, ollama, mock]", hide_possible_values = true)]
     pub provider: Option<ProviderChoice>,
+
+    #[arg(long, help = "Run as an AI Gateway Reverse Proxy (intercepts and compresses LLM prompts)")]
+    pub proxy: bool,
+
+    #[arg(long, default_value = "127.0.0.1:8080", help = "Bind address for the reverse proxy gateway")]
+    pub proxy_bind: String,
+
+    #[arg(long, default_value = "https://api.openai.com/v1", help = "Upstream LLM base URL to forward requests to")]
+    pub upstream_url: String,
 }

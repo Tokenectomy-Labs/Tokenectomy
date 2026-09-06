@@ -2,24 +2,28 @@ use super::{CodeLocation, TraceParser};
 use regex::Regex;
 use std::sync::LazyLock;
 
-pub struct JsTraceParser;
+pub struct CppTraceParser;
 
-static JS_LOC_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+static CPP_LOC_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     // Matches:
-    // at Object.<anonymous> (/path/to/app.ts:10:15)
-    // at /path/to/app.tsx:10:15
-    Regex::new(r"(?:\(|at\s+)([a-zA-Z0-9_/\.\-]+\.(?:m?js|cjs|ts|tsx|jsx|mts|cts)):(\d+)").unwrap()
+    // #0 0x555555555149 in func() src/core/tensor.cpp:88
+    // or src/main.cpp:24:15: error:
+    Regex::new(r"(?:at\s+|\s+)([a-zA-Z0-9_\-/\.]+\.(?:cpp|cc|cxx|c|hpp|h)):(\d+)").unwrap()
 });
 
-impl TraceParser for JsTraceParser {
+impl TraceParser for CppTraceParser {
     fn detect(&self, log: &str) -> bool {
-        (log.contains("Error:") || log.contains("TypeError:") || log.contains("ReferenceError:") || log.contains("SyntaxError:"))
-            && (log.contains("at ") || log.contains(".js:") || log.contains(".ts:") || log.contains(".tsx:") || log.contains(".jsx:"))
+        log.contains("AddressSanitizer")
+            || log.contains("Segmentation fault")
+            || log.contains("core dumped")
+            || log.contains(".cpp:")
+            || log.contains(".cc:")
+            || log.contains(".cxx:")
     }
 
     fn extract_locations(&self, log: &str) -> Vec<CodeLocation> {
         let mut locations = Vec::new();
-        for cap in JS_LOC_REGEX.captures_iter(log) {
+        for cap in CPP_LOC_REGEX.captures_iter(log) {
             if let (Some(file), Some(line_str)) = (cap.get(1), cap.get(2)) {
                 if let Ok(line) = line_str.as_str().parse::<usize>() {
                     locations.push(CodeLocation {
