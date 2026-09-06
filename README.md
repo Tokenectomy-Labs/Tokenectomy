@@ -11,11 +11,10 @@
   <a href="https://github.com/daffa2555/Tokenectomy"><img src="https://img.shields.io/github/stars/daffa2555/Tokenectomy?style=social" alt="GitHub Stars" /></a>
 </p>
 
-> 🌐 **[Explore the Interactive Web Playground & Live Architecture →](https://tokenectomy-web.vercel.app)**  
-> 🔬 **Need Autonomous Auto-Fix, Tree-sitter AST Healing, & Reverse Proxy? [Discover Tokenectomy Sentinel (Pro Tier) →](https://tokenectomy.gumroad.com/l/kiznsu)**  
-> 👑 **Looking for Air-Gapped Zero-Human Autonomous Self-Healing? Tokenectomy Sovereign (Ultra Tier)** operates as an autonomous background hypervisor.  
+> 🌐 **[Interactive Web Playground & Live Architecture →](https://tokenectomy-web.vercel.app)**  
+> 🔬 **Need AST Auto-Healing, Test Rollback & Pro Engine? [Tokenectomy Sentinel (Pro Tier) →](https://tokenectomy.gumroad.com/l/kiznsu)**  
 > 🔀 **Pair with [Tokenectomy Git (OSS)](https://github.com/daffa2555/tokenectomy-git)** for autonomous Git fix branches & PR creation!  
-> 📊 **Full Historical Telemetry Receipts (25K ➔ 1M Lines):** Check out the transparent **[Tokenectomy Benchmark History](https://github.com/daffa2555/tokenectomy-bechmark-history)** repository.
+> 📊 **Telemetry Receipts (25K ➔ 1M Lines):** Check out the transparent **[Benchmark History](https://github.com/daffa2555/tokenectomy-bechmark-history)** repository.
 
 
 <p align="center">
@@ -53,17 +52,9 @@
 
 ---
 
-## 📊 Verifiable Real-World Performance & Benchmark (OSS vs Pro)
+## 📊 Verifiable Real-World Performance Benchmark
 
-No buzzwords or artificial benchmarks. Every developer can verify the core functions on their own machine:
-
-> 🔍 **100% Transparent Benchmark History & Industry Standards (ISO/IEC 25010 & OWASP):**  
-> We track our complete scaling timeline (from 25K to 1 Million lines) and hardware telemetry logs in the **[tokenectomy-bechmark-history](https://github.com/daffa2555/tokenectomy-bechmark-history)** repository.
-
-### 🗡️ Tokenectomy Razor (Community Edition) — Verifiable Heavy Stress Benchmark
-
-
-You don't need to buy anything to test this. Clone this repository right now and verify these heavy load benchmarks directly on your hardware:
+Every developer can verify the core performance claims directly on their physical machine:
 
 | Feature Under Test | Tested Heavy Input | Real Measured Outcome | Status |
 |---|---|---|:---:|
@@ -72,31 +63,13 @@ You don't need to buy anything to test this. Clone this repository right now and
 | **High Concurrency Torture** | 100 concurrent OS threads hammering redaction & extractor | **100/100 in 27.35 ms (7,312.7 ops/sec)**. Zero race conditions. | ✅ Verified |
 | **Kernel Memory Footprint** | Peak Resident Memory during 250,000-line stress test | **76.24 MB VmRSS** via Linux `/proc/self/status`. Zero memory ballooning. | ✅ Verified |
 
-> 💡 **"Skeptical about these numbers? Don't take our word for it."**  
-> We hate marketing fluff and sweet talk as much as you do. You don't need to take our word for it or pay a single cent. Clone this repository, run the benchmark on your own machine, watch your CPU blaze through **250,000 lines** of logs in a third of a second, and verify the exact telemetry in your own terminal:
->
+> 💡 **Verify on your own hardware:** Clone this repository and run the standalone benchmark:
 > ```bash
 > cargo test --release --test stress_benchmark -- --nocapture
 > ```
 
-### 🔬 Tokenectomy Sentinel (Pro Tier) — Industrial-Grade Heavy Production Torture Benchmark
-
-To prove stability under enterprise workloads, we hammered **Tokenectomy Sentinel** with sustained multi-million token traffic, a 10MB Kubernetes crash avalanche, and 250 parallel OS threads on a 12-Core Intel i5-1235U with Arch Linux:
-
-| Stress Vector | Tested Workload | Measured Kernel / CPU Telemetry | Status |
-|---|---|---|:---:|
-| **One Million Line Surgery** | **1,000,002 lines (82.99 MB / 19.5M tokens)** massive cluster dump | **19,500,032 raw tokens processed & scrubbed** (36,549 lines/sec). Zero crash, zero buffer overflow. | ✅ Passed |
-| **Sustained Stream** | 100 consecutive microservice crash incidents (2.16 MB) | **604,490 ➔ 6,490 tokens (98.93% reduction)** at **41,752 tokens/sec**. | ✅ Passed |
-| **K8s Crash Avalanche** | 6,506-line dump combining Spring Boot, PyTorch OOM, & Go | **Processed in 514 ms (1.6 MB/sec)**. User code preserved across 3 languages. | ✅ Passed |
-| **Monorepo Parallel AST** | 100 multi-language files (Rust, TS, Python, Go) parsed simultaneously | **2.68 ms total (0.027 ms / file)** = **37,379 files/sec**. Zero memory leak. | ✅ Passed |
-| **Extreme Concurrency** | 250 parallel OS threads hammering AST, Redact, & HaluGuard | **250/250 passed in 865 ms** (**867 ops/sec**). Zero deadlock or race condition. | ✅ Passed |
-| **Memory Footprint (VmRSS)** | Full 600K-token & 250-thread torture test | **Peak RAM capped at 83.77 MB** via Linux `/proc/self/status`. Zero leak. | ✅ Controlled |
-
-
-> 💡 **"Skeptical about these enterprise numbers? Don't take our word for it."**  
-> Every purchaser of Tokenectomy Sentinel receives the full, standalone benchmark and torture test suite (`tests/heavy_production_torture.rs`) bundled in the package. You can run `cargo test --release --test heavy_production_torture -- --nocapture` on your own infrastructure to verify every metric before deployment.
-
-👉 **[Get Tokenectomy Sentinel on Gumroad ($9) →](https://tokenectomy.gumroad.com/l/kiznsu)** (Native binaries for Linux, macOS Apple Silicon, and Windows).
+> 🔬 **Need enterprise workloads (1M+ lines, 250 threads, AST Smart Healer & test rollback)?**  
+> Check out **[Tokenectomy Sentinel (Pro Tier) on Gumroad ($9) →](https://tokenectomy.gumroad.com/l/kiznsu)**.
 
 ---
 
@@ -343,37 +316,31 @@ Tokenectomy OSS includes 2 native **Antigravity & Coding Agent Skills** in `.age
 
 ---
 
-## ⚡ The Tokenonmix Trinity — Razor vs Sentinel vs Sovereign
+## 🆓 vs 🔬 — Razor (OSS) vs Sentinel (Pro)
 
-| Feature | 🗡️ Razor (OSS) | 🔬 Sentinel (Pro) | 👑 Sovereign (Ultra) |
-|---|:---:|:---:|:---:|
-| **Target Workload** | Developer Workstation | Team & CI/CD Pipeline | Air-Gapped / Production Hypervisor |
-| **Primary Interface** | M2M MCP / CLI | M2M MCP / Proxy / CLI | Autonomous Daemon / MCP / CLI |
-| Smart Framework Filter | ✅ | ✅ | ✅ |
-| Stack Overflow Search | ✅ | ✅ | ✅ |
-| SHA-256 Response Cache | ✅ | ✅ | ✅ |
-| Secret Redaction (ReDoS-safe) | ✅ | ✅ | ✅ |
-| **Anti-Hardcode Secret Shield** | ✅ | ✅ | ✅ |
-| **AST Syntax Validation** (Tree-sitter) | ✅ | ✅ | ✅ |
-| Multi-Provider (OpenAI, Anthropic, Ollama) | ✅ | ✅ | ✅ |
-| **Bundled Agent Skills** | 2 Skills | 4 Skills Suite | Autonomous Daemon Sub-Cortex |
-| **Auto-Fixer** (AI patch → auto-apply) | ❌ | ✅ | ✅ |
-| **AST Smart Healer** (auto-repair syntax errors) | ❌ | ✅ | ✅ |
-| **Code Integrity Guard** (Anti-Halu & Anti-Ngide) | ❌ | ✅ | ✅ |
-| **Test Verification Loop** (auto-rollback on test fail) | ❌ | ✅ | ✅ |
-| **Multi-File Atomic Transactions** | ❌ | ✅ | ✅ |
-| **Time Machine Undo Engine** (1-sec revert) | ❌ | ✅ | ✅ |
-| **True Ectomy Engine** (99% token reduction) | ❌ | ✅ | ✅ |
-| **DB Inspector & Docker Diagnostics** | ❌ | ✅ | ✅ |
-| **`--benchmark` Mode** | ❌ | ✅ | ✅ |
-| **Zero-LLM Autonomous APR** (Local Repair) | ❌ | ❌ | ✅ |
-| **Dynamic Immune Clustering** | ❌ | ❌ | ✅ |
-| **Backward Program Slicing (PDG)** | ❌ | ❌ | ✅ |
-| **Property-Based Invariant Fuzzing** | ❌ | ❌ | ✅ |
-| **Crash Interception Daemon** | ❌ | ❌ | ✅ |
+| Feature | 🗡️ Razor (OSS) | 🔬 Sentinel (Pro) |
+|---|:---:|:---:|
+| Smart Framework Filter | ✅ | ✅ |
+| Stack Overflow Search | ✅ | ✅ |
+| SHA-256 Response Cache | ✅ | ✅ |
+| Secret Redaction (ReDoS-safe) | ✅ | ✅ |
+| Anti-Hardcode Secret Shield | ✅ | ✅ |
+| AST Syntax Validation (Tree-sitter) | ✅ | ✅ |
+| Local Reverse Proxy (`--proxy`) | ✅ | ✅ |
+| MCP Server Mode (JSON-RPC) | ✅ | ✅ |
+| Multi-Provider (OpenAI, Claude, Ollama) | ✅ | ✅ |
+| Bundled Agent Skills | 2 Skills (Spec TDD & Fuzzer) | Full 4 Skills Suite |
+| Auto-Fixer (AI patch ➔ auto-apply) | ❌ | ✅ |
+| AST Smart Healer (auto-syntax fix) | ❌ | ✅ |
+| Code Integrity Guard (Anti-Halu & Anti-Ngide) | ❌ | ✅ |
+| Test Verification Loop (Auto-Rollback) | ❌ | ✅ |
+| Atomic Multi-File Transactions | ❌ | ✅ |
+| Time Machine Undo Engine (`--undo`) | ❌ | ✅ |
+| True Ectomy Engine (99% reduction) | ❌ | ✅ |
+| DB Inspector & Docker Diagnostics | ❌ | ✅ |
+| Reproducible `--benchmark` Mode | ❌ | ✅ |
 
-👉 **[Get Tokenectomy Sentinel on Gumroad ($9) →](https://tokenectomy.gumroad.com/l/kiznsu)**  
-👑 **Tokenectomy Sovereign is an air-gapped private autonomous hypervisor tier.**
+👉 **[Get Tokenectomy Sentinel on Gumroad ($9) →](https://tokenectomy.gumroad.com/l/kiznsu)**
 
 ---
 
