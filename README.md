@@ -12,7 +12,7 @@
 </p>
 
 > 🌐 **[Explore the Interactive Web Playground & Live Architecture →](https://tokenectomy.vercel.app)**  
-> 🛡️ **Need Autonomous Auto-Fix, Tree-sitter AST Healing, & Reverse Proxy? [Discover Tokenectomy Sentinel (Pro Edition) →](https://daffa2555.gumroad.com/l/tokenectomy-sentinel)**  
+> 🛡️ **Need Autonomous Auto-Fix, Tree-sitter AST Healing, & Reverse Proxy? [Discover Tokenectomy Sentinel (Pro Edition) →](https://tokenectomy.gumroad.com/l/kiznsu)**  
 > 🔀 **Pair with [Tokenectomy Git (OSS)](https://github.com/daffa2555/tokenectomy-git)** for autonomous Git fix branches & PR creation!  
 > 📊 **Full Historical Telemetry Receipts (25K ➔ 1M Lines):** Check out the transparent **[Tokenectomy Benchmark History](https://github.com/daffa2555/tokenectomy-bechmark-history)** repository.
 
@@ -93,7 +93,7 @@ To prove stability under enterprise workloads, we hammered **Tokenectomy Pro** w
 > 💡 **"Skeptical about these enterprise numbers? Don't take our word for it."**  
 > Every purchaser of Tokenectomy Pro receives the full, standalone benchmark and torture test suite (`tests/heavy_production_torture.rs`) bundled in the package. You can run `cargo test --release --test heavy_production_torture -- --nocapture` on your own infrastructure to verify every metric before deployment.
 
-👉 **[Get Tokenectomy Sentinel on Gumroad ($9) →](https://daffa2555.gumroad.com/l/tokenectomy-sentinel)** (Native binaries for Linux, macOS Apple Silicon, and Windows).
+👉 **[Get Tokenectomy Sentinel on Gumroad ($9) →](https://tokenectomy.gumroad.com/l/kiznsu)** (Native binaries for Linux, macOS Apple Silicon, and Windows).
 
 ---
 
@@ -322,7 +322,7 @@ Tokenectomy OSS includes 2 native **Antigravity & Coding Agent Skills** in `.age
 | **SRE Incident Commander Skill** (OOM 137 triage & 5-Whys RCA) | ❌ | **✅ Included** |
 | **Refactor Sentinel Skill** (Zero-regression blast radius refactor) | ❌ | **✅ Included** |
 
-👉 **[Get Tokenectomy Sentinel →](https://daffa2555.gumroad.com/l/tokenectomy-sentinel)**
+👉 **[Get Tokenectomy Sentinel →](https://tokenectomy.gumroad.com/l/kiznsu)**
 
 ---
 
