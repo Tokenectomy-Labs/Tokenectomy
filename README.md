@@ -1,7 +1,7 @@
 # Tokenectomy ⚡ — Autonomous Context Surgery & Secret Shield for AI Agents (M2M MCP Server)
 
 <p align="left">
-  <a href="https://tokenectomy.vercel.app"><img src="https://img.shields.io/badge/Website-tokenectomy.vercel.app-000000?style=flat&logo=vercel" alt="Website" /></a>
+  <a href="https://tokenectomy-web.vercel.app"><img src="https://img.shields.io/badge/Website-tokenectomy--web.vercel.app-000000?style=flat&logo=vercel" alt="Website" /></a>
   <a href="https://crates.io/crates/tokenectomy"><img src="https://img.shields.io/crates/v/tokenectomy.svg?logo=rust" alt="Crates.io" /></a>
   <a href="https://github.com/daffa2555/Tokenectomy/actions/workflows/ci.yml"><img src="https://github.com/daffa2555/Tokenectomy/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <a href="https://github.com/rustsec/advisory-db"><img src="https://img.shields.io/badge/Security-Audited%20(RustSec)-2ea44f?logo=rust" alt="Security" /></a>
@@ -11,7 +11,7 @@
   <a href="https://github.com/daffa2555/Tokenectomy"><img src="https://img.shields.io/github/stars/daffa2555/Tokenectomy?style=social" alt="GitHub Stars" /></a>
 </p>
 
-> 🌐 **[Explore the Interactive Web Playground & Live Architecture →](https://tokenectomy.vercel.app)**  
+> 🌐 **[Explore the Interactive Web Playground & Live Architecture →](https://tokenectomy-web.vercel.app)**  
 > 🛡️ **Need Autonomous Auto-Fix, Tree-sitter AST Healing, & Reverse Proxy? [Discover Tokenectomy Sentinel (Pro Edition) →](https://tokenectomy.gumroad.com/l/kiznsu)**  
 > 🔀 **Pair with [Tokenectomy Git (OSS)](https://github.com/daffa2555/tokenectomy-git)** for autonomous Git fix branches & PR creation!  
 > 📊 **Full Historical Telemetry Receipts (25K ➔ 1M Lines):** Check out the transparent **[Tokenectomy Benchmark History](https://github.com/daffa2555/tokenectomy-bechmark-history)** repository.
