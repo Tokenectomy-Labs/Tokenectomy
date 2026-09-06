@@ -1,4 +1,4 @@
-# Tokenectomy ⚡ — Autonomous Context Surgery & Secret Shield for AI Agents (M2M MCP Server)
+# Tokenectomy Razor 🗡️ — Autonomous Context Surgery & Secret Shield for AI Agents (M2M MCP Server)
 
 <p align="left">
   <a href="https://tokenectomy-web.vercel.app"><img src="https://img.shields.io/badge/Website-tokenectomy--web.vercel.app-000000?style=flat&logo=vercel" alt="Website" /></a>
@@ -12,22 +12,23 @@
 </p>
 
 > 🌐 **[Explore the Interactive Web Playground & Live Architecture →](https://tokenectomy-web.vercel.app)**  
-> 🛡️ **Need Autonomous Auto-Fix, Tree-sitter AST Healing, & Reverse Proxy? [Discover Tokenectomy Sentinel (Pro Edition) →](https://tokenectomy.gumroad.com/l/kiznsu)**  
+> 🔬 **Need Autonomous Auto-Fix, Tree-sitter AST Healing, & Reverse Proxy? [Discover Tokenectomy Sentinel (Pro Tier) →](https://tokenectomy.gumroad.com/l/kiznsu)**  
+> 👑 **Looking for Air-Gapped Zero-Human Autonomous Self-Healing? Tokenectomy Sovereign (Ultra Tier)** operates as an autonomous background hypervisor.  
 > 🔀 **Pair with [Tokenectomy Git (OSS)](https://github.com/daffa2555/tokenectomy-git)** for autonomous Git fix branches & PR creation!  
 > 📊 **Full Historical Telemetry Receipts (25K ➔ 1M Lines):** Check out the transparent **[Tokenectomy Benchmark History](https://github.com/daffa2555/tokenectomy-bechmark-history)** repository.
 
 
 <p align="center">
-  <img src="demo.gif" alt="Tokenectomy OSS Demo" width="100%" />
+  <img src="demo.gif" alt="Tokenectomy Razor Demo" width="100%" />
 </p>
 
-**Tokenectomy** is an agent-native **Machine-to-Machine (M2M) MCP server** built with Rust. Designed specifically as a background sidecar for autonomous coding agents (Claude Desktop, Cursor, Cline, Roo Code, Windsurf, Google Antigravity), it acts as an autonomous sub-cortex: surgically scrubbing 90%+ of internal framework noise (`node_modules`, `site-packages`, `.cargo/registry`) from error logs, auto-redacting sensitive credentials before cloud transmission, and enforcing AST syntax safety—**with zero human babysitting**.
+**Tokenectomy Razor 🗡️** (Community / OSS Tier) is an agent-native **Machine-to-Machine (M2M) MCP server** built with Rust. Designed specifically as an autonomous background sub-cortex for AI coding agents (Claude Desktop, Cursor, Cline, Roo Code, Windsurf, Google Antigravity), Razor surgically scrubs 90%+ of internal framework noise (`node_modules`, `site-packages`, `.cargo/registry`) from error logs, auto-redacts sensitive credentials before cloud transmission, and enforces AST syntax safety—**with zero human babysitting**.
 
 ```
                      ┌──────────────────┐
    Agent Error Dump  │   TOKENECTOMY    │      Clean Agent Context
-   (38K tokens) ───► │   🕵️‍♂️ OSS (M2M)  │ ───►  (2K tokens)  ───► LLM Brain
-                     │                  │
+   (38K tokens) ───► │     RAZOR 🗡️     │ ───►  (2K tokens)  ───► LLM Brain
+                     │  Community / OSS │
    node_modules/     │  🔍 Smart Filter │      Only YOUR code
    site-packages/    │  🛡️ Redact       │      + error message
    .cargo/registry/  │  💾 Cache        │      + StackOverflow refs
@@ -59,7 +60,7 @@ No buzzwords or artificial benchmarks. Every developer can verify the core funct
 > 🔍 **100% Transparent Benchmark History & Industry Standards (ISO/IEC 25010 & OWASP):**  
 > We track our complete scaling timeline (from 25K to 1 Million lines) and hardware telemetry logs in the **[tokenectomy-bechmark-history](https://github.com/daffa2555/tokenectomy-bechmark-history)** repository.
 
-### 🆓 Tokenectomy OSS (Community Edition) — Verifiable Heavy Stress Benchmark
+### 🗡️ Tokenectomy Razor (Community Edition) — Verifiable Heavy Stress Benchmark
 
 
 You don't need to buy anything to test this. Clone this repository right now and verify these heavy load benchmarks directly on your hardware:
@@ -78,9 +79,9 @@ You don't need to buy anything to test this. Clone this repository right now and
 > cargo test --release --test stress_benchmark -- --nocapture
 > ```
 
-### 👑 Tokenectomy Pro — Industrial-Grade Heavy Production Torture Benchmark
+### 🔬 Tokenectomy Sentinel (Pro Tier) — Industrial-Grade Heavy Production Torture Benchmark
 
-To prove stability under enterprise workloads, we hammered **Tokenectomy Pro** with sustained multi-million token traffic, a 10MB Kubernetes crash avalanche, and 250 parallel OS threads on a 12-Core Intel i5-1235U with Arch Linux:
+To prove stability under enterprise workloads, we hammered **Tokenectomy Sentinel** with sustained multi-million token traffic, a 10MB Kubernetes crash avalanche, and 250 parallel OS threads on a 12-Core Intel i5-1235U with Arch Linux:
 
 | Stress Vector | Tested Workload | Measured Kernel / CPU Telemetry | Status |
 |---|---|---|:---:|
@@ -93,7 +94,7 @@ To prove stability under enterprise workloads, we hammered **Tokenectomy Pro** w
 
 
 > 💡 **"Skeptical about these enterprise numbers? Don't take our word for it."**  
-> Every purchaser of Tokenectomy Pro receives the full, standalone benchmark and torture test suite (`tests/heavy_production_torture.rs`) bundled in the package. You can run `cargo test --release --test heavy_production_torture -- --nocapture` on your own infrastructure to verify every metric before deployment.
+> Every purchaser of Tokenectomy Sentinel receives the full, standalone benchmark and torture test suite (`tests/heavy_production_torture.rs`) bundled in the package. You can run `cargo test --release --test heavy_production_torture -- --nocapture` on your own infrastructure to verify every metric before deployment.
 
 👉 **[Get Tokenectomy Sentinel on Gumroad ($9) →](https://tokenectomy.gumroad.com/l/kiznsu)** (Native binaries for Linux, macOS Apple Silicon, and Windows).
 
@@ -113,7 +114,9 @@ cargo install tokenectomy
 git clone https://github.com/daffa2555/Tokenectomy.git
 cd Tokenectomy
 cargo build --release
-sudo cp target/release/tokenectomy /usr/local/bin/tkmy
+sudo cp target/release/tokenectomy-razor /usr/local/bin/razor
+# Optional alias for backward compatibility:
+sudo ln -sf /usr/local/bin/razor /usr/local/bin/tkmy
 ```
 
 ### ⚙️ Install via Smithery (for Claude Desktop)
@@ -126,10 +129,11 @@ npx -y @smithery/cli install tokenectomy --client claude
 
 ## 🔌 M2M Agent Setup (1-Minute Integration)
 
-Tokenectomy is architected to run silently between your AI Coding Agent and your repository over **JSON-RPC 2.0 stdio**. You configure it once, and your agent autonomously invokes Tokenectomy in the background during debugging and refactoring loops—**no manual copy-pasting or piping required**.
+Tokenectomy Razor is architected to run silently between your AI Coding Agent and your repository over **JSON-RPC 2.0 stdio**. You configure it once, and your agent autonomously invokes Tokenectomy Razor in the background during debugging and refactoring loops—**no manual copy-pasting or piping required**.
 
 ```bash
-tkmy --mcp
+razor --mcp
+# (or legacy alias: tkmy --mcp)
 ```
 
 ### Claude Desktop
@@ -140,7 +144,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 {
   "mcpServers": {
     "tokenectomy": {
-      "command": "tkmy",
+      "command": "razor",
       "args": ["--mcp"]
     }
   }
@@ -155,7 +159,7 @@ Add to `.cursor/mcp.json` in your project root:
 {
   "mcpServers": {
     "tokenectomy": {
-      "command": "tkmy",
+      "command": "razor",
       "args": ["--mcp"]
     }
   }
@@ -170,7 +174,7 @@ Add to your MCP settings (`settings.json` or `cline_mcp_settings.json`):
 {
   "mcpServers": {
     "tokenectomy": {
-      "command": "tkmy",
+      "command": "razor",
       "args": ["--mcp"]
     }
   }
@@ -180,7 +184,7 @@ Add to your MCP settings (`settings.json` or `cline_mcp_settings.json`):
 ### Google Antigravity CLI
 
 ```bash
-agy mcp add tokenectomy -- tkmy --mcp
+agy mcp add tokenectomy-razor -- razor --mcp
 ```
 
 ### 🤖 Available M2M MCP Tools
@@ -193,13 +197,13 @@ agy mcp add tokenectomy -- tkmy --mcp
  
 ### 🔀 Companion MCP Server: Tokenectomy Git
 
-Close the autonomous loop from error diagnosis all the way to a published GitHub Pull Request! Pair Tokenectomy with our official companion MCP server: **[Tokenectomy Git](https://github.com/daffa2555/tokenectomy-git)**.
+Close the autonomous loop from error diagnosis all the way to a published GitHub Pull Request! Pair Tokenectomy Razor with our official companion MCP server: **[Tokenectomy Git](https://github.com/daffa2555/tokenectomy-git)**.
 
 ```json
 {
   "mcpServers": {
     "tokenectomy": {
-      "command": "tkmy",
+      "command": "razor",
       "args": ["--mcp"]
     },
     "tokenectomy-git": {
@@ -219,16 +223,16 @@ Together, they enable your AI coding assistant to:
 
 ## 🛡️ AI Gateway Reverse Proxy Mode (Zero-Config Token Optimization)
 
-Want token reduction without configuring MCP tools? Tokenectomy can run as a **local AI Reverse Proxy Gateway**. It sits transparently between your IDE/agent and upstream LLM providers (OpenAI, Anthropic, Ollama, OpenRouter).
+Want token reduction without configuring MCP tools? Tokenectomy Razor can run as a **local AI Reverse Proxy Gateway**. It sits transparently between your IDE/agent and upstream LLM providers (OpenAI, Anthropic, Ollama, OpenRouter).
 
-Whenever your agent makes an API call, Tokenectomy intercepts the prompt payload, redacts sensitive credentials, and surgically purges internal framework noise before forwarding the request—streaming the LLM response back with sub-millisecond overhead.
+Whenever your agent makes an API call, Tokenectomy Razor intercepts the prompt payload, redacts sensitive credentials, and surgically purges internal framework noise before forwarding the request—streaming the LLM response back with sub-millisecond overhead.
 
 ```bash
 # Start Gateway Proxy forwarding to OpenAI
-tokenectomy --proxy --proxy-bind 127.0.0.1:8080 --upstream-url https://api.openai.com/v1
+razor --proxy --proxy-bind 127.0.0.1:8080 --upstream-url https://api.openai.com/v1
 
 # Or forward to a local Ollama instance
-tokenectomy --proxy --proxy-bind 127.0.0.1:8080 --upstream-url http://127.0.0.1:11434/v1
+razor --proxy --proxy-bind 127.0.0.1:8080 --upstream-url http://127.0.0.1:11434/v1
 ```
 
 ### Connect Any Agent or Tool in 1 Line:
@@ -258,30 +262,32 @@ Tokenectomy features zero-allocation regex & AST parsers tailored for production
 
 ## 🛠️ Standalone / Local CLI Mode (Optional)
 
-While Tokenectomy is architected for autonomous machine-to-machine agent operation, it also provides a standalone CLI binary if you want to pipe logs in CI/CD pipelines, local shell scripts, or manual debugging:
+While Tokenectomy Razor is architected for autonomous machine-to-machine agent operation, it also provides a standalone CLI binary (`razor`, backwards-compatible with `tkmy`) if you want to pipe logs in CI/CD pipelines, local shell scripts, or manual debugging:
 
 ### Pipe errors directly
 
 ```bash
+python3 app.py 2>&1 | razor
+cargo build 2>&1 | razor
+node server.js 2>&1 | razor
+# Or using legacy alias:
 python3 app.py 2>&1 | tkmy
-cargo build 2>&1 | tkmy
-node server.js 2>&1 | tkmy
 ```
 
 ### Read from a log file
 
 ```bash
-tkmy --file /var/log/app/error.log
+razor --file /var/log/app/error.log
 ```
 
 ### Advanced options
 
 ```bash
-tkmy --local-only            # 100% offline via Ollama ($0 cost)
-tkmy --provider openai       # Use OpenAI GPT-4o
-tkmy --provider anthropic    # Use Claude 3.5 Sonnet
-tkmy --context-lines 20      # Extract 20 lines of surrounding context
-tkmy --yes                   # Skip interactive prompts (CI/CD mode)
+razor --local-only            # 100% offline via Ollama ($0 cost)
+razor --provider openai       # Use OpenAI GPT-4o
+razor --provider anthropic    # Use Claude 3.5 Sonnet
+razor --context-lines 20      # Extract 20 lines of surrounding context
+razor --yes                   # Skip interactive prompts (CI/CD mode)
 ```
 
 ---
@@ -337,33 +343,37 @@ Tokenectomy OSS includes 2 native **Antigravity & Coding Agent Skills** in `.age
 
 ---
 
-## 🆓 vs 👑 — OSS vs Pro
+## ⚡ The Tokenonmix Trinity — Razor vs Sentinel vs Sovereign
 
-| Feature | OSS (Free) | Pro ($9) |
-|---|:---:|:---:|
-| Smart Framework Filter | ✅ | ✅ |
-| Stack Overflow Search | ✅ | ✅ |
-| SHA-256 Response Cache | ✅ | ✅ |
-| Secret Redaction (ReDoS-safe) | ✅ | ✅ |
-| **Anti-Hardcode Secret Shield** | ✅ | ✅ |
-| **AST Syntax Validation** (Tree-sitter) | ✅ | ✅ |
-| MCP Server Mode | ✅ | ✅ |
-| Multi-Provider (OpenAI, Anthropic, Ollama) | ✅ | ✅ |
-| **Bundled Agent Skills** | 2 Skills | **4 Full Skills Suite** |
-| **Auto-Fixer** (AI patch → auto-apply) | ❌ | ✅ |
-| **AST Smart Healer** (auto-repair syntax errors) | ❌ | ✅ |
-| **Code Integrity Guard** (Anti-Halu & Anti-Ngide) | ❌ | ✅ |
-| **Test Verification Loop** (auto-rollback on test fail) | ❌ | ✅ |
-| **Multi-File Atomic Transactions** | ❌ | ✅ |
-| **Time Machine Undo Engine** (1-sec revert via `tkmy --undo`) | ❌ | ✅ |
-| **True Ectomy Engine** (99% token reduction) | ❌ | ✅ |
-| **DB Inspector** (real TCP port probe) | ❌ | ✅ |
-| **Docker Diagnostics** (OOMKilled detection) | ❌ | ✅ |
-| **`--benchmark` Mode** | ❌ | ✅ |
-| **SRE Incident Commander Skill** (OOM 137 triage & 5-Whys RCA) | ❌ | **✅ Included** |
-| **Refactor Sentinel Skill** (Zero-regression blast radius refactor) | ❌ | **✅ Included** |
+| Feature | 🗡️ Razor (OSS) | 🔬 Sentinel (Pro) | 👑 Sovereign (Ultra) |
+|---|:---:|:---:|:---:|
+| **Target Workload** | Developer Workstation | Team & CI/CD Pipeline | Air-Gapped / Production Hypervisor |
+| **Primary Interface** | M2M MCP / CLI | M2M MCP / Proxy / CLI | Autonomous Daemon / MCP / CLI |
+| Smart Framework Filter | ✅ | ✅ | ✅ |
+| Stack Overflow Search | ✅ | ✅ | ✅ |
+| SHA-256 Response Cache | ✅ | ✅ | ✅ |
+| Secret Redaction (ReDoS-safe) | ✅ | ✅ | ✅ |
+| **Anti-Hardcode Secret Shield** | ✅ | ✅ | ✅ |
+| **AST Syntax Validation** (Tree-sitter) | ✅ | ✅ | ✅ |
+| Multi-Provider (OpenAI, Anthropic, Ollama) | ✅ | ✅ | ✅ |
+| **Bundled Agent Skills** | 2 Skills | 4 Skills Suite | Autonomous Daemon Sub-Cortex |
+| **Auto-Fixer** (AI patch → auto-apply) | ❌ | ✅ | ✅ |
+| **AST Smart Healer** (auto-repair syntax errors) | ❌ | ✅ | ✅ |
+| **Code Integrity Guard** (Anti-Halu & Anti-Ngide) | ❌ | ✅ | ✅ |
+| **Test Verification Loop** (auto-rollback on test fail) | ❌ | ✅ | ✅ |
+| **Multi-File Atomic Transactions** | ❌ | ✅ | ✅ |
+| **Time Machine Undo Engine** (1-sec revert) | ❌ | ✅ | ✅ |
+| **True Ectomy Engine** (99% token reduction) | ❌ | ✅ | ✅ |
+| **DB Inspector & Docker Diagnostics** | ❌ | ✅ | ✅ |
+| **`--benchmark` Mode** | ❌ | ✅ | ✅ |
+| **Zero-LLM Autonomous APR** (Local Repair) | ❌ | ❌ | ✅ |
+| **Dynamic Immune Clustering** | ❌ | ❌ | ✅ |
+| **Backward Program Slicing (PDG)** | ❌ | ❌ | ✅ |
+| **Property-Based Invariant Fuzzing** | ❌ | ❌ | ✅ |
+| **Crash Interception Daemon** | ❌ | ❌ | ✅ |
 
-👉 **[Get Tokenectomy Sentinel →](https://tokenectomy.gumroad.com/l/kiznsu)**
+👉 **[Get Tokenectomy Sentinel on Gumroad ($9) →](https://tokenectomy.gumroad.com/l/kiznsu)**  
+👑 **Tokenectomy Sovereign is an air-gapped private autonomous hypervisor tier.**
 
 ---
 
