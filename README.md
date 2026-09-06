@@ -38,7 +38,9 @@
 
 ## ✨ Key Features
 
-- **🔍 Smart Framework Filter** — Strips thousands of lines of noisy internal stack frames (`node_modules`, `site-packages`, `.cargo/registry`, `__pycache__`) and keeps only the code *you* wrote.
+- **🌐 Polyglot Trace Surgery** — Natively parses stack traces and crashes across **Rust, Python, Node.js/TypeScript/JSX, Golang, Java/Kotlin, C/C++ (ASan & GDB), and PHP (Laravel/Symfony)**, auto-filtering thousands of lines of framework dependency noise (`node_modules`, `site-packages`, `go/src`, `pkg/mod`, `.gradle`, `.m2`, `/usr/include`, `vendor`).
+- **🛡️ AI Gateway Reverse Proxy (`--proxy`)** — Intercepts OpenAI/Anthropic/Ollama API traffic locally (`127.0.0.1:8080`), surgically scrubbing prompt token waste and auto-redacting secrets with sub-millisecond latency before forwarding to upstream LLMs.
+- **🔍 Smart Framework Filter** — Strips thousands of lines of noisy internal stack frames and preserves strictly the lines of code *you* wrote.
 - **🌐 Stack Overflow Search** — Silently queries StackExchange APIs and injects top community solutions into the AI's context.
 - **⚡ SHA-256 Response Cache** — Identical errors hit local cache (24h TTL). Recurring CI/CD failures cost $0.00 in API calls.
 - **🛡️ Secret Redaction** — Regex engine strips API keys, AWS secrets, JWTs, and database connection strings before any data leaves your machine (ReDoS-safe, linear-time).
@@ -212,6 +214,45 @@ Together, they enable your AI coding assistant to:
 1. Scrub noisy error logs & redact credentials (`tokenectomy`)
 2. Generate an accurate fix patch
 3. Create a branch, commit files, and open a GitHub PR autonomously (`tokenectomy-git`)
+
+---
+
+## 🛡️ AI Gateway Reverse Proxy Mode (Zero-Config Token Optimization)
+
+Want token reduction without configuring MCP tools? Tokenectomy can run as a **local AI Reverse Proxy Gateway**. It sits transparently between your IDE/agent and upstream LLM providers (OpenAI, Anthropic, Ollama, OpenRouter).
+
+Whenever your agent makes an API call, Tokenectomy intercepts the prompt payload, redacts sensitive credentials, and surgically purges internal framework noise before forwarding the request—streaming the LLM response back with sub-millisecond overhead.
+
+```bash
+# Start Gateway Proxy forwarding to OpenAI
+tokenectomy --proxy --proxy-bind 127.0.0.1:8080 --upstream-url https://api.openai.com/v1
+
+# Or forward to a local Ollama instance
+tokenectomy --proxy --proxy-bind 127.0.0.1:8080 --upstream-url http://127.0.0.1:11434/v1
+```
+
+### Connect Any Agent or Tool in 1 Line:
+Point your agent's API base URL to localhost:
+```bash
+export OPENAI_BASE_URL="http://127.0.0.1:8080/v1"
+```
+Works out-of-the-box with **Cursor**, **Aider**, **Cline / Roo Code**, **Continue.dev**, **Open-Interpreter**, and any OpenAI SDK client!
+
+---
+
+### 🌐 Polyglot Ecosystem Support Matrix
+
+Tokenectomy features zero-allocation regex & AST parsers tailored for production backends:
+
+| Language | Ecosystems & Frameworks | Filtered Framework Noise |
+|---|---|---|
+| **Rust** | `tokio`, `actix-web`, `axum` | `.cargo/registry`, `.rustup`, `target/debug/build` |
+| **Python** | `Django`, `FastAPI`, `PyTorch` | `site-packages`, `dist-packages`, `venv`, `__pycache__` |
+| **TypeScript / JS** | `Next.js`, `Vite`, `Express`, `NestJS` | `node_modules`, `.next`, `dist`, webpack internals |
+| **Golang** | Goroutine panics, `Gin`, `Fiber` | `go/src` (stdlib), `go/pkg/mod`, `vendor` |
+| **Java / Kotlin** | `Spring Boot`, `Quarkus`, JVM exceptions | `.m2/repository`, `.gradle/caches`, `org.springframework` |
+| **C / C++** | GDB backtraces, AddressSanitizer (ASan) | `/usr/include`, `/usr/lib`, `vcpkg_installed` |
+| **PHP** | `Laravel`, `Symfony`, Fatal errors | `vendor/composer`, `vendor/symfony`, `vendor/laravel` |
 
 ---
 
