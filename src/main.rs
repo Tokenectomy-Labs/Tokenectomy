@@ -63,7 +63,7 @@ use std::io::IsTerminal;
             let prov_val = format!("{:?}", app_config.default_provider.clone().unwrap_or(ProviderChoice::Ollama)).to_lowercase();
             let ctx_val = format!("{} lines", context_lines);
             
-            let title = "   TOKENECTOMY AGENT v1.0.0 (AI DEBUGGER)   ";
+            let title = "   🗡️ TOKENECTOMY RAZOR v1.0.0 (COMMUNITY OSS) 🗡️   ";
             println!("╭{}╮", "─".repeat(70).yellow());
             println!("│{:^70}│", title.black().on_yellow().bold());
             println!("├{}┤", "─".repeat(70).yellow());
@@ -75,8 +75,8 @@ use std::io::IsTerminal;
             println!("│  {}       Provider: {}│", "| |    | |".green(), format!("{:<44}", prov_val).white());
             println!("│  {}       Context : {}│", "\\/\\__/\\/".green(), format!("{:<44}", ctx_val).white());
             println!("│                                                                      │");
-            println!("│             {}│", format!("{:<54}", "Features Activated").cyan().bold());
-            println!("│             {}│", format!("{:<54}", "Smart Filter, StackOverflow, Secret Redaction").white());
+            println!("│             {}│", format!("{:<54}", "Razor Features Activated").cyan().bold());
+            println!("│             {}│", format!("{:<54}", "Smart Filter, 95% Token Slicer, Secret Redaction, Proxy").white());
             
             let footer = "   READY FOR LOG INPUT   ";
             println!("├{}┤", "─".repeat(70).yellow());
@@ -85,7 +85,7 @@ use std::io::IsTerminal;
 
             // 3. Tip of the day
             let tips = [
-                "Combine with `|` to pipe errors directly: `npm run dev 2>&1 | tkmy`",
+                "Combine with `|` to pipe errors directly: `npm run dev 2>&1 | razor`",
                 "Use `/help` in the REPL to see all available slash commands.",
                 "Set `--yes` to auto-approve reading files outside the directory.",
                 "Ensure your Ollama daemon is running if you use local mode."
@@ -94,11 +94,11 @@ use std::io::IsTerminal;
             let tip = tips[(now as usize) % tips.len()];
             println!("{} {}\n", "✦ Tip:".bright_black().bold(), tip.bright_black());
 
-            println!("Welcome to Tokenectomy! Paste your error log or type {} for options.", "/help".cyan());
+            println!("Welcome to Tokenectomy Razor! Paste your error log or type {} for options.", "/help".cyan());
             
             let mut line = String::new();
             loop {
-                print!("tkmy> ");
+                print!("razor> ");
                 std::io::stdout().flush().unwrap();
                 let n = io::stdin().read_line(&mut line)?;
                 if n == 0 { break; } // Ctrl+D

@@ -13,10 +13,11 @@ pub enum ProviderChoice {
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "tkmy",
+    name = "tokenectomy-razor",
+    alias = "razor",
     version,
-    about = "Tokenectomy CLI 🕵️‍♂️ - AI-Powered Debugger & MCP Server",
-    after_help = "EXAMPLES:\n  $ python3 app.py 2>&1 | tkmy\n  $ tkmy --file error.log\n  $ tkmy --local-only\n  $ tkmy --mcp\n"
+    about = "Tokenectomy Razor 🗡️ — Zero-Waste Token Slicer (Community OSS)",
+    after_help = "EXAMPLES:\n  $ python3 app.py 2>&1 | razor\n  $ razor --file error.log\n  $ razor --proxy\n  $ razor --mcp\n"
 )]
 pub struct Cli {
     #[arg(short, long, help = "File to read error log from (reads from stdin if not provided)")]
