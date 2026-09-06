@@ -1,20 +1,19 @@
-# Tokenectomy 🕵️‍♂️ — Autonomous Context Surgery & Secret Shield for AI Agents (M2M MCP Server)
+# Tokenectomy ⚡ — Autonomous Context Surgery & Secret Shield for AI Agents (M2M MCP Server)
 
-[![CI](https://github.com/daffa2555/Tokenectomy/actions/workflows/ci.yml/badge.svg)](https://github.com/daffa2555/Tokenectomy/actions/workflows/ci.yml)
-[![Crates.io](https://img.shields.io/crates/v/tokenectomy.svg?logo=rust)](https://crates.io/crates/tokenectomy)
-[![Security: Audited](https://img.shields.io/badge/Security-Audited%20(RustSec)-2ea44f?logo=rust)](https://github.com/rustsec/advisory-db)
-[![Built with Rust](https://img.shields.io/badge/Built%20with-Rust-orange?logo=rust)](https://www.rust-lang.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![MCP Compatible](https://img.shields.io/badge/MCP-Compatible-blue?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9zdmc+)](https://modelcontextprotocol.io)
-[![Glama](https://img.shields.io/badge/Glama-MCP%20Server-blueviolet)](https://glama.ai/mcp/servers)
-[![GitHub Stars](https://img.shields.io/github/stars/daffa2555/Tokenectomy?style=social)](https://github.com/daffa2555/Tokenectomy)
-[![Benchmark History](https://img.shields.io/badge/Benchmarks-100%25%20Verifiable%20History-blue?logo=github)]#(https://github.com/daffa2555/tokenectomy-bechmark-history)
+<p align="left">
+  <a href="https://tokenectomy.vercel.app"><img src="https://img.shields.io/badge/Website-tokenectomy.vercel.app-000000?style=flat&logo=vercel" alt="Website" /></a>
+  <a href="https://crates.io/crates/tokenectomy"><img src="https://img.shields.io/crates/v/tokenectomy.svg?logo=rust" alt="Crates.io" /></a>
+  <a href="https://github.com/daffa2555/Tokenectomy/actions/workflows/ci.yml"><img src="https://github.com/daffa2555/Tokenectomy/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://github.com/rustsec/advisory-db"><img src="https://img.shields.io/badge/Security-Audited%20(RustSec)-2ea44f?logo=rust" alt="Security" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License" /></a>
+  <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-Compatible-purple" alt="MCP" /></a>
+  <a href="https://github.com/daffa2555/tokenectomy-bechmark-history"><img src="https://img.shields.io/badge/Benchmarks-Verifiable%20History-blue?logo=github" alt="Benchmarks" /></a>
+  <a href="https://github.com/daffa2555/Tokenectomy"><img src="https://img.shields.io/github/stars/daffa2555/Tokenectomy?style=social" alt="GitHub Stars" /></a>
+</p>
 
-> 👑 **Looking for Auto-Fixer, AST Smart Healer, Anti-Halu, and Time Machine Undo?**
-> **[Get Tokenectomy Pro (Enterprise Edition) →](https://tokenectomy.gumroad.com/l/kiznsu)**
->
-> 🔀 **Pair with [Tokenectomy Git (OSS)](https://github.com/daffa2555/tokenectomy-git)** for autonomous Git PR creation!
->
+> 🌐 **[Explore the Interactive Web Playground & Live Architecture →](https://tokenectomy.vercel.app)**  
+> 🛡️ **Need Autonomous Auto-Fix, Tree-sitter AST Healing, & Reverse Proxy? [Discover Tokenectomy Sentinel (Pro Edition) →](https://daffa2555.gumroad.com/l/tokenectomy-sentinel)**  
+> 🔀 **Pair with [Tokenectomy Git (OSS)](https://github.com/daffa2555/tokenectomy-git)** for autonomous Git fix branches & PR creation!  
 > 📊 **Full Historical Telemetry Receipts (25K ➔ 1M Lines):** Check out the transparent **[Tokenectomy Benchmark History](https://github.com/daffa2555/tokenectomy-bechmark-history)** repository.
 
 
@@ -94,7 +93,7 @@ To prove stability under enterprise workloads, we hammered **Tokenectomy Pro** w
 > 💡 **"Skeptical about these enterprise numbers? Don't take our word for it."**  
 > Every purchaser of Tokenectomy Pro receives the full, standalone benchmark and torture test suite (`tests/heavy_production_torture.rs`) bundled in the package. You can run `cargo test --release --test heavy_production_torture -- --nocapture` on your own infrastructure to verify every metric before deployment.
 
-👉 **[Get Tokenectomy Pro on Gumroad ($9) →](https://tokenectomy.gumroad.com/l/kiznsu)** (Native binaries for Linux, macOS Apple Silicon, and Windows).
+👉 **[Get Tokenectomy Sentinel on Gumroad ($9) →](https://daffa2555.gumroad.com/l/tokenectomy-sentinel)** (Native binaries for Linux, macOS Apple Silicon, and Windows).
 
 ---
 
@@ -323,7 +322,7 @@ Tokenectomy OSS includes 2 native **Antigravity & Coding Agent Skills** in `.age
 | **SRE Incident Commander Skill** (OOM 137 triage & 5-Whys RCA) | ❌ | **✅ Included** |
 | **Refactor Sentinel Skill** (Zero-regression blast radius refactor) | ❌ | **✅ Included** |
 
-👉 **[Get Tokenectomy Pro →](https://tokenectomy.gumroad.com/l/kiznsu)**
+👉 **[Get Tokenectomy Sentinel →](https://daffa2555.gumroad.com/l/tokenectomy-sentinel)**
 
 ---
 
