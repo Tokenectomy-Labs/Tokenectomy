@@ -70,7 +70,7 @@ Found a bug, unexpected panic, or regex mismatch? [Open an issue](https://github
 - Label: `bug`
 
 ### ✨ Suggest Features & Parsers
-Have an idea for improved trace extraction, a new language parser, or agent integrations? [Open a discussion](https://github.com/daffa2555/Tokenectomy/discussions) or issue:
+Have an idea for improved trace extraction, a new language parser, or agent integrations? [Open an issue](https://github.com/daffa2555/Tokenectomy/issues):
 - Clear description of the use case.
 - Sample stack traces and expected pruned output.
 - Label: `enhancement`
@@ -174,8 +174,7 @@ cargo audit
 ---
 
 ## 🆘 Need Help?
-- 💬 General questions & ideas: [GitHub Discussions](https://github.com/daffa2555/Tokenectomy/discussions)
-- 🐛 Issues & bug reports: [GitHub Issues](https://github.com/daffa2555/Tokenectomy/issues)
+- 🐛 Issues, questions & feature requests: [GitHub Issues](https://github.com/daffa2555/Tokenectomy/issues)
 - 🔒 Security concerns: Please refer to [SECURITY.md](SECURITY.md)
 
 Thank you for helping make Tokenectomy Razor the fastest, leanest context surgery sub-cortex for AI coding agents! 🗡️
