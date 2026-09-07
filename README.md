@@ -14,7 +14,8 @@
 > 🌐 **[Interactive Web Playground & Live Architecture →](https://tokenectomy-web.vercel.app)**  
 > 🔬 **Need AST Auto-Healing, Test Rollback & Pro Engine? [Tokenectomy Sentinel (Pro Tier) →](https://tokenectomy.gumroad.com/l/kiznsu)**  
 > 🔀 **Pair with [Tokenectomy Git (OSS)](https://github.com/daffa2555/tokenectomy-git)** for autonomous Git fix branches & PR creation!  
-> 📊 **Telemetry Receipts (25K ➔ 1M Lines):** Check out the transparent **[Benchmark History](https://github.com/daffa2555/tokenectomy-bechmark-history)** repository.
+> 📊 **Telemetry Receipts (25K ➔ 1M Lines):** Check out the transparent **[Benchmark History](https://github.com/daffa2555/tokenectomy-bechmark-history)** repository.  
+> 🏷️ **Official MCP Registry:** mcp-name: io.github.daffa2555/razor
 
 
 <p align="center">
