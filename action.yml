@@ -1,5 +1,5 @@
 name: 'Tokenectomy Razor'
-author: 'Daffa Ananta (@daffa2555)'
+author: 'daffa2555'
 description: 'Surgically scrub framework frames (node_modules, site-packages) and redact credentials from CI logs for AI agents.'
 
 branding:
