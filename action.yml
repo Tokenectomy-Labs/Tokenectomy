@@ -3,7 +3,7 @@ author: 'daffa2555'
 description: 'Surgically scrub framework frames (node_modules, site-packages) and redact credentials from CI logs for AI agents.'
 
 branding:
-  icon: 'scissors'
+  icon: 'shield'
   color: 'blue'
 
 inputs:
