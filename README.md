@@ -7,6 +7,7 @@
   <a href="https://github.com/rustsec/advisory-db"><img src="https://img.shields.io/badge/Security-Audited%20(RustSec)-2ea44f?logo=rust" alt="Security" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License" /></a>
   <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-Compatible-purple" alt="MCP" /></a>
+  <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/Official%20MCP%20Registry-Active-brightgreen" alt="Official MCP Registry" /></a>
   <a href="https://github.com/daffa2555/tokenectomy-bechmark-history"><img src="https://img.shields.io/badge/Benchmarks-Verifiable%20History-blue?logo=github" alt="Benchmarks" /></a>
   <a href="https://github.com/daffa2555/Tokenectomy"><img src="https://img.shields.io/github/stars/daffa2555/Tokenectomy?style=social" alt="GitHub Stars" /></a>
 </p>
@@ -15,7 +16,7 @@
 > 🔬 **Need AST Auto-Healing, Test Rollback & Pro Engine? [Tokenectomy Sentinel (Pro Tier) →](https://tokenectomy.gumroad.com/l/kiznsu)**  
 > 🔀 **Pair with [Tokenectomy Git (OSS)](https://github.com/daffa2555/tokenectomy-git)** for autonomous Git fix branches & PR creation!  
 > 📊 **Telemetry Receipts (25K ➔ 1M Lines):** Check out the transparent **[Benchmark History](https://github.com/daffa2555/tokenectomy-bechmark-history)** repository.  
-> 🏷️ **Official MCP Registry:** mcp-name: io.github.daffa2555/razor
+> 🏷️ **Official MCP Registry:** Officially listed as [`io.github.daffa2555/razor`](https://registry.modelcontextprotocol.io/) (`mcp-name: io.github.daffa2555/razor`)
 
 
 <p align="center">
