@@ -32,6 +32,9 @@ pub struct Cli {
     #[arg(long, help = "Run as an MCP Server (JSON-RPC over stdio)")]
     pub mcp: bool,
 
+    #[arg(long, alias = "sanitize", help = "Surgically scrub framework frames and redact credentials, printing clean log to stdout")]
+    pub scrub: bool,
+
     #[arg(long, help = "Force using local provider (Ollama)")]
     pub local_only: bool,
 

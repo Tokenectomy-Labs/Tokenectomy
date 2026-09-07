@@ -136,3 +136,34 @@ async fn test_proxy_tcp_health_endpoint() {
     assert_eq!(json["status"], "ok");
     assert_eq!(json["service"], "tokenectomy-gateway");
 }
+
+#[test]
+fn test_scrub_prunes_dependency_frames_and_redacts_credentials() {
+    let dirty_log = r#"
+Error: Failed to connect to cluster
+    at queryMaster (/app/src/db.ts:15:2)
+    at node_modules/pg/lib/connection.js:84:11
+    at node_modules/@prisma/client/runtime.js:200:5
+    at site-packages/django/db/backends.py:40:1
+Connection string: postgresql://admin:SuperSecretPass@cluster.internal:5432/main
+AWS Key: AKIAIOSFODNN7EXAMPLE
+    "#;
+
+    let mut pruned = Vec::new();
+    for line in dirty_log.lines() {
+        if !tokenectomy::extractor::is_dependency_file(line) {
+            pruned.push(line);
+        }
+    }
+    let joined = pruned.join("\n");
+    let safe = tokenectomy::redact::redact_secrets(&joined);
+
+    assert!(!safe.contains("node_modules"));
+    assert!(!safe.contains("site-packages"));
+    assert!(!safe.contains("SuperSecretPass"));
+    assert!(!safe.contains("AKIAIOSFODNN7EXAMPLE"));
+    assert!(safe.contains("/app/src/db.ts:15:2"));
+    assert!(safe.contains("[CONNECTION_STRING_REDACTED]"));
+    assert!(safe.contains("[AWS_KEY_REDACTED]"));
+}
+

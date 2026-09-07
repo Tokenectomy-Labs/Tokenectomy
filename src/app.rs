@@ -25,6 +25,29 @@ pub async fn run_cli() -> anyhow::Result<()> {
         return proxy::run_reverse_proxy(&args.proxy_bind, &args.upstream_url).await;
     }
 
+    if args.scrub {
+        let mut raw = String::new();
+        if let Some(file_path) = &args.file {
+            raw = std::fs::read_to_string(file_path)?;
+        } else {
+            io::stdin().take(50 * 1024 * 1024).read_to_string(&mut raw)?;
+        }
+
+        let mut pruned = Vec::new();
+        for line in raw.lines() {
+            if !extractor::is_dependency_file(line) {
+                pruned.push(line);
+            }
+        }
+        let joined = pruned.join("\n");
+        let safe = redact::redact_secrets(&joined);
+        print!("{}", safe);
+        if !safe.ends_with('\n') {
+            println!();
+        }
+        return Ok(());
+    }
+
     let app_config = AppConfig::load();
 
     // Merge Config & Args (Args override Config)

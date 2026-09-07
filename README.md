@@ -8,6 +8,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License" /></a>
   <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-Compatible-purple" alt="MCP" /></a>
   <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/Official%20MCP%20Registry-Active-brightgreen" alt="Official MCP Registry" /></a>
+  <a href="https://github.com/marketplace/actions/tokenectomy-razor"><img src="https://img.shields.io/badge/GitHub%20Marketplace-Tokenectomy%20Razor-blue?logo=githubactions" alt="GitHub Marketplace" /></a>
   <a href="https://github.com/daffa2555/tokenectomy-bechmark-history"><img src="https://img.shields.io/badge/Benchmarks-Verifiable%20History-blue?logo=github" alt="Benchmarks" /></a>
   <a href="https://github.com/daffa2555/Tokenectomy"><img src="https://img.shields.io/github/stars/daffa2555/Tokenectomy?style=social" alt="GitHub Stars" /></a>
 </p>
@@ -215,6 +216,30 @@ Together, they enable your AI coding assistant to:
 
 ---
 
+## 🐙 GitHub Actions CI/CD (GitHub Marketplace Action)
+
+Run sub-millisecond context surgery and credential scrubbing directly in your automated GitHub Actions CI/CD workflows. Prevent sensitive keys from leaking to triage bots or pipeline artifacts while cutting 90%+ of framework token bloat:
+
+```yaml
+- name: Surgically Scrub CI Failure Log
+  if: failure()
+  uses: daffa2555/Tokenectomy@v1
+  with:
+    log-file: 'build.log'
+    output-file: 'sanitized.log'
+
+# The sanitized output is saved to 'sanitized.log' and ready for LLM triage!
+```
+
+| Input | Description | Default |
+|---|---|---|
+| `log-file` | Path to the raw build/test error log file to sanitize | `''` |
+| `log-content` | Direct raw string log content (used if `log-file` is empty) | `''` |
+| `output-file` | Target path to write the scrubbed output | `tokenectomy-sanitized.log` |
+| `version` | Target release version of Tokenectomy Razor binary | `v1.1.1` |
+
+---
+
 ## 🛡️ AI Gateway Reverse Proxy Mode (Zero-Config Token Optimization)
 
 Want token reduction without configuring MCP tools? Tokenectomy Razor can run as a **local AI Reverse Proxy Gateway**. It sits transparently between your IDE/agent and upstream LLM providers (OpenAI, Anthropic, Ollama, OpenRouter).
@@ -258,7 +283,20 @@ Tokenectomy Razor features zero-allocation compiled regex trace parsers tailored
 
 While Tokenectomy Razor is architected for autonomous machine-to-machine agent operation, it also provides a standalone CLI binary (`razor`, backwards-compatible with `tkmy`) if you want to pipe logs in CI/CD pipelines, local shell scripts, or manual debugging:
 
-### Pipe errors directly
+### Instant Sub-Millisecond Log Surgery (Zero-LLM Mode)
+
+Scrub framework frames and redact credentials locally without making any LLM API calls:
+
+```bash
+# Pipe directly:
+npm test 2>&1 | razor --scrub > sanitized.log
+cargo test 2>&1 | razor --sanitize > sanitized.log
+
+# Or scrub an existing file:
+razor --scrub --file /var/log/app/error.log > sanitized.log
+```
+
+### AI Diagnosis CLI Mode (Optional)
 
 ```bash
 python3 app.py 2>&1 | razor

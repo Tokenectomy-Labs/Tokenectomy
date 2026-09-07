@@ -1,0 +1,180 @@
+name: 'Tokenectomy Razor'
+author: 'Daffa Ananta (@daffa2555)'
+description: 'Surgically scrub framework frames (node_modules, site-packages) and redact credentials from CI logs for AI agents.'
+
+branding:
+  icon: 'scissors'
+  color: 'blue'
+
+inputs:
+  log-file:
+    description: 'Path to the raw error log or build output file to sanitize'
+    required: false
+    default: ''
+  log-content:
+    description: 'Direct log string content to sanitize (used if log-file is empty)'
+    required: false
+    default: ''
+  output-file:
+    description: 'Target path to write the sanitized log output'
+    required: false
+    default: 'tokenectomy-sanitized.log'
+  version:
+    description: 'Release version of the Tokenectomy Razor binary'
+    required: false
+    default: 'v1.1.2'
+
+outputs:
+  sanitized-file:
+    description: 'Path to the sanitized output file'
+    value: ${{ steps.run-tokenectomy.outputs.sanitized_file }}
+  sanitized-content:
+    description: 'Content of the sanitized log'
+    value: ${{ steps.run-tokenectomy.outputs.sanitized_content }}
+  original-lines:
+    description: 'Line count before sanitization'
+    value: ${{ steps.run-tokenectomy.outputs.original_lines }}
+  sanitized-lines:
+    description: 'Line count after sanitization'
+    value: ${{ steps.run-tokenectomy.outputs.sanitized_lines }}
+  lines-pruned:
+    description: 'Number of framework frames pruned'
+    value: ${{ steps.run-tokenectomy.outputs.lines_pruned }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Tokenectomy Razor Binary
+      id: setup-razor
+      shell: bash
+      run: |
+        set -euo pipefail
+        
+        OS="${RUNNER_OS:-Linux}"
+        ARCH="${RUNNER_ARCH:-X64}"
+        VERSION="${{ inputs.version }}"
+        
+        case "$OS" in
+          Linux)
+            PLATFORM="linux-amd64"
+            BIN_NAME="razor"
+            ;;
+          macOS)
+            if [ "$ARCH" = "ARM64" ]; then
+              PLATFORM="macos-arm64"
+            else
+              PLATFORM="macos-intel"
+            fi
+            BIN_NAME="razor"
+            ;;
+          Windows)
+            PLATFORM="windows-amd64.exe"
+            BIN_NAME="razor.exe"
+            ;;
+          *)
+            echo "::error::Unsupported OS: $OS"
+            exit 1
+            ;;
+        esac
+
+        BIN_DIR="${HOME}/.tokenectomy/bin"
+        mkdir -p "$BIN_DIR"
+        BIN_PATH="$BIN_DIR/$BIN_NAME"
+
+        if [ ! -f "$BIN_PATH" ]; then
+          echo "⬇️ Downloading Tokenectomy Razor ($VERSION) for $PLATFORM..."
+          URL="https://github.com/daffa2555/Tokenectomy/releases/download/${VERSION}/razor-${PLATFORM}"
+          if curl -fsSL -o "$BIN_PATH" "$URL"; then
+            chmod +x "$BIN_PATH"
+            echo "✅ Successfully downloaded Tokenectomy Razor binary."
+          else
+            echo "::warning::Could not download release binary. Falling back to local/cargo razor if present."
+          fi
+        fi
+
+        if [ -x "$BIN_PATH" ]; then
+          echo "RAZOR_BIN=$BIN_PATH" >> "$GITHUB_ENV"
+        elif command -v razor >/dev/null 2>&1; then
+          echo "RAZOR_BIN=$(command -v razor)" >> "$GITHUB_ENV"
+        else
+          echo "::error::Tokenectomy Razor binary not found."
+          exit 1
+        fi
+
+    - name: Execute Tokenectomy Surgery
+      id: run-tokenectomy
+      shell: bash
+      run: |
+        set -euo pipefail
+        
+        LOG_FILE="${{ inputs.log-file }}"
+        LOG_CONTENT="${{ inputs.log-content }}"
+        OUT_FILE="${{ inputs.output-file }}"
+        
+        TMP_INPUT="/tmp/tokenectomy_raw_input.log"
+        if [ -n "$LOG_FILE" ] && [ -f "$LOG_FILE" ]; then
+          cp "$LOG_FILE" "$TMP_INPUT"
+        elif [ -n "$LOG_CONTENT" ]; then
+          printf "%s\n" "$LOG_CONTENT" > "$TMP_INPUT"
+        else
+          echo "::error::Either 'log-file' or 'log-content' must be provided."
+          exit 1
+        fi
+
+        ORIG_LINES=$(wc -l < "$TMP_INPUT" | tr -d ' ')
+        
+        echo "🗡️ Performing sub-millisecond log surgery with Tokenectomy Razor..."
+        
+        if "$RAZOR_BIN" --help 2>&1 | grep -q -- "--scrub"; then
+          "$RAZOR_BIN" --scrub --file "$TMP_INPUT" > "$OUT_FILE"
+        else
+          JSON_RPC_REQ=$(python3 -c "
+import json, sys
+with open('$TMP_INPUT', 'r', errors='ignore') as f:
+    content = f.read()
+req = {
+    'jsonrpc': '2.0',
+    'id': 1,
+    'method': 'tools/call',
+    'params': {
+        'name': 'get_error_context',
+        'arguments': {'log': content, 'context_lines': 5}
+    }
+}
+print(json.dumps(req))
+")
+          CLEAN_OUTPUT=$(printf "%s\n" "$JSON_RPC_REQ" | "$RAZOR_BIN" --mcp 2>/dev/null | python3 -c "
+import json, sys
+for line in sys.stdin:
+    line = line.strip()
+    if not line: continue
+    try:
+        data = json.loads(line)
+        if 'result' in data and 'content' in data['result']:
+            text = data['result']['content'][0]['text']
+            print(text)
+            break
+    except Exception:
+        pass
+")
+          printf "%s\n" "$CLEAN_OUTPUT" > "$OUT_FILE"
+        fi
+
+        SAN_LINES=$(wc -l < "$OUT_FILE" | tr -d ' ')
+        PRUNED_LINES=$(( ORIG_LINES > SAN_LINES ? ORIG_LINES - SAN_LINES : 0 ))
+
+        echo "✅ Surgery complete: $ORIG_LINES lines -> $SAN_LINES lines ($PRUNED_LINES lines pruned)."
+        
+        echo "sanitized_file=$OUT_FILE" >> "$GITHUB_OUTPUT"
+        echo "original_lines=$ORIG_LINES" >> "$GITHUB_OUTPUT"
+        echo "sanitized_lines=$SAN_LINES" >> "$GITHUB_OUTPUT"
+        echo "lines_pruned=$PRUNED_LINES" >> "$GITHUB_OUTPUT"
+
+        FILESIZE=$(wc -c < "$OUT_FILE" | tr -d ' ')
+        if [ "$FILESIZE" -lt 20480 ]; then
+          {
+            echo "sanitized_content<<EOF"
+            cat "$OUT_FILE"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+        fi
