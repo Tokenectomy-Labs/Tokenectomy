@@ -48,13 +48,13 @@ pub async fn run_cli() -> anyhow::Result<()> {
 /_/  \____/_/|_|\___/_/ /_/\___/\___/\__/\____/_/ /_/ /_/\__, /  
                                                         /____/   "#;
             println!("{}", banner.yellow().bold());
-            println!("{:>70}", "v1.0.0 | AI-Powered Debugger".bright_black());
+            println!("{:>70}", "v1.1.0 | AI-Powered Debugger".bright_black());
             
             // 2. Dashboard with Bug ASCII Art & Solid Background Colors
             let prov_val = format!("{:?}", app_config.default_provider.clone().unwrap_or(ProviderChoice::Ollama)).to_lowercase();
             let ctx_val = format!("{} lines", context_lines);
             
-            let title = "   🗡️ TOKENECTOMY RAZOR v1.0.0 (COMMUNITY OSS) 🗡️   ";
+            let title = "   🗡️ TOKENECTOMY RAZOR v1.1.0 (COMMUNITY OSS) 🗡️   ";
             println!("╭{}╮", "─".repeat(70).yellow());
             println!("│{:^70}│", title.black().on_yellow().bold());
             println!("├{}┤", "─".repeat(70).yellow());

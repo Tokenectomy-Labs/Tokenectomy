@@ -113,7 +113,7 @@ pub async fn run_reverse_proxy(bind_addr: &str, upstream_url: &str) -> anyhow::R
 
             // Health check endpoint
             if path == "/health" || path == "/v1/health" {
-                let resp = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"status\":\"ok\",\"service\":\"tokenectomy-gateway\",\"version\":\"1.0.0\"}\r\n";
+                let resp = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"status\":\"ok\",\"service\":\"tokenectomy-gateway\",\"version\":\"1.1.0\"}\r\n";
                 let _ = socket.write_all(resp.as_bytes()).await;
                 return;
             }
