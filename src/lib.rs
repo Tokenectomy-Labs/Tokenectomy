@@ -4,8 +4,7 @@
 //!
 //! Designed specifically for autonomous coding assistants (**Claude Desktop**, **Cursor**, **Cline**, **Roo Code**, **Windsurf**, and **Google Antigravity**),
 //! Tokenectomy operates silently as a background sidecar. It intercepts noisy framework errors, strips 90%+ of internal runtime frames
-//! (`node_modules`, `site-packages`, `.cargo/registry`), auto-redacts sensitive credentials (JWTs, database URLs, API keys),
-//! and validates code syntax via Tree-sitter AST validation before prompt transmission.
+//! (`node_modules`, `site-packages`, `.cargo/registry`), and auto-redacts sensitive credentials (JWTs, database URLs, API keys) before prompt transmission.
 //!
 //! ## Key Capabilities for AI Coding Agents
 //! - **Log Surgery**: Reduces massive 38K token error dumps down to <2K tokens, preserving only user-written code.
@@ -21,6 +20,9 @@
 //! let sanitized = redact_secrets(raw_log);
 //! assert!(sanitized.contains("[CONNECTION_STRING_REDACTED]"));
 //! ```
+
+pub mod app;
+pub use crate::app::run_cli;
 
 pub mod cache;
 pub mod cli;

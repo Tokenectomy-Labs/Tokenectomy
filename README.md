@@ -44,9 +44,8 @@
 - **🌐 Stack Overflow Search** — Silently queries StackExchange APIs and injects top community solutions into the AI's context.
 - **⚡ SHA-256 Response Cache** — Identical errors hit local cache (24h TTL). Recurring CI/CD failures cost $0.00 in API calls.
 - **🛡️ Secret Redaction** — Regex engine strips API keys, AWS secrets, JWTs, and database connection strings before any data leaves your machine (ReDoS-safe, linear-time).
-- **🔒 Anti-Hardcode Secret Shield** — Automatically detects and blocks AI patches that attempt to hardcode raw API keys, passwords, or credentials into your source code.
-- **📐 AST Syntax Validation** — In-memory Tree-sitter AST parser ensures AI patches never write broken syntax to your repository.
-- **🔒 Path Traversal Protection** — MCP file operations are canonicalized and locked to your current working directory.
+- **⚡ High-Throughput Stream Surgery** — Zero-allocation linear-time $O(N)$ evaluation handling 250,000+ lines in ~330ms without memory bloat.
+- **🔒 Path Traversal Protection** — MCP file operations are strictly canonicalized and locked within your workspace.
 - **🤖 MCP Server Mode** — Full JSON-RPC 2.0 over stdio. Works with Claude Desktop, Cursor, VS Code, Google Antigravity, and any MCP-compatible client.
 - **🔌 Multi-Provider** — Supports OpenAI, Anthropic, and Ollama (100% offline mode).
 
@@ -87,7 +86,8 @@ cargo install tokenectomy
 git clone https://github.com/daffa2555/Tokenectomy.git
 cd Tokenectomy
 cargo build --release
-sudo cp target/release/tokenectomy-razor /usr/local/bin/razor
+sudo cp target/release/razor /usr/local/bin/razor
+sudo cp target/release/tokenectomy /usr/local/bin/tokenectomy
 # Optional alias for backward compatibility:
 sudo ln -sf /usr/local/bin/razor /usr/local/bin/tkmy
 ```
@@ -293,10 +293,14 @@ max_context_chars = 10000
 
 ```
 src/
-├── main.rs          # Entry point, CLI args, REPL, pipeline orchestration
+├── lib.rs           # Core library interface
+├── app.rs           # CLI application runner & REPL
+├── main.rs          # `tokenectomy` binary entry point
+├── bin/             # Standalone binary aliases (`razor`, `tokenectomy-razor`)
 ├── mcp.rs           # JSON-RPC 2.0 over stdio MCP server
-├── extractor/       # Language-specific context extraction (Rust, Python, JS)
-├── provider/        # AI backends (OpenAI, Anthropic, Ollama, Mock)
+├── proxy.rs         # AI Gateway Reverse Proxy (TCP socket prompt compressor)
+├── extractor/       # Polyglot trace parsers (Rust, Python, JS/TS, Go, Java, C++, PHP)
+├── provider/        # AI backends (OpenAI, Anthropic, Ollama, Mock test provider)
 ├── redact.rs        # Secret redaction (linear-time regex, ReDoS-safe)
 ├── cache.rs         # SHA-256 response cache (24h TTL, 0700 perms)
 ├── search.rs        # Stack Overflow API integration
@@ -321,21 +325,21 @@ Tokenectomy OSS includes 2 native **Antigravity & Coding Agent Skills** in `.age
 | Feature | 🗡️ Razor (OSS) | 🔬 Sentinel (Pro) |
 |---|:---:|:---:|
 | Smart Framework Filter | ✅ | ✅ |
+| Polyglot Trace Surgery (7 Languages) | ✅ | ✅ |
+| Local Reverse Proxy Gateway (`--proxy`) | ✅ | ✅ |
 | Stack Overflow Search | ✅ | ✅ |
 | SHA-256 Response Cache | ✅ | ✅ |
 | Secret Redaction (ReDoS-safe) | ✅ | ✅ |
-| Anti-Hardcode Secret Shield | ✅ | ✅ |
-| AST Syntax Validation (Tree-sitter) | ✅ | ✅ |
-| Local Reverse Proxy (`--proxy`) | ✅ | ✅ |
 | MCP Server Mode (JSON-RPC) | ✅ | ✅ |
 | Multi-Provider (OpenAI, Claude, Ollama) | ✅ | ✅ |
 | Bundled Agent Skills | 2 Skills (Spec TDD & Fuzzer) | Full 4 Skills Suite |
-| Auto-Fixer (AI patch ➔ auto-apply) | ❌ | ✅ |
+| Anti-Hardcode Secret Shield | ❌ | ✅ |
+| AST Syntax Validation (Tree-sitter) | ❌ | ✅ |
 | AST Smart Healer (auto-syntax fix) | ❌ | ✅ |
 | Code Integrity Guard (Anti-Halu & Anti-Ngide) | ❌ | ✅ |
 | Test Verification Loop (Auto-Rollback) | ❌ | ✅ |
 | Atomic Multi-File Transactions | ❌ | ✅ |
-| Time Machine Undo Engine (`--undo`) | ❌ | ✅ |
+| Time Machine CAS Undo Engine (`--undo`) | ❌ | ✅ |
 | True Ectomy Engine (99% reduction) | ❌ | ✅ |
 | DB Inspector & Docker Diagnostics | ❌ | ✅ |
 | Reproducible `--benchmark` Mode | ❌ | ✅ |

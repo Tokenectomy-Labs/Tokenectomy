@@ -11,28 +11,24 @@ pub trait AiProvider {
     async fn explain(&self, log: &str, context: &str) -> Result<String>;
 }
 
+/// Offline testing / dry-run provider. Does not connect to an external LLM.
 pub struct MockProvider;
 
 #[async_trait]
 impl AiProvider for MockProvider {
-    async fn explain(&self, log: &str, _context: &str) -> Result<String> {
-        if log.contains("server.py") || log.contains("ZeroDivisionError") {
-            Ok(r#"💡 Root Cause Analysis:
-ZeroDivisionError detected in server.py:10
-The variable `active_users` evaluates to 0, causing division by zero inside `calculate_metrics()`.
-
-🔧 Recommended Fix:
-Guard division by zero with a fallback default:
-```python
-per_user = total_tokens / max(active_users, 1)
-```"#.to_string())
-        } else {
-            Ok(r#"💡 Root Cause Analysis:
-Unhandled exception detected in application execution.
-
-🔧 Recommended Fix:
-Validate input parameters and handle boundary conditions before execution."#.to_string())
-        }
+    async fn explain(&self, log: &str, context: &str) -> Result<String> {
+        let first_line = log.lines().find(|l| !l.trim().is_empty()).unwrap_or("Unknown error");
+        Ok(format!(
+            "💡 [OFFLINE TEST MOCK — No LLM Connected]\n\
+             Root Cause:\n\
+             Diagnostic test run for: {}\n\n\
+             Source Context Extracted:\n\
+             {} lines of local code provided.\n\n\
+             Solution:\n\
+             Configure an active LLM provider (Ollama, OpenAI, or Anthropic) in ~/.tokenectomy.toml or via --provider.",
+            first_line.trim(),
+            context.lines().count()
+        ))
     }
 }
 

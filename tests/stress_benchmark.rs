@@ -36,7 +36,7 @@ fn test_oss_heavy_stress_benchmark() {
 
     println!("\n{}", "=".repeat(85));
     println!("🧪 TOKENECTOMY OSS VERIFIABLE HEAVY STRESS BENCHMARK (100% REPRODUCIBLE IN OSS)");
-    println!("   Hardware: 12-Core Intel i5-1235U | OS: Arch Linux | Kernel Telemetry Active");
+    println!("   Hardware: 10-Core / 12-Thread Intel Core i5-1235U | OS: Arch Linux | Kernel Telemetry Active");
     println!("   Initial Baseline Process Memory (VmRSS): {:.2} MB", initial_rss);
     println!("{}", "=".repeat(85));
 
