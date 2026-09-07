@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile for Glama, Smithery, and Containerized MCP Execution
-FROM rust:1.85-slim as builder
+FROM rust:1-slim as builder
 
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
