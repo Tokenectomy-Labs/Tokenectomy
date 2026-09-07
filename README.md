@@ -1,4 +1,4 @@
-# Tokenectomy Razor 🗡️ — Autonomous Context Surgery & Secret Shield for AI Agents (M2M MCP Server)
+# Tokenectomy Razor 🗡️ — Autonomous Context Surgery & Secret Redaction for AI Agents (M2M MCP Server)
 
 <p align="left">
   <a href="https://tokenectomy-web.vercel.app"><img src="https://img.shields.io/badge/Website-tokenectomy--web.vercel.app-000000?style=flat&logo=vercel" alt="Website" /></a>
@@ -21,7 +21,7 @@
   <img src="demo.gif" alt="Tokenectomy Razor Demo" width="100%" />
 </p>
 
-**Tokenectomy Razor 🗡️** (Community / OSS Tier) is an agent-native **Machine-to-Machine (M2M) MCP server** built with Rust. Designed specifically as an autonomous background sub-cortex for AI coding agents (Claude Desktop, Cursor, Cline, Roo Code, Windsurf, Google Antigravity), Razor surgically scrubs 90%+ of internal framework noise (`node_modules`, `site-packages`, `.cargo/registry`) from error logs, auto-redacts sensitive credentials before cloud transmission, and enforces AST syntax safety—**with zero human babysitting**.
+**Tokenectomy Razor 🗡️** (Community / OSS Tier) is an agent-native **Machine-to-Machine (M2M) MCP server** built with Rust. Designed specifically as an autonomous background sub-cortex for AI coding agents (Claude Desktop, Cursor, Cline, Roo Code, Windsurf, Google Antigravity), Razor surgically scrubs 90%+ of internal framework noise (`node_modules`, `site-packages`, `.cargo/registry`) from error logs, auto-redacts sensitive credentials before cloud transmission, and provides sub-millisecond AI reverse proxying—**with zero human babysitting**.
 
 ```
                      ┌──────────────────┐
@@ -219,7 +219,7 @@ Works out-of-the-box with **Cursor**, **Aider**, **Cline / Roo Code**, **Continu
 
 ### 🌐 Polyglot Ecosystem Support Matrix
 
-Tokenectomy features zero-allocation regex & AST parsers tailored for production backends:
+Tokenectomy Razor features zero-allocation compiled regex trace parsers tailored for production backends:
 
 | Language | Ecosystems & Frameworks | Filtered Framework Noise |
 |---|---|---|
