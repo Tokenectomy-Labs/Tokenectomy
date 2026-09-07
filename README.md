@@ -98,6 +98,25 @@ sudo ln -sf /usr/local/bin/razor /usr/local/bin/tkmy
 npx -y @smithery/cli install tokenectomy --client claude
 ```
 
+### 🐳 Run via GitHub Container Registry (GHCR)
+
+Pull the multi-arch container image:
+```bash
+docker pull ghcr.io/daffa2555/razor:latest
+```
+
+Or configure your MCP client to run the containerized Razor server directly:
+```json
+{
+  "mcpServers": {
+    "tokenectomy": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "ghcr.io/daffa2555/razor:latest", "razor", "--mcp"]
+    }
+  }
+}
+```
+
 ---
 
 ## 🔌 M2M Agent Setup (1-Minute Integration)

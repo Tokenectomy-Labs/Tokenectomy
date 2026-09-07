@@ -5,14 +5,17 @@ WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 
 # Pre-cache dependencies
-RUN mkdir -p src && \
+RUN mkdir -p src/bin && \
+    touch src/lib.rs && \
     echo "fn main() {}" > src/main.rs && \
+    echo "fn main() {}" > src/bin/razor.rs && \
+    echo "fn main() {}" > src/bin/tokenectomy-razor.rs && \
     cargo build --release && \
     rm -rf src
 
 # Build actual application
 COPY src ./src
-RUN touch src/main.rs && cargo build --release
+RUN touch src/lib.rs src/main.rs src/bin/razor.rs src/bin/tokenectomy-razor.rs && cargo build --release
 
 # Minimal runtime image
 FROM debian:bookworm-slim
@@ -25,6 +28,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 COPY --from=builder /app/target/release/tokenectomy /usr/local/bin/tokenectomy
-RUN ln -s /usr/local/bin/tokenectomy /usr/local/bin/tkmy
+COPY --from=builder /app/target/release/razor /usr/local/bin/razor
+COPY --from=builder /app/target/release/tokenectomy-razor /usr/local/bin/tokenectomy-razor
+RUN ln -s /usr/local/bin/razor /usr/local/bin/tkmy
 
-ENTRYPOINT ["tokenectomy", "--mcp"]
+ENTRYPOINT ["razor", "--mcp"]
