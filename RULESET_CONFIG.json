@@ -2,7 +2,7 @@
   "rulesets": [
     {
       "name": "Master Branch Protection",
-      "description": "Production-grade protection for master branch",
+      "description": "Production-grade protection for master branch with GitHub Actions CI/CD",
       "enforcement": "active",
       "bypass_actors": [],
       "conditions": {
@@ -25,17 +25,16 @@
           "required_approving_review_count": 1
         },
         "required_status_checks": [
-          "continuous-integration/your-ci-tool"
+          "build",
+          "test",
+          "lint"
         ],
-        "restrict_force_pushes": true,
-        "code_scanning": false,
-        "code_quality": false,
-        "code_coverage": false
+        "restrict_force_pushes": true
       }
     },
     {
       "name": "Release Branch Protection",
-      "description": "Production-grade protection for release branches",
+      "description": "Production-grade protection for release branches with GitHub Actions CI/CD",
       "enforcement": "active",
       "bypass_actors": [],
       "conditions": {
@@ -58,13 +57,16 @@
           "required_approving_review_count": 1
         },
         "required_status_checks": [
-          "continuous-integration/your-ci-tool"
+          "build",
+          "test",
+          "lint"
         ],
-        "restrict_force_pushes": true,
-        "code_scanning": false,
-        "code_quality": false,
-        "code_coverage": false
+        "restrict_force_pushes": true
       }
     }
-  ]
+  ],
+  "notes": {
+    "github_actions_setup": "Status checks assume you have GitHub Actions workflows named: build, test, lint",
+    "customize": "Update 'required_status_checks' array dengan nama workflow/job Anda yang sebenarnya"
+  }
 }
