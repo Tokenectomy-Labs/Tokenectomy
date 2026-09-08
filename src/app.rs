@@ -22,7 +22,12 @@ pub async fn run_cli() -> anyhow::Result<()> {
     }
 
     if args.proxy {
-        return proxy::run_reverse_proxy(&args.proxy_bind, &args.upstream_url).await;
+        return proxy::run_reverse_proxy_configured(
+            &args.proxy_bind,
+            &args.upstream_url,
+            args.allow_remote,
+            args.proxy_token.as_deref(),
+        ).await;
     }
 
     if args.scrub {

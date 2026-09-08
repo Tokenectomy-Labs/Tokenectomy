@@ -55,4 +55,10 @@ pub struct Cli {
 
     #[arg(long, default_value = "https://api.openai.com/v1", help = "Upstream LLM base URL to forward requests to")]
     pub upstream_url: String,
+
+    #[arg(long, help = "Allow proxy to bind to non-loopback addresses (requires --proxy-token)")]
+    pub allow_remote: bool,
+
+    #[arg(long, env = "TOKENECTOMY_PROXY_TOKEN", help = "Authentication token for proxy (required when using --allow-remote)")]
+    pub proxy_token: Option<String>,
 }
