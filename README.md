@@ -187,9 +187,9 @@ agy mcp add tokenectomy-razor -- razor --mcp
 
 | Tool | Autonomous Agent Role |
 |------|-------------|
-| `get_error_context` | Performs deep log surgery: strips framework noise, redacts secrets, extracts source context and git diff |
+| `get_error_context` | Performs deep log surgery: strips framework noise, redacts secrets prior to parsing, extracts source context and git diff via `WorkspaceBoundary` |
 | `search_stack_overflow` | Searches Stack Overflow for a specific error (query is auto-sanitized of secrets) |
-| `apply_code_patch` | Applies a code patch to a file by search-and-replace |
+| `apply_code_patch` | Safely applies a patch within `WorkspaceBoundary` with language syntax verification (`cargo check`, `py_compile`, `node --check`) and automated rollback on failure (guaranteeing 0 dirty git diffs) |
  
 ### 🔀 Companion MCP Server: Tokenectomy Git
 
@@ -261,6 +261,14 @@ Point your agent's API base URL to localhost:
 export OPENAI_BASE_URL="http://127.0.0.1:8080/v1"
 ```
 Works out-of-the-box with **Cursor**, **Aider**, **Cline / Roo Code**, **Continue.dev**, **Open-Interpreter**, and any OpenAI SDK client!
+
+### 🔒 Proxy Hardening & Remote Deployment
+By default, the reverse proxy strictly binds to local loopback (`127.0.0.1`, `[::1]`). Binding to external network interfaces (`0.0.0.0`) requires explicit authorization and bearer token authentication:
+```bash
+# Protected remote gateway deployment with mandatory token authentication
+razor --proxy --proxy-bind 0.0.0.0:8080 --upstream-url https://api.openai.com/v1 --allow-remote --proxy-token "YOUR_SECURE_TOKEN"
+```
+Enforces strict resource bounds: `MAX_HEADER_SIZE` (64 KB), `MAX_BODY_SIZE` (10 MB), client/upstream timeouts (30s / 60s), and a 128-connection concurrency limit.
 
 ---
 

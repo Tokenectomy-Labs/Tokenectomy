@@ -22,29 +22,39 @@ Tokenectomy Razor is architected with uncompromising security-first principles f
 ### 1. **ReDoS Immunity ($O(N)$ Evaluation)** ✅
 - **Linear-Time Regex Evaluation**: All pattern matching executes via Rust's guaranteed linear-time finite automaton regex engine—immune to catastrophic backtracking.
 - **Hardware-Audited Proof**: 50,000-character malicious pathological payloads evaluated in **1.44 ms** with zero memory spikes (verified in release benchmark suite).
-- **Implication**: Algorithmic complexity attacks and regex-based Denial of Service (ReDoS) are mathematically impossible.
+- **Guaranteed Bound**: Rust's `regex` crate uses finite automata (DFA/NFA) providing strict linear-time guarantees $O(N)$ with respect to input length, preventing algorithmic complexity attacks and ReDoS vulnerabilities.
 
 ### 2. **Secret Redaction (Zero-Knowledge Invariant)** ✅
+- **Redaction Prior to Parsing**: Raw error logs and stack traces are scrubbed for credentials *before* context extraction and AST processing, ensuring secrets never enter memory ASTs or prompt representations.
 - **Zero Cloud Leakage**: All regex scanning and sanitization occurs 100% locally on your machine or private CI runner before any prompt or context is shared.
 - **Redaction Patterns**:
   - AWS Access Keys & Secret Keys (`AKIA...`, `aws_secret_access_key`)
   - GitHub / GitLab / Gitea Personal Access Tokens (PATs)
-  - OpenAI, Anthropic, and generic API keys (`sk-...`)
+  - OpenAI, Anthropic, and generic AI API keys (`sk-...`)
   - PostgreSQL, MySQL, Redis, MongoDB connection URIs
   - Slack & Discord Webhooks / Bot Tokens
   - JSON Web Tokens (JWTs) (`eyJ...`)
   - SSH / RSA / Ed25519 Private Keys
   - Database passwords and auth headers
 
-### 3. **Path Traversal Protection** ✅
-- **Canonicalized File Boundaries**: All MCP tool file operations resolve canonical paths strictly restricted to the workspace `CWD` and below.
-- **Directory Escape Prevention**: Forbidden directory traversal sequences (`../`, null bytes, symlink escapes) are rejected with deterministic error codes.
+### 3. **Workspace Boundary Enforcement (Single Security Perimeter)** ✅
+- **Centralized `WorkspaceBoundary`**: All filesystem operations (`read`, `write`, `resolve`, and context extraction) are mediated through a single, strict security boundary.
+- **Canonicalized Path Traversal Immunity**: Target paths and workspace roots are strictly canonicalized. Directory escapes (`../`), null-byte injection (`\0`), and out-of-boundary symlink traversals are rejected before any I/O occurs.
 
-### 4. **Memory Safety & Zero Allocations** ✅
+### 4. **Automated Patch Verification & 0 Dirty Diff Rollback** ✅
+- **Fail-Safe Patching (`apply_code_patch`)**: Any patch applied by autonomous agents creates an in-memory backup state and immediately triggers language-specific syntax validation (`cargo check`, `py_compile`, `node --check`).
+- **Deterministic Auto-Rollback**: If syntax or compilation verification fails, the original file is instantly restored, guaranteeing 0 dirty diffs in version control.
+
+### 5. **Network Proxy Hardening & Remote Mode Authentication** ✅
+- **Loopback Default Invariant**: Reverse proxy binds strictly to local loopback (`127.0.0.1`, `[::1]`) by default.
+- **Mandatory Remote Auth**: Binding to external interfaces (`0.0.0.0`) requires explicit `--allow-remote` flag AND a mandatory proxy bearer token (`--proxy-token` or `TOKENECTOMY_PROXY_TOKEN`).
+- **Resource Bounds & DoS Resistance**: Strict upper limits enforced: `MAX_HEADER_SIZE` (64 KB), `MAX_BODY_SIZE` (10 MB), client/upstream timeouts (30s / 60s), and concurrency throttling via asynchronous permits (max 128 concurrent connections).
+
+### 6. **Memory Safety & Zero Allocations** ✅
 - **Pure Rust Guarantee**: Zero buffer overflows, use-after-free, or data races guaranteed by the Rust compiler.
-- **Zero Unsafe Code**: No unvetted `unsafe` blocks in trace parsing or redaction paths.
+- **Zero Unsafe Code**: No unvetted `unsafe` blocks in trace parsing, workspace boundaries, or redaction paths.
 
-### 5. **Cryptographic Integrity** ✅
+### 7. **Cryptographic Integrity** ✅
 - **SHA-256 Cache Keying**: Content hashes and response caches use SHA-256 (not vulnerable non-cryptographic hashers).
 - **Secure File Permissions**: Temporary caches enforce strict POSIX permissions (`0700`).
 
