@@ -1,0 +1,70 @@
+{
+  "rulesets": [
+    {
+      "name": "Master Branch Protection",
+      "description": "Production-grade protection for master branch",
+      "enforcement": "active",
+      "bypass_actors": [],
+      "conditions": {
+        "ref_name": {
+          "include": ["master"],
+          "exclude": []
+        }
+      },
+      "rules": {
+        "creation": true,
+        "update": true,
+        "deletion": true,
+        "required_linear_history": true,
+        "required_deployments_to_succeed": false,
+        "required_signatures": true,
+        "pull_request_required": {
+          "dismiss_stale_reviews": true,
+          "require_code_owner_review": false,
+          "require_last_push_approval": false,
+          "required_approving_review_count": 1
+        },
+        "required_status_checks": [
+          "continuous-integration/your-ci-tool"
+        ],
+        "restrict_force_pushes": true,
+        "code_scanning": false,
+        "code_quality": false,
+        "code_coverage": false
+      }
+    },
+    {
+      "name": "Release Branch Protection",
+      "description": "Production-grade protection for release branches",
+      "enforcement": "active",
+      "bypass_actors": [],
+      "conditions": {
+        "ref_name": {
+          "include": ["release/*"],
+          "exclude": []
+        }
+      },
+      "rules": {
+        "creation": true,
+        "update": true,
+        "deletion": true,
+        "required_linear_history": true,
+        "required_deployments_to_succeed": false,
+        "required_signatures": true,
+        "pull_request_required": {
+          "dismiss_stale_reviews": true,
+          "require_code_owner_review": false,
+          "require_last_push_approval": false,
+          "required_approving_review_count": 1
+        },
+        "required_status_checks": [
+          "continuous-integration/your-ci-tool"
+        ],
+        "restrict_force_pushes": true,
+        "code_scanning": false,
+        "code_quality": false,
+        "code_coverage": false
+      }
+    }
+  ]
+}
