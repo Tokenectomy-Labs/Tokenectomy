@@ -1,0 +1,34 @@
+name: "✨ Feature / Trace Parser Request"
+description: "Suggest a new stack trace parser, framework filter, or agent integration"
+title: "[FEATURE]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We welcome requests for new language parsers, framework filters, and AI agent integrations!
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: "Feature or Parser Description"
+      description: "Describe the language, framework, or agent feature you would like Tokenectomy to support."
+      placeholder: "Add support for C# .NET stack trace parsing and NuGet cache noise reduction..."
+    validations:
+      required: true
+  - type: textarea
+    id: sample-trace
+    attributes:
+      label: "Sample Stack Trace / Log"
+      description: "Provide sample trace logs from this language/framework."
+      render: shell
+      placeholder: "Paste real trace lines here..."
+    validations:
+      required: false
+  - type: textarea
+    id: expected-pruned
+    attributes:
+      label: "Expected Pruned Output"
+      description: "What lines should be kept vs discarded?"
+      placeholder: "Keep user controller frames, discard runtime dependency frames..."
+    validations:
+      required: false
