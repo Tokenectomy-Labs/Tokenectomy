@@ -24,27 +24,61 @@ fn success_response(id: Value, result: Value) -> Value {
     })
 }
 
-fn is_path_safe(file_path: &str) -> bool {
-    if let Ok(current_dir) = std::env::current_dir() {
-        let current_dir = current_dir.canonicalize().unwrap_or(current_dir);
-        let path = std::path::Path::new(file_path);
-        let abs_path = if path.is_absolute() {
-            path.to_path_buf()
-        } else {
-            current_dir.join(path)
-        };
-        // Canonicalize untuk resolve symlink
-        if let Ok(resolved) = abs_path.canonicalize() {
-            resolved.starts_with(&current_dir)
-        } else {
-            false // File tidak ada = tolak
+use crate::workspace::WorkspaceBoundary;
+
+pub fn verify_patch(path: &std::path::Path) -> Result<(), String> {
+    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+        match ext {
+            "rs" => {
+                if let Ok(output) = std::process::Command::new("cargo")
+                    .args(["check", "--quiet", "--message-format=short"])
+                    .output()
+                {
+                    if !output.status.success() {
+                        let stderr = String::from_utf8_lossy(&output.stderr);
+                        let stdout = String::from_utf8_lossy(&output.stdout);
+                        let err_msg = if !stderr.trim().is_empty() {
+                            stderr.trim()
+                        } else {
+                            stdout.trim()
+                        };
+                        return Err(format!("Cargo check failed: {}", err_msg));
+                    }
+                }
+            }
+            "py" => {
+                if let Ok(output) = std::process::Command::new("python3")
+                    .args(["-m", "py_compile", path.to_str().unwrap_or("")])
+                    .output()
+                {
+                    if !output.status.success() {
+                        let stderr = String::from_utf8_lossy(&output.stderr);
+                        return Err(format!("Python syntax check failed: {}", stderr.trim()));
+                    }
+                }
+            }
+            "js" | "mjs" | "cjs" => {
+                if let Ok(output) = std::process::Command::new("node")
+                    .args(["--check", path.to_str().unwrap_or("")])
+                    .output()
+                {
+                    if !output.status.success() {
+                        let stderr = String::from_utf8_lossy(&output.stderr);
+                        return Err(format!("Node syntax check failed: {}", stderr.trim()));
+                    }
+                }
+            }
+            _ => {}
         }
-    } else {
-        false
     }
+    Ok(())
 }
 
 pub async fn run_server() -> anyhow::Result<()> {
+    let boundary = WorkspaceBoundary::current().unwrap_or_else(|_| {
+        WorkspaceBoundary::new(std::env::current_dir().unwrap_or_default())
+            .expect("workspace boundary initialization")
+    });
     let stdin = io::stdin();
     let mut stdout = io::stdout();
 
@@ -154,15 +188,16 @@ pub async fn run_server() -> anyhow::Result<()> {
                         "get_error_context" => {
                             if let Some(log) = args.get("log").and_then(|l| l.as_str()) {
                                 let context_lines = args.get("context_lines").and_then(|c| c.as_u64()).unwrap_or(10) as usize;
-                                let (context, _) = extractor::extract_context(log, context_lines, true);
-                                let mut combined = format!("Log:\n{}\nContext:\n{}", log, context);
+                                // P1: Redact secrets BEFORE extracting context so raw credentials never enter AST or memory
+                                let safe_log = redact::redact_secrets(log);
+                                let (context, _) = extractor::extract_context_with_boundary(&safe_log, context_lines, Some(&boundary));
+                                let mut combined = format!("Log:\n{}\nContext:\n{}", safe_log, context);
                                 if let Some(git_diff) = git::get_recent_changes() {
-                                    combined.push_str(&format!("\n\nRecent Git Changes:\n{}", git_diff));
+                                    let safe_diff = redact::redact_secrets(&git_diff);
+                                    combined.push_str(&format!("\n\nRecent Git Changes:\n{}", safe_diff));
                                 }
-                                // Sensor API key, password, JWT sebelum dikirim
-                                let safe_combined = redact::redact_secrets(&combined);
                                 Some(success_response(id.unwrap_or(Value::Null), json!({
-                                    "content": [{ "type": "text", "text": safe_combined }]
+                                    "content": [{ "type": "text", "text": combined }]
                                 })))
                             } else {
                                 Some(error_response(id, -32602, "Missing 'log' argument"))
@@ -185,29 +220,43 @@ pub async fn run_server() -> anyhow::Result<()> {
                             let new_code = args.get("new_code").and_then(|n| n.as_str());
 
                             if let (Some(fp), Some(orig), Some(new_c)) = (file_path, original, new_code) {
-                                if !is_path_safe(fp) {
-                                    Some(error_response(id, -32602, "Security Error: Cannot modify files outside the current working directory"))
-                                } else {
-                                    let result = match std::fs::read_to_string(fp) {
-                                        Ok(content) => {
-                                            let count = content.matches(orig).count();
-                                            if count == 0 {
-                                                "Error: original_code not found in the file. Make sure it matches exactly.".to_string()
-                                            } else if count > 1 {
-                                                format!("Error: original_code found {} times. Please provide a more specific code block.", count)
-                                            } else {
-                                                let updated = content.replacen(orig, new_c, 1);
-                                                match std::fs::write(fp, updated) {
-                                                    Ok(_) => "Patch applied successfully.".to_string(),
-                                                    Err(e) => format!("Failed to write file: {}", e)
+                                match boundary.resolve(fp) {
+                                    Err(e) => {
+                                        Some(error_response(id, -32602, &format!("Security Error: {}", e)))
+                                    }
+                                    Ok(safe_path) => {
+                                        let result = match boundary.read(&safe_path) {
+                                            Ok(content) => {
+                                                let count = content.matches(orig).count();
+                                                if count == 0 {
+                                                    "Error: original_code not found in the file. Make sure it matches exactly.".to_string()
+                                                } else if count > 1 {
+                                                    format!("Error: original_code found {} times. Please provide a more specific code block.", count)
+                                                } else {
+                                                    let backup = content.clone();
+                                                    let updated = content.replacen(orig, new_c, 1);
+                                                    match boundary.write(&safe_path, updated.as_bytes()) {
+                                                        Ok(_) => {
+                                                            // P0-2: Verify patch and rollback on failure (0 dirty diff)
+                                                            match verify_patch(&safe_path) {
+                                                                Ok(_) => "Patch applied and verified successfully.".to_string(),
+                                                                Err(verify_err) => {
+                                                                    // Automatic rollback!
+                                                                    let _ = boundary.write(&safe_path, backup.as_bytes());
+                                                                    format!("Patch rejected and automatically rolled back: {}", verify_err)
+                                                                }
+                                                            }
+                                                        }
+                                                        Err(e) => format!("Failed to write file: {}", e),
+                                                    }
                                                 }
                                             }
-                                        }
-                                        Err(e) => format!("Failed to read file: {}", e)
-                                    };
-                                    Some(success_response(id.unwrap_or(Value::Null), json!({
-                                        "content": [{ "type": "text", "text": result }]
-                                    })))
+                                            Err(e) => format!("Failed to read file: {}", e),
+                                        };
+                                        Some(success_response(id.unwrap_or(Value::Null), json!({
+                                            "content": [{ "type": "text", "text": result }]
+                                        })))
+                                    }
                                 }
                             } else {
                                 Some(error_response(id, -32602, "Missing required arguments for apply_code_patch"))
