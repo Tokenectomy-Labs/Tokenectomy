@@ -49,6 +49,19 @@ pub fn is_dependency_file(path: &str) -> bool {
 }
 
 pub fn extract_context(log: &str, context_lines: usize, strict_cwd: bool) -> (String, Vec<String>) {
+    let boundary = if strict_cwd {
+        crate::workspace::WorkspaceBoundary::current().ok()
+    } else {
+        None
+    };
+    extract_context_with_boundary(log, context_lines, boundary.as_ref())
+}
+
+pub fn extract_context_with_boundary(
+    log: &str,
+    context_lines: usize,
+    boundary: Option<&crate::workspace::WorkspaceBoundary>,
+) -> (String, Vec<String>) {
     let parsers: Vec<Box<dyn TraceParser>> = vec![
         Box::new(rust::RustTraceParser),
         Box::new(python::PythonTraceParser),
@@ -61,7 +74,6 @@ pub fn extract_context(log: &str, context_lines: usize, strict_cwd: bool) -> (St
 
     let mut context_output = String::new();
     let mut extracted_files = Vec::new();
-    let current_dir = std::env::current_dir().unwrap_or_default();
 
     for parser in parsers {
         if parser.detect(log) {
@@ -73,21 +85,21 @@ pub fn extract_context(log: &str, context_lines: usize, strict_cwd: bool) -> (St
                     continue;
                 }
 
-                // Security: Strict CWD check for MCP mode
-                if strict_cwd {
-                    let path = std::path::Path::new(&loc.file);
-                    let abs_path = if path.is_absolute() {
-                        path.to_path_buf()
-                    } else {
-                        current_dir.join(path)
-                    };
-                    if !abs_path.starts_with(&current_dir) {
-                        log::debug!("Security Block: File outside CWD ignored: {}", loc.file);
+                // Security: Strict boundary check
+                if let Some(b) = boundary {
+                    if !b.is_safe(&loc.file) {
+                        log::debug!("Security Block: File outside workspace boundary ignored: {}", loc.file);
                         continue;
                     }
                 }
 
-                if let Ok(content) = std::fs::read_to_string(&loc.file) {
+                let content_opt = if let Some(b) = boundary {
+                    b.read(&loc.file).ok()
+                } else {
+                    std::fs::read_to_string(&loc.file).ok()
+                };
+
+                if let Some(content) = content_opt {
                     extracted_files.push(loc.file.clone());
                     
                     let lines: Vec<&str> = content.lines().collect();

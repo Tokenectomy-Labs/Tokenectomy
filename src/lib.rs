@@ -35,4 +35,5 @@ pub mod provider;
 pub mod proxy;
 pub mod redact;
 pub mod search;
+pub mod workspace;
 
