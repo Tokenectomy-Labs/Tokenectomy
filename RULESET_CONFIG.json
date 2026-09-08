@@ -25,9 +25,7 @@
           "required_approving_review_count": 1
         },
         "required_status_checks": [
-          "build",
-          "test",
-          "lint"
+          "CI"
         ],
         "restrict_force_pushes": true
       }
@@ -57,16 +55,19 @@
           "required_approving_review_count": 1
         },
         "required_status_checks": [
-          "build",
-          "test",
-          "lint"
+          "CI"
         ],
         "restrict_force_pushes": true
       }
     }
   ],
+  "github_actions_workflows": {
+    "CI": "ci.yml - Test suite dengan matrix (ubuntu, macos, windows) + Security Audit",
+    "Release Binaries": "release.yml - Build & upload binaries untuk setiap platform",
+    "Publish Docker Image to GHCR": "docker-publish.yml - Push multi-arch Docker images ke GitHub Container Registry"
+  },
   "notes": {
-    "github_actions_setup": "Status checks assume you have GitHub Actions workflows named: build, test, lint",
-    "customize": "Update 'required_status_checks' array dengan nama workflow/job Anda yang sebenarnya"
+    "status_checks": "Required status check: CI (mandatory untuk PR & push)",
+    "optional_checks": "Bisa tambah 'Release Binaries' & 'Publish Docker Image to GHCR' jika diperlukan strict requirement"
   }
 }
