@@ -9,8 +9,8 @@
 
 | Version | Security Updates | Status |
 |---------|-----------------|--------|
-| v1.1.2+ | ✅ Active | **Current Release** |
-| v1.1.0 – v1.1.1 | ✅ Critical Only | Supported |
+| v1.1.3+ | ✅ Active | **Current Release** |
+| v1.1.0 – v1.1.2 | ✅ Critical Only | Supported |
 | < v1.1.0 | ⚠️ End of Life | Upgrade recommended |
 
 ---

@@ -237,7 +237,7 @@ Run sub-millisecond context surgery and credential scrubbing directly in your au
 | `log-file` | Path to the raw build/test error log file to sanitize | `''` |
 | `log-content` | Direct raw string log content (used if `log-file` is empty) | `''` |
 | `output-file` | Target path to write the scrubbed output | `tokenectomy-sanitized.log` |
-| `version` | Target release version of Tokenectomy Razor binary | `v1.1.1` |
+| `version` | Target release version of Tokenectomy Razor binary | `v1.1.3` |
 
 ---
 
