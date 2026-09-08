@@ -167,3 +167,104 @@ AWS Key: AKIAIOSFODNN7EXAMPLE
     assert!(safe.contains("[AWS_KEY_REDACTED]"));
 }
 
+#[test]
+fn test_proxy_is_loopback() {
+    assert!(tokenectomy::proxy::is_loopback("127.0.0.1:8080"));
+    assert!(tokenectomy::proxy::is_loopback("127.0.0.1"));
+    assert!(tokenectomy::proxy::is_loopback("localhost:8080"));
+    assert!(tokenectomy::proxy::is_loopback("localhost"));
+    assert!(tokenectomy::proxy::is_loopback("[::1]:8080"));
+    assert!(tokenectomy::proxy::is_loopback("::1"));
+
+    assert!(!tokenectomy::proxy::is_loopback("0.0.0.0:8080"));
+    assert!(!tokenectomy::proxy::is_loopback("192.168.1.100:8080"));
+    assert!(!tokenectomy::proxy::is_loopback("10.0.0.1:8080"));
+}
+
+#[tokio::test]
+async fn test_proxy_remote_bind_security_guards() {
+    // 1. Binding to non-loopback without allow_remote should fail
+    let res = tokenectomy::proxy::run_reverse_proxy_configured("0.0.0.0:18991", "http://127.0.0.1:11434", false, None).await;
+    assert!(res.is_err());
+    let err = res.err().unwrap().to_string();
+    assert!(err.contains("Security Violation"));
+    assert!(err.contains("--allow-remote"));
+
+    // 2. Binding to non-loopback with allow_remote=true but missing token should fail
+    let res2 = tokenectomy::proxy::run_reverse_proxy_configured("0.0.0.0:18991", "http://127.0.0.1:11434", true, None).await;
+    assert!(res2.is_err());
+    let err2 = res2.err().unwrap().to_string();
+    assert!(err2.contains("requires an authentication token"));
+}
+
+#[tokio::test]
+async fn test_proxy_bearer_auth_and_unauthorized_rejection() {
+    let bind_addr = "127.0.0.1:18096";
+    let auth_token = "my-secret-agent-token-12345";
+
+    tokio::spawn(async move {
+        let _ = tokenectomy::proxy::run_reverse_proxy_configured(
+            bind_addr,
+            "http://127.0.0.1:11434",
+            false,
+            Some(auth_token),
+        ).await;
+    });
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+    let client = reqwest::Client::new();
+
+    // 1. Health endpoint should remain accessible without token
+    let health_resp = client.get("http://127.0.0.1:18096/health").send().await.expect("Failed to call /health");
+    assert_eq!(health_resp.status(), 200);
+
+    // 2. Protected endpoint without token should return 401 Unauthorized
+    let unauth_resp = client.post("http://127.0.0.1:18096/v1/chat/completions")
+        .body("{}")
+        .send()
+        .await
+        .expect("Failed to call completions");
+    assert_eq!(unauth_resp.status(), 401);
+
+    // 3. Protected endpoint with invalid token should return 401 Unauthorized
+    let wrong_resp = client.post("http://127.0.0.1:18096/v1/chat/completions")
+        .header("Authorization", "Bearer wrong-token")
+        .body("{}")
+        .send()
+        .await
+        .expect("Failed to call completions with wrong token");
+    assert_eq!(wrong_resp.status(), 401);
+}
+
+#[test]
+fn test_verify_patch_and_auto_rollback_on_syntax_error() {
+    let temp_dir = std::env::temp_dir().join(format!("tokenectomy_verify_test_{}", std::process::id()));
+    let _ = std::fs::create_dir_all(&temp_dir);
+
+    // Create a valid Python file
+    let py_path = temp_dir.join("calc.py");
+    let valid_code = "def calculate_tax(subtotal: float) -> float:\n    return subtotal * 0.1\n";
+    std::fs::write(&py_path, valid_code).expect("Failed to write test file");
+
+    // 1. Verification of valid file passes
+    let verify_res = tokenectomy::mcp::verify_patch(&py_path);
+    assert!(verify_res.is_ok());
+
+    // 2. Simulate patch with syntax error (invalid Python)
+    let broken_code = "def calculate_tax(subtotal: float\n    return subtotal *\n";
+    // Simulate apply_code_patch: backup original, write patch, verify, rollback on fail
+    let backup = std::fs::read_to_string(&py_path).unwrap();
+    std::fs::write(&py_path, broken_code).unwrap();
+    
+    let check = tokenectomy::mcp::verify_patch(&py_path);
+    assert!(check.is_err(), "Broken syntax must fail verification");
+    
+    // Auto-rollback
+    std::fs::write(&py_path, &backup).unwrap();
+    let restored = std::fs::read_to_string(&py_path).unwrap();
+    assert_eq!(restored, valid_code, "File must be 100% restored with 0 dirty diff");
+
+    let _ = std::fs::remove_dir_all(&temp_dir);
+}
+
