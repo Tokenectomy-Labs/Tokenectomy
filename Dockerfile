@@ -1,23 +1,31 @@
-# Multi-stage Dockerfile for Glama, Smithery, and Containerized MCP Execution
-FROM rust:1-slim as builder
-
+# ============================================================
+# Multi-stage Dockerfile with cargo-chef for cached Rust builds
+# ============================================================
+# Stage 1: Chef — install cargo-chef
+FROM rust:1-slim AS chef
+RUN cargo install cargo-chef
 WORKDIR /app
+
+# Stage 2: Planner — analyze dependencies and create recipe
+FROM chef AS planner
 COPY Cargo.toml Cargo.lock ./
-
-# Pre-cache dependencies
-RUN mkdir -p src/bin && \
-    touch src/lib.rs && \
-    echo "fn main() {}" > src/main.rs && \
-    echo "fn main() {}" > src/bin/razor.rs && \
-    echo "fn main() {}" > src/bin/tokenectomy-razor.rs && \
-    cargo build --release && \
-    rm -rf src
-
-# Build actual application
 COPY src ./src
-RUN touch src/lib.rs src/main.rs src/bin/razor.rs src/bin/tokenectomy-razor.rs && cargo build --release
+RUN cargo chef prepare --recipe-path recipe.json
 
-# Minimal runtime image
+# Stage 3: Builder — cook dependencies (cached), then build app
+FROM chef AS builder
+
+# Cook dependencies first — this layer is cached as long as
+# Cargo.toml/Cargo.lock don't change. No full recompile!
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+
+# Now copy source and build — only your code recompiles
+COPY Cargo.toml Cargo.lock ./
+COPY src ./src
+RUN cargo build --release
+
+# Stage 4: Minimal runtime image
 FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
