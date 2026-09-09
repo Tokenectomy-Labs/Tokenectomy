@@ -2,6 +2,8 @@
 
 > **Fast, deterministic log surgery and secret redaction for AI coding agents — purge 90%+ framework noise, redact credentials with O(N) ReDoS immunity, sub-millisecond latency. Written in safe Rust.**
 
+*Tokenectomy (noun): **token** + **-ectomy** (surgical removal) — the precise excision of wasteful tokens from LLM context windows.*
+
 ### High-Performance Log Surgery & Secret Redaction Engine for AI Coding Agents
 
 <p align="left">
