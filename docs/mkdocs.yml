@@ -1,0 +1,67 @@
+site_name: Tokenectomy Razor
+site_description: "High-performance log surgery & secret redaction MCP server for AI coding agents. Rust-powered, ReDoS-immune, sub-millisecond latency."
+site_url: https://daffa2555.github.io/Tokenectomy
+repo_url: https://github.com/daffa2555/Tokenectomy
+repo_name: daffa2555/Tokenectomy
+edit_uri: edit/main/docs/docs/
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  icon:
+    repo: fontawesome/brands/github
+  custom_dir: overrides
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - MCP Integration: mcp-integration.md
+  - AI Gateway Proxy: proxy.md
+  - GitHub Actions: github-actions.md
+  - CLI Reference: cli.md
+  - Security: security.md
+  - Contributing: contributing.md
+  - Changelog: changelog.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/daffa2555/Tokenectomy
+    - icon: fontawesome/brands/npm
+      link: https://www.npmjs.com/package/tokenectomy-razor
+    - icon: fontawesome/brands/rust
+      link: https://crates.io/crates/tokenectomy

@@ -1,16 +1,19 @@
 # Tokenectomy Razor
 
+> **Fast, deterministic log surgery and secret redaction for AI coding agents — purge 90%+ framework noise, redact credentials with O(N) ReDoS immunity, sub-millisecond latency. Written in safe Rust.**
+
 ### High-Performance Log Surgery & Secret Redaction Engine for AI Coding Agents
 
 <p align="left">
-  <a href="https://tokenectomy-web.vercel.app"><img src="https://img.shields.io/badge/Website-tokenectomy--web.vercel.app-000000?style=flat&logo=vercel" alt="Website" /></a>
-  <a href="https://crates.io/crates/tokenectomy"><img src="https://img.shields.io/crates/v/tokenectomy.svg?logo=rust" alt="Crates.io" /></a>
-  <a href="https://www.npmjs.com/package/tokenectomy-razor"><img src="https://img.shields.io/npm/v/tokenectomy-razor.svg?logo=npm" alt="npm" /></a>
-  <a href="https://github.com/daffa2555/Tokenectomy/actions/workflows/ci.yml"><img src="https://github.com/daffa2555/Tokenectomy/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-  <a href="SECURITY.md"><img src="https://img.shields.io/badge/Security-Audited%20(RustSec)-2ea44f?logo=rust" alt="Security" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License" /></a>
-  <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/Official%20MCP%20Registry-io.github.daffa2555%2Frazor-brightgreen" alt="Official MCP Registry" /></a>
-  <a href="https://github.com/marketplace/actions/tokenectomy-razor"><img src="https://img.shields.io/badge/GitHub%20Marketplace-Tokenectomy%20Razor-blue?logo=githubactions" alt="GitHub Marketplace" /></a>
+  <a href="https://tokenectomy-web.vercel.app"><img src="https://img.shields.io/badge/Website-tokenectomy--web.vercel.app-000000?style=flat&logo=vercel" alt="Tokenectomy Razor official website" /></a>
+  <a href="https://crates.io/crates/tokenectomy"><img src="https://img.shields.io/crates/v/tokenectomy.svg?logo=rust" alt="Tokenectomy Razor crate version on crates.io" /></a>
+  <a href="https://www.npmjs.com/package/tokenectomy-razor"><img src="https://img.shields.io/npm/v/tokenectomy-razor.svg?logo=npm" alt="Tokenectomy Razor npm package version" /></a>
+  <a href="https://github.com/daffa2555/Tokenectomy/actions/workflows/ci.yml"><img src="https://github.com/daffa2555/Tokenectomy/actions/workflows/ci.yml/badge.svg" alt="Tokenectomy Razor CI build status" /></a>
+  <a href="SECURITY.md"><img src="https://img.shields.io/badge/Security-Audited%20(RustSec)-2ea44f?logo=rust" alt="Tokenectomy Razor RustSec security audit status" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="Tokenectomy Razor MIT License" /></a>
+  <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/Official%20MCP%20Registry-io.github.daffa2555%2Frazor-brightgreen" alt="Tokenectomy Razor on official MCP Registry" /></a>
+  <a href="https://github.com/marketplace/actions/tokenectomy-razor"><img src="https://img.shields.io/badge/GitHub%20Marketplace-Tokenectomy%20Razor-blue?logo=githubactions" alt="Tokenectomy Razor GitHub Actions Marketplace" /></a>
+  <a href="https://daffa2555.github.io/Tokenectomy"><img src="https://img.shields.io/badge/Docs-GitHub%20Pages-blue?logo=googledocs" alt="Tokenectomy Razor documentation site" /></a>
 </p>
 
 ---
@@ -501,6 +504,16 @@ Found a bug? Have a feature request? Want to add support for a new language?
 3. **Security:** See [SECURITY.md](SECURITY.md) for private vulnerability disclosure
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines.
+
+---
+
+## Resources
+
+- 📖 **[Documentation](https://daffa2555.github.io/Tokenectomy)** — Full guides, API reference, and integration tutorials
+- 📋 **[Changelog](CHANGELOG.md)** — Release history and notable changes
+- 🤝 **[Contributing](CONTRIBUTING.md)** — How to contribute, development workflow, and testing
+- 🔒 **[Security Policy](SECURITY.md)** — Vulnerability disclosure and audit details
+- 🏗️ **[Architecture](ARCHITECTURE.md)** — Internal design and system architecture
 
 ---
 

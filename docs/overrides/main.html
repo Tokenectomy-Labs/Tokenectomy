@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block extrahead %}
+  <!-- Primary Meta Tags -->
+  <meta name="title" content="Tokenectomy Razor — AI Log Surgery & Secret Redaction Engine">
+  <meta name="description" content="High-performance MCP server for AI coding agents. Purge 90%+ framework noise, redact secrets with O(N) ReDoS immunity. Written in safe Rust.">
+  <meta name="keywords" content="tokenectomy, mcp server, ai agent, log surgery, secret redaction, rust, model context protocol, claude, cursor, cline, antigravity, llm, ai coding">
+  <meta name="author" content="daffa2555">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://daffa2555.github.io/Tokenectomy/{{ page.url }}">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://daffa2555.github.io/Tokenectomy/{{ page.url }}">
+  <meta property="og:title" content="{{ page.title }} — Tokenectomy Razor">
+  <meta property="og:description" content="High-performance log surgery & secret redaction MCP server for AI coding agents. Rust-powered, ReDoS-immune, sub-millisecond latency.">
+  <meta property="og:image" content="https://raw.githubusercontent.com/daffa2555/Tokenectomy/main/demo.gif">
+  <meta property="og:site_name" content="Tokenectomy Razor">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://daffa2555.github.io/Tokenectomy/{{ page.url }}">
+  <meta name="twitter:title" content="{{ page.title }} — Tokenectomy Razor">
+  <meta name="twitter:description" content="High-performance log surgery & secret redaction MCP server for AI coding agents. Rust-powered, ReDoS-immune, sub-millisecond latency.">
+  <meta name="twitter:image" content="https://raw.githubusercontent.com/daffa2555/Tokenectomy/main/demo.gif">
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareSourceCode",
+    "name": "Tokenectomy Razor",
+    "description": "High-performance log surgery & secret redaction MCP server for AI coding agents",
+    "url": "https://github.com/daffa2555/Tokenectomy",
+    "codeRepository": "https://github.com/daffa2555/Tokenectomy",
+    "programmingLanguage": "Rust",
+    "license": "https://opensource.org/licenses/MIT",
+    "author": {
+      "@type": "Person",
+      "name": "daffa2555",
+      "url": "https://github.com/daffa2555"
+    },
+    "operatingSystem": "Cross-platform",
+    "applicationCategory": "DeveloperApplication"
+  }
+  </script>
+{% endblock %}
