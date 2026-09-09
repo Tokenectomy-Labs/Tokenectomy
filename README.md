@@ -78,13 +78,24 @@ Every developer can verify the core performance claims directly on their physica
 
 ## 📦 Installation
 
-### ⚡ Install via Cargo (crates.io)
+### ⚡ Instant via npx (Zero Dependencies, Recommended for AI Agents & MCP)
+
+No Rust compiler or manual build required:
+```bash
+npx -y tokenectomy-razor --mcp
+```
+Or install globally via npm:
+```bash
+npm install -g tokenectomy-razor
+```
+
+### 🦀 Install via Cargo (crates.io)
 
 ```bash
 cargo install tokenectomy
 ```
 
-### 🦀 Build from Source
+### 🛠️ Build from Source
 
 ```bash
 git clone https://github.com/daffa2555/Tokenectomy.git
@@ -127,11 +138,6 @@ Or configure your MCP client to run the containerized Razor server directly:
 
 Tokenectomy Razor is architected to run silently between your AI Coding Agent and your repository over **JSON-RPC 2.0 stdio**. You configure it once, and your agent autonomously invokes Tokenectomy Razor in the background during debugging and refactoring loops—**no manual copy-pasting or piping required**.
 
-```bash
-razor --mcp
-# (or legacy alias: tkmy --mcp)
-```
-
 ### Claude Desktop
 
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
@@ -140,12 +146,13 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 {
   "mcpServers": {
     "tokenectomy": {
-      "command": "razor",
-      "args": ["--mcp"]
+      "command": "npx",
+      "args": ["-y", "tokenectomy-razor", "--mcp"]
     }
   }
 }
 ```
+*(Or `"command": "razor"` if installed via Cargo / binary)*
 
 ### Cursor
 
@@ -155,8 +162,8 @@ Add to `.cursor/mcp.json` in your project root:
 {
   "mcpServers": {
     "tokenectomy": {
-      "command": "razor",
-      "args": ["--mcp"]
+      "command": "npx",
+      "args": ["-y", "tokenectomy-razor", "--mcp"]
     }
   }
 }
@@ -170,8 +177,8 @@ Add to your MCP settings (`settings.json` or `cline_mcp_settings.json`):
 {
   "mcpServers": {
     "tokenectomy": {
-      "command": "razor",
-      "args": ["--mcp"]
+      "command": "npx",
+      "args": ["-y", "tokenectomy-razor", "--mcp"]
     }
   }
 }
@@ -180,7 +187,7 @@ Add to your MCP settings (`settings.json` or `cline_mcp_settings.json`):
 ### Google Antigravity CLI
 
 ```bash
-agy mcp add tokenectomy-razor -- razor --mcp
+agy mcp add tokenectomy-razor -- npx -y tokenectomy-razor --mcp
 ```
 
 ### 🤖 Available M2M MCP Tools

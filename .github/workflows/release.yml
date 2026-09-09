@@ -57,3 +57,27 @@ jobs:
           files: dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-npm:
+    name: Publish npm Package
+    needs: [build]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Sync version with git tag
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          cd packages/tokenectomy-razor
+          npm version $VERSION --no-git-tag-version --allow-same-version || true
+      - name: Publish to npm
+        run: |
+          cd packages/tokenectomy-razor
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
