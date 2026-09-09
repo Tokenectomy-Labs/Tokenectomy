@@ -1,146 +1,106 @@
-# Tokenectomy Razor 🗡️ — Autonomous Context Surgery & Secret Redaction for AI Agents (M2M MCP Server)
+# Tokenectomy Razor
+
+### High-Performance Log Surgery & Secret Redaction Engine for AI Coding Agents
 
 <p align="left">
   <a href="https://tokenectomy-web.vercel.app"><img src="https://img.shields.io/badge/Website-tokenectomy--web.vercel.app-000000?style=flat&logo=vercel" alt="Website" /></a>
   <a href="https://crates.io/crates/tokenectomy"><img src="https://img.shields.io/crates/v/tokenectomy.svg?logo=rust" alt="Crates.io" /></a>
+  <a href="https://www.npmjs.com/package/tokenectomy-razor"><img src="https://img.shields.io/npm/v/tokenectomy-razor.svg?logo=npm" alt="npm" /></a>
   <a href="https://github.com/daffa2555/Tokenectomy/actions/workflows/ci.yml"><img src="https://github.com/daffa2555/Tokenectomy/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <a href="SECURITY.md"><img src="https://img.shields.io/badge/Security-Audited%20(RustSec)-2ea44f?logo=rust" alt="Security" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License" /></a>
-  <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-Compatible-purple" alt="MCP" /></a>
-  <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/Official%20MCP%20Registry-Active-brightgreen" alt="Official MCP Registry" /></a>
+  <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/Official%20MCP%20Registry-io.github.daffa2555%2Frazor-brightgreen" alt="Official MCP Registry" /></a>
   <a href="https://github.com/marketplace/actions/tokenectomy-razor"><img src="https://img.shields.io/badge/GitHub%20Marketplace-Tokenectomy%20Razor-blue?logo=githubactions" alt="GitHub Marketplace" /></a>
-  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-Welcome-brightgreen.svg" alt="PRs Welcome" /></a>
-  <a href="https://github.com/daffa2555/tokenectomy-bechmark-history"><img src="https://img.shields.io/badge/Benchmarks-Verifiable%20History-blue?logo=github" alt="Benchmarks" /></a>
-  <a href="https://github.com/daffa2555/Tokenectomy"><img src="https://img.shields.io/github/stars/daffa2555/Tokenectomy?style=social" alt="GitHub Stars" /></a>
 </p>
 
-> 🌐 **[Interactive Web Playground & Live Architecture →](https://tokenectomy-web.vercel.app)**  
-> 🔬 **Need AST Auto-Healing, Test Rollback & Pro Engine? [Tokenectomy Sentinel (Pro Tier) →](https://tokenectomy.gumroad.com/l/kiznsu)**  
-> 🔀 **Pair with [Tokenectomy Git (OSS)](https://github.com/daffa2555/tokenectomy-git)** for autonomous Git fix branches & PR creation!  
-> 📊 **Telemetry Receipts (25K ➔ 1M Lines):** Check out the transparent **[Benchmark History](https://github.com/daffa2555/tokenectomy-bechmark-history)** repository.  
-> 🏷️ **Official MCP Registry:** Officially listed as [`io.github.daffa2555/razor`](https://registry.modelcontextprotocol.io/) (`mcp-name: io.github.daffa2555/razor`)
-
-
-<p align="center">
-  <img src="demo.gif" alt="Tokenectomy Razor Demo" width="100%" />
-</p>
-
-**Tokenectomy Razor 🗡️** (Community / OSS Tier) is an agent-native **Machine-to-Machine (M2M) MCP server** built with Rust. Designed specifically as an autonomous background sub-cortex for AI coding agents (Claude Desktop, Cursor, Cline, Roo Code, Windsurf, Google Antigravity), Razor surgically scrubs 90%+ of internal framework noise (`node_modules`, `site-packages`, `.cargo/registry`) from error logs, auto-redacts sensitive credentials before cloud transmission, and provides sub-millisecond AI reverse proxying—**with zero human babysitting**.
+Tokenectomy Razor is an autonomous, machine-to-machine (M2M) Model Context Protocol (MCP) server and stream processing engine written in safe Rust. Engineered as a high-throughput background sub-cortex for AI coding assistants (Claude Desktop, Cursor, Cline, Roo Code, Windsurf, Google Antigravity), Razor purges 90%+ of redundant framework dependency frames (`node_modules`, `site-packages`, `.cargo/registry`) from execution traces, enforces zero-knowledge credential redaction ($O(N)$ ReDoS-immune), and operates with sub-millisecond latency.
 
 ```
-                     ┌──────────────────┐
-   Agent Error Dump  │   TOKENECTOMY    │      Clean Agent Context
-   (38K tokens) ───► │     RAZOR 🗡️     │ ───►  (2K tokens)  ───► LLM Brain
-                     │  Community / OSS │
-   node_modules/     │  🔍 Smart Filter │      Only YOUR code
-   site-packages/    │  🛡️ Redact       │      + error message
-   .cargo/registry/  │  💾 Cache        │      + StackOverflow refs
-                     └──────────────────┘
+                  ┌──────────────────────────────────────────────┐
+  Agent Error     │              TOKENECTOMY RAZOR               │    Sanitized Context
+  Dump (38K toks) │  - Polyglot Stack Frame Filter               │ ──►  (2K toks) ──► LLM
+ ────────────────►│  - Deterministic Secret Redactor (O(N))      │
+                  │  - SHA-256 Idempotency Cache (24h TTL)       │
+                  └──────────────────────────────────────────────┘
 ```
 
 ---
 
-## ✨ Key Features
+## Technical Highlights
 
-- **🌐 Polyglot Trace Surgery** — Natively parses stack traces and crashes across **Rust, Python, Node.js/TypeScript/JSX, Golang, Java/Kotlin, C/C++ (ASan & GDB), and PHP (Laravel/Symfony)**, auto-filtering thousands of lines of framework dependency noise (`node_modules`, `site-packages`, `go/src`, `pkg/mod`, `.gradle`, `.m2`, `/usr/include`, `vendor`).
-- **🛡️ AI Gateway Reverse Proxy (`--proxy`)** — Intercepts OpenAI/Anthropic/Ollama API traffic locally (`127.0.0.1:8080`), surgically scrubbing prompt token waste and auto-redacting secrets with sub-millisecond latency before forwarding to upstream LLMs.
-- **🔍 Smart Framework Filter** — Strips thousands of lines of noisy internal stack frames and preserves strictly the lines of code *you* wrote.
-- **🌐 Stack Overflow Search** — Silently queries StackExchange APIs and injects top community solutions into the AI's context.
-- **⚡ SHA-256 Response Cache** — Identical errors hit local cache (24h TTL). Recurring CI/CD failures cost $0.00 in API calls.
-- **🛡️ Secret Redaction** — Regex engine strips API keys, AWS secrets, JWTs, and database connection strings before any data leaves your machine (ReDoS-safe, linear-time).
-- **⚡ High-Throughput Stream Surgery** — Zero-allocation linear-time $O(N)$ evaluation handling 250,000+ lines in ~330ms without memory bloat.
-- **🔒 Path Traversal Protection** — MCP file operations are strictly canonicalized and locked within your workspace.
-- **🤖 MCP Server Mode** — Full JSON-RPC 2.0 over stdio. Works with Claude Desktop, Cursor, VS Code, Google Antigravity, and any MCP-compatible client.
-- **🔌 Multi-Provider** — Supports OpenAI, Anthropic, and Ollama (100% offline mode).
+- **Polyglot Trace Surgery**: In-memory parsing across Rust, Python, TypeScript/JavaScript, Go, Java/Kotlin, C/C++ (ASan & GDB), and PHP (Laravel/Symfony). Filters noisy dependency frames and isolates first-party source code.
+- **AI Gateway Reverse Proxy (`--proxy`)**: Transparently intercepts prompt streams on `127.0.0.1:8080`, performing real-time token excision and credential sanitization before upstream forwarding.
+- **Zero-Knowledge Secret Redaction**: Linear-time deterministic regex engine strips JWTs, API tokens, cloud access keys, and connection strings prior to network transmission.
+- **SHA-256 Idempotency Cache**: Stores deterministic responses with a 24-hour TTL. Repeated CI/CD or agent loop failures incur zero upstream API cost.
+- **Path Traversal Containment**: All MCP filesystem access is canonicalized and locked to the workspace root boundary (`CWD`).
+- **M2M Protocol Compliance**: Native JSON-RPC 2.0 stdio server compliant with the official Model Context Protocol specification.
 
 ---
 
-## 📊 Verifiable Real-World Performance Benchmark
+## Verifiable Benchmarks
 
-Every developer can verify the core performance claims directly on their physical machine:
+Performance metrics are hardware-grounded and reproducible via standalone benchmark suites:
 
-| Feature Under Test | Tested Heavy Input | Real Measured Outcome | Status |
+| Benchmark Target | Workload Under Test | Verified Measurement | Result |
 |---|---|---|:---:|
-| **Quarter-Million Log Redaction** | **250,000 lines (24.44 MB)** enterprise dump with DB URLs, API keys, JWTs | **333.49 ms (73.3 MB/sec, 749,652 lines/sec)**. 100% sanitized. | ✅ Verified |
-| **ReDoS Immunity** | 50,000-character malicious backtracking exploit string | **1.44 ms**. Linear $O(N)$ evaluation, 100% ReDoS immune. | ✅ Verified |
-| **High Concurrency Torture** | 100 concurrent OS threads hammering redaction & extractor | **100/100 in 27.35 ms (7,312.7 ops/sec)**. Zero race conditions. | ✅ Verified |
-| **Kernel Memory Footprint** | Peak Resident Memory during 250,000-line stress test | **76.24 MB VmRSS** via Linux `/proc/self/status`. Zero memory ballooning. | ✅ Verified |
+| **High-Volume Log Redaction** | 250,000 lines (24.44 MB) enterprise dump containing API keys and connection URIs | **333.49 ms (73.3 MB/sec, 749,652 lines/sec)** | Pass |
+| **ReDoS Resistance** | 50,000-character pathological backtracking string | **1.44 ms** (Linear $O(N)$ evaluation) | Pass |
+| **Thread Concurrency** | 100 concurrent OS threads executing simultaneous redaction and extraction | **100/100 completed in 27.35 ms (7,312 ops/sec)** | Pass |
+| **Kernel Memory Footprint** | Peak Resident Memory during 250,000-line continuous stress test | **76.24 MB VmRSS** via `/proc/self/status` | Pass |
 
-> 💡 **Verify on your own hardware:** Clone this repository and run the standalone benchmark:
+> **Reproduce locally:**
 > ```bash
 > cargo test --release --test stress_benchmark -- --nocapture
 > ```
 
-> 🔬 **Need enterprise workloads (1M+ lines, 250 threads, AST Smart Healer & test rollback)?**  
-> Check out **[Tokenectomy Sentinel (Pro Tier) on Gumroad ($9) →](https://tokenectomy.gumroad.com/l/kiznsu)**.
-
 ---
 
-## 📦 Installation
+## Installation
 
-### ⚡ Instant via npx (Zero Dependencies, Recommended for AI Agents & MCP)
+### Method 1: Instant via npx (Recommended for MCP Clients)
 
-No Rust compiler or manual build required:
+No Rust toolchain, native compilation, or manual path setup required:
+
 ```bash
 npx -y tokenectomy-razor --mcp
 ```
+
 Or install globally via npm:
+
 ```bash
 npm install -g tokenectomy-razor
 ```
 
-### 🦀 Install via Cargo (crates.io)
+### Method 2: Cargo (crates.io)
 
 ```bash
 cargo install tokenectomy
 ```
 
-### 🛠️ Build from Source
+### Method 3: Build from Source
 
 ```bash
 git clone https://github.com/daffa2555/Tokenectomy.git
 cd Tokenectomy
 cargo build --release
 sudo cp target/release/razor /usr/local/bin/razor
-sudo cp target/release/tokenectomy /usr/local/bin/tokenectomy
-# Optional alias for backward compatibility:
-sudo ln -sf /usr/local/bin/razor /usr/local/bin/tkmy
 ```
 
-### ⚙️ Install via Smithery (for Claude Desktop)
+### Method 4: Multi-Arch Container (GHCR)
 
-```bash
-npx -y @smithery/cli install tokenectomy --client claude
-```
-
-### 🐳 Run via GitHub Container Registry (GHCR)
-
-Pull the multi-arch container image:
 ```bash
 docker pull ghcr.io/daffa2555/razor:latest
 ```
 
-Or configure your MCP client to run the containerized Razor server directly:
-```json
-{
-  "mcpServers": {
-    "tokenectomy": {
-      "command": "docker",
-      "args": ["run", "-i", "--rm", "ghcr.io/daffa2555/razor:latest", "razor", "--mcp"]
-    }
-  }
-}
-```
-
 ---
 
-## 🔌 M2M Agent Setup (1-Minute Integration)
+## Model Context Protocol (MCP) Integration
 
-Tokenectomy Razor is architected to run silently between your AI Coding Agent and your repository over **JSON-RPC 2.0 stdio**. You configure it once, and your agent autonomously invokes Tokenectomy Razor in the background during debugging and refactoring loops—**no manual copy-pasting or piping required**.
+Configure Tokenectomy Razor as an autonomous background server across major AI agent environments:
 
 ### Claude Desktop
 
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
 
 ```json
 {
@@ -152,7 +112,6 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
   }
 }
 ```
-*(Or `"command": "razor"` if installed via Cargo / binary)*
 
 ### Cursor
 
@@ -171,7 +130,7 @@ Add to `.cursor/mcp.json` in your project root:
 
 ### Cline / Roo Code / Windsurf / VS Code
 
-Add to your MCP settings (`settings.json` or `cline_mcp_settings.json`):
+Add to your client configuration (`cline_mcp_settings.json` or `settings.json`):
 
 ```json
 {
@@ -190,159 +149,104 @@ Add to your MCP settings (`settings.json` or `cline_mcp_settings.json`):
 agy mcp add tokenectomy-razor -- npx -y tokenectomy-razor --mcp
 ```
 
-### 🤖 Available M2M MCP Tools
+### Exposed MCP Tools
 
-| Tool | Autonomous Agent Role |
-|------|-------------|
-| `get_error_context` | Performs deep log surgery: strips framework noise, redacts secrets prior to parsing, extracts source context and git diff via `WorkspaceBoundary` |
-| `search_stack_overflow` | Searches Stack Overflow for a specific error (query is auto-sanitized of secrets) |
-| `apply_code_patch` | Safely applies a patch within `WorkspaceBoundary` with language syntax verification (`cargo check`, `py_compile`, `node --check`) and automated rollback on failure (guaranteeing 0 dirty git diffs) |
- 
-### 🔀 Companion MCP Server: Tokenectomy Git
-
-Close the autonomous loop from error diagnosis all the way to a published GitHub Pull Request! Pair Tokenectomy Razor with our official companion MCP server: **[Tokenectomy Git](https://github.com/daffa2555/tokenectomy-git)**.
-
-```json
-{
-  "mcpServers": {
-    "tokenectomy": {
-      "command": "razor",
-      "args": ["--mcp"]
-    },
-    "tokenectomy-git": {
-      "command": "tkmy-git",
-      "args": ["--mcp"]
-    }
-  }
-}
-```
-
-Together, they enable your AI coding assistant to:
-1. Scrub noisy error logs & redact credentials (`tokenectomy`)
-2. Generate an accurate fix patch
-3. Create a branch, commit files, and open a GitHub PR autonomously (`tokenectomy-git`)
+| Tool Name | Capability Description |
+|---|---|
+| `get_error_context` | Performs trace surgery on error dumps, removes framework noise, redacts credentials, and extracts relevant local source context bounded to the workspace. |
+| `search_stack_overflow` | Queries Stack Exchange API for relevant error signatures using sanitized search terms. |
+| `apply_code_patch` | Applies atomic file modifications with post-write language syntax verification (`cargo check`, `py_compile`, `node --check`) and automated rollback on validation failure. |
 
 ---
 
-## 🐙 GitHub Actions CI/CD (GitHub Marketplace Action)
+## AI Gateway Reverse Proxy Mode
 
-Run sub-millisecond context surgery and credential scrubbing directly in your automated GitHub Actions CI/CD workflows. Prevent sensitive keys from leaking to triage bots or pipeline artifacts while cutting 90%+ of framework token bloat:
+Tokenectomy Razor can operate as a transparent local HTTP reverse proxy. It sits between client applications and upstream LLM providers (OpenAI, Anthropic, Ollama, OpenRouter), performing real-time token reduction and secret scrubbing without requiring MCP tool configurations.
+
+```bash
+# Forward to OpenAI
+razor --proxy --proxy-bind 127.0.0.1:8080 --upstream-url https://api.openai.com/v1
+
+# Forward to local Ollama instance
+razor --proxy --proxy-bind 127.0.0.1:8080 --upstream-url http://127.0.0.1:11434/v1
+```
+
+Point any standard SDK or IDE client to the local proxy:
+
+```bash
+export OPENAI_BASE_URL="http://127.0.0.1:8080/v1"
+```
+
+### Production Proxy Hardening
+
+Binding to external interfaces (`0.0.0.0`) requires explicit token authorization:
+
+```bash
+razor --proxy --proxy-bind 0.0.0.0:8080 --upstream-url https://api.openai.com/v1 --allow-remote --proxy-token "YOUR_SECURE_TOKEN"
+```
+
+Resource limits enforced: `MAX_HEADER_SIZE` (64 KB), `MAX_BODY_SIZE` (10 MB), client/upstream timeouts (30s / 60s), and a 128-connection concurrency cap.
+
+---
+
+## GitHub Actions CI/CD Integration
+
+Sanitize build failure logs and prevent credential leakage in automated workflows:
 
 ```yaml
-- name: Surgically Scrub CI Failure Log
+- name: Sanitize Build Failure Log
   if: failure()
   uses: daffa2555/Tokenectomy@v1
   with:
     log-file: 'build.log'
     output-file: 'sanitized.log'
-
-# The sanitized output is saved to 'sanitized.log' and ready for LLM triage!
 ```
 
-| Input | Description | Default |
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `log-file` | String | `''` | Path to raw error log file to process |
+| `log-content` | String | `''` | Direct string content if file is not specified |
+| `output-file` | String | `tokenectomy-sanitized.log` | Path for scrubbed output file |
+| `version` | String | `v1.1.3` | Binary release target version |
+
+---
+
+## Supported Ecosystems
+
+| Language | Primary Frameworks | Excluded Framework Paths |
 |---|---|---|
-| `log-file` | Path to the raw build/test error log file to sanitize | `''` |
-| `log-content` | Direct raw string log content (used if `log-file` is empty) | `''` |
-| `output-file` | Target path to write the scrubbed output | `tokenectomy-sanitized.log` |
-| `version` | Target release version of Tokenectomy Razor binary | `v1.1.3` |
+| **Rust** | Tokio, Actix-web, Axum | `.cargo/registry`, `.rustup`, `target/debug/build` |
+| **Python** | Django, FastAPI, Flask, PyTorch | `site-packages`, `dist-packages`, `venv`, `__pycache__` |
+| **TypeScript / JavaScript** | Next.js, Express, NestJS, Vite | `node_modules`, `.next`, `dist`, webpack internals |
+| **Golang** | Gin, Fiber, Stdlib panics | `go/src` (stdlib), `go/pkg/mod`, `vendor` |
+| **Java / Kotlin** | Spring Boot, Quarkus, Gradle | `.m2/repository`, `.gradle/caches`, framework internals |
+| **C / C++** | GDB Backtraces, AddressSanitizer | `/usr/include`, `/usr/lib`, `vcpkg_installed` |
+| **PHP** | Laravel, Symfony | `vendor/composer`, `vendor/symfony`, `vendor/laravel` |
 
 ---
 
-## 🛡️ AI Gateway Reverse Proxy Mode (Zero-Config Token Optimization)
+## Standalone CLI Usage
 
-Want token reduction without configuring MCP tools? Tokenectomy Razor can run as a **local AI Reverse Proxy Gateway**. It sits transparently between your IDE/agent and upstream LLM providers (OpenAI, Anthropic, Ollama, OpenRouter).
-
-Whenever your agent makes an API call, Tokenectomy Razor intercepts the prompt payload, redacts sensitive credentials, and surgically purges internal framework noise before forwarding the request—streaming the LLM response back with sub-millisecond overhead.
+In addition to M2M agent mode, Razor provides CLI commands for terminal piping and local shell scripting:
 
 ```bash
-# Start Gateway Proxy forwarding to OpenAI
-razor --proxy --proxy-bind 127.0.0.1:8080 --upstream-url https://api.openai.com/v1
-
-# Or forward to a local Ollama instance
-razor --proxy --proxy-bind 127.0.0.1:8080 --upstream-url http://127.0.0.1:11434/v1
-```
-
-### Connect Any Agent or Tool in 1 Line:
-Point your agent's API base URL to localhost:
-```bash
-export OPENAI_BASE_URL="http://127.0.0.1:8080/v1"
-```
-Works out-of-the-box with **Cursor**, **Aider**, **Cline / Roo Code**, **Continue.dev**, **Open-Interpreter**, and any OpenAI SDK client!
-
-### 🔒 Proxy Hardening & Remote Deployment
-By default, the reverse proxy strictly binds to local loopback (`127.0.0.1`, `[::1]`). Binding to external network interfaces (`0.0.0.0`) requires explicit authorization and bearer token authentication:
-```bash
-# Protected remote gateway deployment with mandatory token authentication
-razor --proxy --proxy-bind 0.0.0.0:8080 --upstream-url https://api.openai.com/v1 --allow-remote --proxy-token "YOUR_SECURE_TOKEN"
-```
-Enforces strict resource bounds: `MAX_HEADER_SIZE` (64 KB), `MAX_BODY_SIZE` (10 MB), client/upstream timeouts (30s / 60s), and a 128-connection concurrency limit.
-
----
-
-### 🌐 Polyglot Ecosystem Support Matrix
-
-Tokenectomy Razor features zero-allocation compiled regex trace parsers tailored for production backends:
-
-| Language | Ecosystems & Frameworks | Filtered Framework Noise |
-|---|---|---|
-| **Rust** | `tokio`, `actix-web`, `axum` | `.cargo/registry`, `.rustup`, `target/debug/build` |
-| **Python** | `Django`, `FastAPI`, `PyTorch` | `site-packages`, `dist-packages`, `venv`, `__pycache__` |
-| **TypeScript / JS** | `Next.js`, `Vite`, `Express`, `NestJS` | `node_modules`, `.next`, `dist`, webpack internals |
-| **Golang** | Goroutine panics, `Gin`, `Fiber` | `go/src` (stdlib), `go/pkg/mod`, `vendor` |
-| **Java / Kotlin** | `Spring Boot`, `Quarkus`, JVM exceptions | `.m2/repository`, `.gradle/caches`, `org.springframework` |
-| **C / C++** | GDB backtraces, AddressSanitizer (ASan) | `/usr/include`, `/usr/lib`, `vcpkg_installed` |
-| **PHP** | `Laravel`, `Symfony`, Fatal errors | `vendor/composer`, `vendor/symfony`, `vendor/laravel` |
-
----
-
-## 🛠️ Standalone / Local CLI Mode (Optional)
-
-While Tokenectomy Razor is architected for autonomous machine-to-machine agent operation, it also provides a standalone CLI binary (`razor`, backwards-compatible with `tkmy`) if you want to pipe logs in CI/CD pipelines, local shell scripts, or manual debugging:
-
-### Instant Sub-Millisecond Log Surgery (Zero-LLM Mode)
-
-Scrub framework frames and redact credentials locally without making any LLM API calls:
-
-```bash
-# Pipe directly:
+# Scrub framework frames and output clean log
 npm test 2>&1 | razor --scrub > sanitized.log
-cargo test 2>&1 | razor --sanitize > sanitized.log
 
-# Or scrub an existing file:
+# Sanitize a specific log file
 razor --scrub --file /var/log/app/error.log > sanitized.log
-```
 
-### AI Diagnosis CLI Mode (Optional)
-
-```bash
-python3 app.py 2>&1 | razor
-cargo build 2>&1 | razor
-node server.js 2>&1 | razor
-# Or using legacy alias:
-python3 app.py 2>&1 | tkmy
-```
-
-### Read from a log file
-
-```bash
-razor --file /var/log/app/error.log
-```
-
-### Advanced options
-
-```bash
-razor --local-only            # 100% offline via Ollama ($0 cost)
-razor --provider openai       # Use OpenAI GPT-4o
-razor --provider anthropic    # Use Claude 3.5 Sonnet
-razor --context-lines 20      # Extract 20 lines of surrounding context
-razor --yes                   # Skip interactive prompts (CI/CD mode)
+# CLI diagnosis with specific AI provider
+razor --file error.log --provider openai
+razor --file error.log --provider anthropic
+razor --file error.log --local-only
 ```
 
 ---
 
-## 🧠 Configuration
+## Configuration
 
-Create `~/.tokenectomy.toml`:
+Configuration values can be set via `~/.tokenectomy.toml`:
 
 ```toml
 default_provider = "openai"  # openai | anthropic | ollama | mock
@@ -355,95 +259,42 @@ max_context_chars = 10000
 
 ---
 
-## 🔒 Security
+## Edition Comparison
 
-- **No secrets leave your machine.** Regex engine redacts API keys, JWTs, AWS credentials, and database URLs before any data is sent to an LLM.
-- **No path traversal.** MCP file operations are canonicalized and locked to CWD.
-- **No stdin bombs.** Input is capped at 10MB (CLI) / 50MB (MCP) via `.take()`.
-- **No weak hashing.** Cache uses `sha2::Sha256`, never `DefaultHasher`.
-
----
-
-## 🏗️ Architecture
-
-```
-src/
-├── lib.rs           # Core library interface
-├── app.rs           # CLI application runner & REPL
-├── main.rs          # `tokenectomy` binary entry point
-├── bin/             # Standalone binary aliases (`razor`, `tokenectomy-razor`)
-├── mcp.rs           # JSON-RPC 2.0 over stdio MCP server
-├── proxy.rs         # AI Gateway Reverse Proxy (TCP socket prompt compressor)
-├── extractor/       # Polyglot trace parsers (Rust, Python, JS/TS, Go, Java, C++, PHP)
-├── provider/        # AI backends (OpenAI, Anthropic, Ollama, Mock test provider)
-├── redact.rs        # Secret redaction (linear-time regex, ReDoS-safe)
-├── cache.rs         # SHA-256 response cache (24h TTL, 0700 perms)
-├── search.rs        # Stack Overflow API integration
-└── git.rs           # Recent git diff extraction
-```
-
----
-
-## 🧠 Bundled Open Source Agent Skills
-
-Tokenectomy OSS includes 2 native **Antigravity & Coding Agent Skills** in `.agents/skills/` to elevate your AI assistant's engineering discipline:
-
-| Skill | Description | Location |
-|---|---|---|
-| **`adversary-bug-hunter`** | Red-team fuzzer that stress-tests edge cases, catches unhandled unwraps/ReDoS, and hardens code. | [`.agents/skills/adversary-bug-hunter/`](.agents/skills/adversary-bug-hunter/SKILL.md) |
-| **`spec-first-architect`** | Enforces strict Test-Driven Development (TDD) & state machine invariants to eliminate AI hallucinations. | [`.agents/skills/spec-first-architect/`](.agents/skills/spec-first-architect/SKILL.md) |
-
----
-
-## 🆓 vs 🔬 — Razor (OSS) vs Sentinel (Pro)
-
-| Feature | 🗡️ Razor (OSS) | 🔬 Sentinel (Pro) |
+| Capability | Razor (Community OSS) | Sentinel (Commercial Tier) |
 |---|:---:|:---:|
-| Smart Framework Filter | ✅ | ✅ |
-| Polyglot Trace Surgery (7 Languages) | ✅ | ✅ |
-| Local Reverse Proxy Gateway (`--proxy`) | ✅ | ✅ |
-| Stack Overflow Search | ✅ | ✅ |
-| SHA-256 Response Cache | ✅ | ✅ |
-| Secret Redaction (ReDoS-safe) | ✅ | ✅ |
-| MCP Server Mode (JSON-RPC) | ✅ | ✅ |
-| Multi-Provider (OpenAI, Claude, Ollama) | ✅ | ✅ |
+| Framework Log Filtering | Yes | Yes |
+| Polyglot Trace Extraction (7 Languages) | Yes | Yes |
+| AI Reverse Proxy Gateway (`--proxy`) | Yes | Yes |
+| Stack Overflow Integration | Yes | Yes |
+| SHA-256 Idempotency Cache | Yes | Yes |
+| ReDoS-Safe Secret Redaction | Yes | Yes |
+| MCP Protocol Server (JSON-RPC) | Yes | Yes |
 | Bundled Agent Skills | 2 Skills (Spec TDD & Fuzzer) | Full 4 Skills Suite |
-| Anti-Hardcode Secret Shield | ❌ | ✅ |
-| AST Syntax Validation (Tree-sitter) | ❌ | ✅ |
-| AST Smart Healer (auto-syntax fix) | ❌ | ✅ |
-| Code Integrity Guard (Anti-Halu & Anti-Ngide) | ❌ | ✅ |
-| Test Verification Loop (Auto-Rollback) | ❌ | ✅ |
-| Atomic Multi-File Transactions | ❌ | ✅ |
-| Time Machine CAS Undo Engine (`--undo`) | ❌ | ✅ |
-| True Ectomy Engine (99% reduction) | ❌ | ✅ |
-| DB Inspector & Docker Diagnostics | ❌ | ✅ |
-| Reproducible `--benchmark` Mode | ❌ | ✅ |
+| Tree-sitter AST Syntax Healing | No | Yes |
+| Anti-Hallucination Scope Guard | No | Yes |
+| Automated Test Rollback Loop | No | Yes |
+| Multi-File Atomic Transactions | No | Yes |
+| Time Machine Undo Engine (`--undo`) | No | Yes |
+| True Ectomy Deep Surgery Engine | No | Yes |
+| Live DB Port & Docker Diagnostics | No | Yes |
 
-👉 **[Get Tokenectomy Sentinel on Gumroad ($9) →](https://tokenectomy.gumroad.com/l/kiznsu)**
+Commercial licenses and enterprise capabilities: **[Tokenectomy Sentinel](https://tokenectomy.gumroad.com/l/kiznsu)**.
 
 ---
 
-## 🛡️ Trust, Security & Verifiable Guarantees
+## Security & Reliability Invariants
 
-Tokenectomy Razor is engineered with strict production invariants for security-conscious developers, automated CI/CD pipelines, and autonomous agent loops:
+- **Zero-Knowledge Processing**: All scanning and redaction occurs on local hardware before data leaves the system boundary.
+- **ReDoS Immunity**: All pattern matchers utilize finite automaton evaluation with linear time guarantees.
+- **Path Traversal Isolation**: File operations are strictly locked within workspace boundaries.
+- **Memory Safety**: Implemented in safe Rust with bounded stream readers (`.take()`) preventing resource exhaustion attacks.
+- **Audit Verification**: Continuous dependency auditing maintained via RustSec advisory databases.
 
-| Guarantee / Invariant | Technical Implementation | Hardware-Verified Truth |
-|---|---|---|
-| **ReDoS Immunity** | Finite-automaton regex engine ($O(N)$ linear time) | 50,000-char pathological exploit evaluated in **1.44 ms** |
-| **Zero-Knowledge Redaction** | 100% local scanning before any LLM/cloud transmission | AWS, PATs, JWTs, DB connection URIs auto-redacted |
-| **Path Traversal Guard** | Canonical path resolution bounded strictly to workspace `CWD` | Rejects `../`, null bytes, and symlink directory escapes |
-| **Memory Safety** | Pure safe Rust architecture | Zero buffer overflows, use-after-free, or memory leaks |
-| **Dependency Auditing** | Continuous dependency verification via RustSec | 0 known CVEs in dependency tree |
-
-- 🔒 **Security Policy & Vulnerability Reporting**: See [`SECURITY.md`](SECURITY.md)
-- 🤝 **Community Contribution & Parser Guidelines**: See [`CONTRIBUTING.md`](CONTRIBUTING.md)
+Refer to [`SECURITY.md`](SECURITY.md) for vulnerability disclosure procedures.
 
 ---
 
-## 📜 License
+## License
 
-MIT — see [LICENSE](LICENSE) for details.
-
----
-
-*Built with 🦀 Rust for maximum performance, strict memory safety, and uncompromising security.*
+MIT License. See [`LICENSE`](LICENSE) for terms.
