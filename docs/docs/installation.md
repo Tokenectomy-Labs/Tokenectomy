@@ -39,7 +39,7 @@ sudo cp target/release/razor /usr/local/bin/razor
 ## Method 4: Multi-Arch Container (GHCR)
 
 ```bash
-docker pull ghcr.io/daffa2555/razor:latest
+docker pull ghcr.io/tokenectomy-labs/razor:latest
 ```
 
 ## Next Steps

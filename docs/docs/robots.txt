@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://daffa2555.github.io/Tokenectomy/sitemap.xml
+Sitemap: https://tokenectomy-labs.github.io/Tokenectomy/sitemap.xml

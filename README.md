@@ -13,9 +13,9 @@
   <a href="https://github.com/Tokenectomy-Labs/Tokenectomy/actions/workflows/ci.yml"><img src="https://github.com/Tokenectomy-Labs/Tokenectomy/actions/workflows/ci.yml/badge.svg" alt="Tokenectomy Razor CI build status" /></a>
   <a href="SECURITY.md"><img src="https://img.shields.io/badge/Security-Audited%20(RustSec)-2ea44f?logo=rust" alt="Tokenectomy Razor RustSec security audit status" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="Tokenectomy Razor MIT License" /></a>
-  <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/Official%20MCP%20Registry-io.github.daffa2555%2Frazor-brightgreen" alt="Tokenectomy Razor on official MCP Registry" /></a>
+  <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/Official%20MCP%20Registry-io.github.tokenectomy--labs%2Frazor-brightgreen" alt="Tokenectomy Razor on official MCP Registry" /></a>
   <a href="https://github.com/marketplace/actions/tokenectomy-razor"><img src="https://img.shields.io/badge/GitHub%20Marketplace-Tokenectomy%20Razor-blue?logo=githubactions" alt="Tokenectomy Razor GitHub Actions Marketplace" /></a>
-  <a href="https://daffa2555.github.io/Tokenectomy"><img src="https://img.shields.io/badge/Docs-GitHub%20Pages-blue?logo=googledocs" alt="Tokenectomy Razor documentation site" /></a>
+  <a href="https://tokenectomy-labs.github.io/Tokenectomy"><img src="https://img.shields.io/badge/Docs-GitHub%20Pages-blue?logo=googledocs" alt="Tokenectomy Razor documentation site" /></a>
 </p>
 
 ---
@@ -166,8 +166,8 @@ sudo cp target/release/razor /usr/local/bin/razor
 ### Method 4: Multi-Arch Container (GHCR)
 
 ```bash
-docker pull ghcr.io/daffa2555/razor:latest
-docker run -it ghcr.io/daffa2555/razor:latest --help
+docker pull ghcr.io/tokenectomy-labs/razor:latest
+docker run -it ghcr.io/tokenectomy-labs/razor:latest --help
 ```
 
 ---
@@ -511,7 +511,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines.
 
 ## Resources
 
-- 📖 **[Documentation](https://daffa2555.github.io/Tokenectomy)** — Full guides, API reference, and integration tutorials
+- 📖 **[Documentation](https://tokenectomy-labs.github.io/Tokenectomy)** — Full guides, API reference, and integration tutorials
 - 📋 **[Changelog](CHANGELOG.md)** — Release history and notable changes
 - 🤝 **[Contributing](CONTRIBUTING.md)** — How to contribute, development workflow, and testing
 - 🔒 **[Security Policy](SECURITY.md)** — Vulnerability disclosure and audit details

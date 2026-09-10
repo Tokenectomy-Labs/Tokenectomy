@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - Multi-architecture Docker image published to GHCR (`linux/amd64`, `linux/arm64`).
 - GitHub Marketplace Action for CI/CD build failure log sanitization.
 - Google Antigravity CLI integration guide and `agy mcp add` support.
-- Official MCP Registry listing (`io.github.daffa2555/razor`).
+- Official MCP Registry listing (`io.github.tokenectomy-labs/razor`).
 
 ### Improved
 - Secret redaction regex patterns expanded (GCP service account keys, Vault tokens).
