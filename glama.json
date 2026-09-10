@@ -2,20 +2,5 @@
   "$schema": "https://glama.ai/mcp/schemas/server.json",
   "maintainers": [
     "Tokenectomy-Labs"
-  ],
-  "name": "Tokenectomy Razor",
-  "description": "Autonomous M2M Model Context Protocol (MCP) server & high-throughput log surgery engine for AI coding agents (Claude, Cursor, Cline, Antigravity).",
-  "type": "mcp_server",
-  "status": "production",
-  "transport": [
-    "stdio"
-  ],
-  "keywords": [
-    "mcp",
-    "mcp-server",
-    "ai-agent",
-    "context-window",
-    "log-surgery",
-    "secret-redaction"
   ]
 }
