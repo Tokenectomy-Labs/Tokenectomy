@@ -56,4 +56,4 @@ tokenectomy-razor --help
 ```
 
 ## 🔗 Repository
-[https://github.com/daffa2555/Tokenectomy](https://github.com/daffa2555/Tokenectomy)
+[https://github.com/Tokenectomy-Labs/Tokenectomy](https://github.com/Tokenectomy-Labs/Tokenectomy)

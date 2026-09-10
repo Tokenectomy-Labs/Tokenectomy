@@ -83,7 +83,7 @@ runs:
 
         if [ ! -f "$BIN_PATH" ]; then
           echo "⬇️ Downloading Tokenectomy Razor ($VERSION) for $PLATFORM..."
-          URL="https://github.com/daffa2555/Tokenectomy/releases/download/${VERSION}/razor-${PLATFORM}"
+          URL="https://github.com/Tokenectomy-Labs/Tokenectomy/releases/download/${VERSION}/razor-${PLATFORM}"
           if curl -fsSL -o "$BIN_PATH" "$URL"; then
             chmod +x "$BIN_PATH"
             echo "✅ Successfully downloaded Tokenectomy Razor binary."

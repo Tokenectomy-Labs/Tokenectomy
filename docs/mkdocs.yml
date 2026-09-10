@@ -1,8 +1,8 @@
 site_name: Tokenectomy Razor
 site_description: "High-performance log surgery & secret redaction MCP server for AI coding agents. Rust-powered, ReDoS-immune, sub-millisecond latency."
 site_url: https://daffa2555.github.io/Tokenectomy
-repo_url: https://github.com/daffa2555/Tokenectomy
-repo_name: daffa2555/Tokenectomy
+repo_url: https://github.com/Tokenectomy-Labs/Tokenectomy
+repo_name: Tokenectomy-Labs/Tokenectomy
 edit_uri: edit/main/docs/docs/
 
 theme:
@@ -60,7 +60,7 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/daffa2555/Tokenectomy
+      link: https://github.com/Tokenectomy-Labs/Tokenectomy
     - icon: fontawesome/brands/npm
       link: https://www.npmjs.com/package/tokenectomy-razor
     - icon: fontawesome/brands/rust

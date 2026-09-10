@@ -5,4 +5,4 @@ description: How to contribute to Tokenectomy Razor — bug reports, feature req
 
 # Contributing
 
-Please refer to the full [CONTRIBUTING.md](https://github.com/daffa2555/Tokenectomy/blob/main/CONTRIBUTING.md) for detailed contribution guidelines, development workflow, and testing requirements.
+Please refer to the full [CONTRIBUTING.md](https://github.com/Tokenectomy-Labs/Tokenectomy/blob/main/CONTRIBUTING.md) for detailed contribution guidelines, development workflow, and testing requirements.

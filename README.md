@@ -10,7 +10,7 @@
   <a href="https://tokenectomy-web.vercel.app"><img src="https://img.shields.io/badge/Website-tokenectomy--web.vercel.app-000000?style=flat&logo=vercel" alt="Tokenectomy Razor official website" /></a>
   <a href="https://crates.io/crates/tokenectomy"><img src="https://img.shields.io/crates/v/tokenectomy.svg?logo=rust" alt="Tokenectomy Razor crate version on crates.io" /></a>
   <a href="https://www.npmjs.com/package/tokenectomy-razor"><img src="https://img.shields.io/npm/v/tokenectomy-razor.svg?logo=npm" alt="Tokenectomy Razor npm package version" /></a>
-  <a href="https://github.com/daffa2555/Tokenectomy/actions/workflows/ci.yml"><img src="https://github.com/daffa2555/Tokenectomy/actions/workflows/ci.yml/badge.svg" alt="Tokenectomy Razor CI build status" /></a>
+  <a href="https://github.com/Tokenectomy-Labs/Tokenectomy/actions/workflows/ci.yml"><img src="https://github.com/Tokenectomy-Labs/Tokenectomy/actions/workflows/ci.yml/badge.svg" alt="Tokenectomy Razor CI build status" /></a>
   <a href="SECURITY.md"><img src="https://img.shields.io/badge/Security-Audited%20(RustSec)-2ea44f?logo=rust" alt="Tokenectomy Razor RustSec security audit status" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="Tokenectomy Razor MIT License" /></a>
   <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/Official%20MCP%20Registry-io.github.daffa2555%2Frazor-brightgreen" alt="Tokenectomy Razor on official MCP Registry" /></a>
@@ -157,7 +157,7 @@ cargo install tokenectomy
 ### Method 3: Build from Source
 
 ```bash
-git clone https://github.com/daffa2555/Tokenectomy.git
+git clone https://github.com/Tokenectomy-Labs/Tokenectomy.git
 cd Tokenectomy
 cargo build --release
 sudo cp target/release/razor /usr/local/bin/razor
@@ -253,7 +253,7 @@ agy mcp add tokenectomy-razor -- npx -y tokenectomy-razor --mcp
 # Add to your workflow (.github/workflows/build.yml)
 - name: Sanitize Build Failure Log
   if: failure()
-  uses: daffa2555/Tokenectomy@v1
+  uses: Tokenectomy-Labs/Tokenectomy@v1
   with:
     log-file: 'build.log'
     output-file: 'sanitized.log'
@@ -361,7 +361,7 @@ max_context_chars = 10000
 | **C / C++** | GDB Backtraces, AddressSanitizer | `/usr/include`, `/usr/lib`, `vcpkg_installed` |
 | **PHP** | Laravel, Symfony | `vendor/composer`, `vendor/symfony`, `vendor/laravel` |
 
-**Note:** Currently shipped with robust extractors for **Rust, Python, TypeScript/JavaScript, and Go**. Java/Kotlin, C/C++, and PHP support is coming in v1.2. See [#1](https://github.com/daffa2555/Tokenectomy/issues) for progress tracking.
+**Note:** Currently shipped with robust extractors for **Rust, Python, TypeScript/JavaScript, and Go**. Java/Kotlin, C/C++, and PHP support is coming in v1.2. See [#1](https://github.com/Tokenectomy-Labs/Tokenectomy/issues) for progress tracking.
 
 ---
 
@@ -501,7 +501,7 @@ A: Razor is the free, community version with all essential features. Sentinel ad
 
 Found a bug? Have a feature request? Want to add support for a new language?
 
-1. **Issues:** [github.com/daffa2555/Tokenectomy/issues](https://github.com/daffa2555/Tokenectomy/issues)
+1. **Issues:** [github.com/Tokenectomy-Labs/Tokenectomy/issues](https://github.com/Tokenectomy-Labs/Tokenectomy/issues)
 2. **Pull Requests:** Fork, create a feature branch, and submit a PR with tests
 3. **Security:** See [SECURITY.md](SECURITY.md) for private vulnerability disclosure
 
@@ -527,4 +527,4 @@ MIT License. See [LICENSE](LICENSE) for full terms.
 
 **Made with ❤️ by [@daffa2555](https://github.com/daffa2555)**
 
-Questions? Open an issue or start a discussion on [GitHub](https://github.com/daffa2555/Tokenectomy).
+Questions? Open an issue or start a discussion on [GitHub](https://github.com/Tokenectomy-Labs/Tokenectomy).

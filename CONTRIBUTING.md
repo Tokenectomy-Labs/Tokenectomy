@@ -40,7 +40,7 @@ We are committed to providing a welcoming, respectful, and inclusive community f
 
 ```bash
 # Clone the repository
-git clone https://github.com/daffa2555/Tokenectomy.git
+git clone https://github.com/Tokenectomy-Labs/Tokenectomy.git
 cd Tokenectomy
 
 # Build in debug mode
@@ -62,7 +62,7 @@ cargo fmt --check
 ## 💡 Ways to Contribute
 
 ### 🐛 Report Bugs
-Found a bug, unexpected panic, or regex mismatch? [Open an issue](https://github.com/daffa2555/Tokenectomy/issues) with:
+Found a bug, unexpected panic, or regex mismatch? [Open an issue](https://github.com/Tokenectomy-Labs/Tokenectomy/issues) with:
 - Clear, descriptive title.
 - Minimal reproducible example or raw log snippet.
 - Expected vs. actual sanitized output.
@@ -70,7 +70,7 @@ Found a bug, unexpected panic, or regex mismatch? [Open an issue](https://github
 - Label: `bug`
 
 ### ✨ Suggest Features & Parsers
-Have an idea for improved trace extraction, a new language parser, or agent integrations? [Open an issue](https://github.com/daffa2555/Tokenectomy/issues):
+Have an idea for improved trace extraction, a new language parser, or agent integrations? [Open an issue](https://github.com/Tokenectomy-Labs/Tokenectomy/issues):
 - Clear description of the use case.
 - Sample stack traces and expected pruned output.
 - Label: `enhancement`
@@ -154,7 +154,7 @@ cargo audit
 
 ### Opening a Pull Request
 1. Push your branch to your fork.
-2. Open a Pull Request against `daffa2555/Tokenectomy:main`.
+2. Open a Pull Request against `Tokenectomy-Labs/Tokenectomy:main`.
 3. Provide a clear summary of changes and reference any related issues (`Closes #123`).
 
 ---
@@ -174,7 +174,7 @@ cargo audit
 ---
 
 ## 🆘 Need Help?
-- 🐛 Issues, questions & feature requests: [GitHub Issues](https://github.com/daffa2555/Tokenectomy/issues)
+- 🐛 Issues, questions & feature requests: [GitHub Issues](https://github.com/Tokenectomy-Labs/Tokenectomy/issues)
 - 🔒 Security concerns: Please refer to [SECURITY.md](SECURITY.md)
 
 Thank you for helping make Tokenectomy Razor the fastest, leanest context surgery sub-cortex for AI coding agents! 🗡️

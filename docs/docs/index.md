@@ -9,8 +9,8 @@ description: High-performance MCP server for AI coding agents. Purge 90%+ framew
 
 [![Crates.io](https://img.shields.io/crates/v/tokenectomy.svg?logo=rust)](https://crates.io/crates/tokenectomy)
 [![npm](https://img.shields.io/npm/v/tokenectomy-razor.svg?logo=npm)](https://www.npmjs.com/package/tokenectomy-razor)
-[![CI](https://github.com/daffa2555/Tokenectomy/actions/workflows/ci.yml/badge.svg)](https://github.com/daffa2555/Tokenectomy/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/daffa2555/Tokenectomy/blob/main/LICENSE)
+[![CI](https://github.com/Tokenectomy-Labs/Tokenectomy/actions/workflows/ci.yml/badge.svg)](https://github.com/Tokenectomy-Labs/Tokenectomy/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Tokenectomy-Labs/Tokenectomy/blob/main/LICENSE)
 
 Tokenectomy Razor is an autonomous, machine-to-machine (M2M) **Model Context Protocol (MCP)** server and stream processing engine written in safe Rust. It operates as a high-throughput background sub-cortex for AI coding assistants like **Claude Desktop**, **Cursor**, **Cline**, **Roo Code**, **Windsurf**, and **Google Antigravity**.
 
@@ -65,4 +65,4 @@ npm install -g tokenectomy-razor
 | **PHP** | Laravel, Symfony |
 
 [Get started →](installation.md){ .md-button .md-button--primary }
-[View on GitHub →](https://github.com/daffa2555/Tokenectomy){ .md-button }
+[View on GitHub →](https://github.com/Tokenectomy-Labs/Tokenectomy){ .md-button }

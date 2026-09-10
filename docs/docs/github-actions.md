@@ -12,7 +12,7 @@ Sanitize build failure logs and prevent credential leakage in automated workflow
 ```yaml
 - name: Sanitize Build Failure Log
   if: failure()
-  uses: daffa2555/Tokenectomy@v1
+  uses: Tokenectomy-Labs/Tokenectomy@v1
   with:
     log-file: 'build.log'
     output-file: 'sanitized.log'

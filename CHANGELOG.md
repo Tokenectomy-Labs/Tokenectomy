@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to [Tokenectomy Razor](https://github.com/daffa2555/Tokenectomy) are documented here.
+All notable changes to [Tokenectomy Razor](https://github.com/Tokenectomy-Labs/Tokenectomy) are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
@@ -47,8 +47,8 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - Path traversal containment locked to workspace root (CWD).
 - Standalone CLI with `--scrub`, `--file`, `--provider`, `--local-only` modes.
 
-[Unreleased]: https://github.com/daffa2555/Tokenectomy/compare/v1.1.3...HEAD
-[1.1.3]: https://github.com/daffa2555/Tokenectomy/compare/v1.1.2...v1.1.3
-[1.1.2]: https://github.com/daffa2555/Tokenectomy/compare/v1.1.0...v1.1.2
-[1.1.0]: https://github.com/daffa2555/Tokenectomy/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/daffa2555/Tokenectomy/releases/tag/v1.0.0
+[Unreleased]: https://github.com/Tokenectomy-Labs/Tokenectomy/compare/v1.1.3...HEAD
+[1.1.3]: https://github.com/Tokenectomy-Labs/Tokenectomy/compare/v1.1.2...v1.1.3
+[1.1.2]: https://github.com/Tokenectomy-Labs/Tokenectomy/compare/v1.1.0...v1.1.2
+[1.1.0]: https://github.com/Tokenectomy-Labs/Tokenectomy/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/Tokenectomy-Labs/Tokenectomy/releases/tag/v1.0.0
