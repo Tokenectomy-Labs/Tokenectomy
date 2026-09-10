@@ -2,6 +2,7 @@ use crate::extractor;
 use crate::git;
 use crate::redact;
 use crate::search;
+use crate::workspace::WorkspaceBoundary;
 use serde_json::{json, Value};
 use std::io::{self, BufRead, Read, Write};
 
@@ -23,8 +24,6 @@ fn success_response(id: Value, result: Value) -> Value {
         "result": result
     })
 }
-
-use crate::workspace::WorkspaceBoundary;
 
 pub fn verify_patch(path: &std::path::Path) -> Result<(), String> {
     if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
@@ -90,7 +89,7 @@ pub async fn run_server() -> anyhow::Result<()> {
         if n == 0 {
             break; // EOF
         }
-        
+
         if line.trim().is_empty() {
             continue;
         }
@@ -117,8 +116,9 @@ pub async fn run_server() -> anyhow::Result<()> {
         };
 
         let response = match method {
-            "initialize" => {
-                Some(success_response(id.unwrap_or(Value::Null), json!({
+            "initialize" => Some(success_response(
+                id.unwrap_or(Value::Null),
+                json!({
                     "protocolVersion": "2024-11-05",
                     "capabilities": {
                         "tools": {}
@@ -127,52 +127,71 @@ pub async fn run_server() -> anyhow::Result<()> {
                         "name": "tokenectomy",
                         "version": env!("CARGO_PKG_VERSION")
                     }
-                })))
-            }
+                }),
+            )),
             "notifications/initialized" => None,
             "ping" => Some(success_response(id.unwrap_or(Value::Null), json!({}))),
-            "tools/list" => {
-                Some(success_response(id.unwrap_or(Value::Null), json!({
+            "tools/list" => Some(success_response(
+                id.unwrap_or(Value::Null),
+                json!({
                     "tools": [
                         {
                             "name": "get_error_context",
-                            "description": "Extracts detailed source code context and git diff from an error log",
+                            "description": "Extracts detailed source code context and git diff from an error log, removing framework noise and redacting secrets.",
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {
-                                    "log": { "type": "string" },
-                                    "context_lines": { "type": "integer" }
+                                    "log": {
+                                        "type": "string",
+                                        "description": "The raw error stack trace or compiler panic message string to sanitize and extract context from."
+                                    },
+                                    "context_lines": {
+                                        "type": "integer",
+                                        "description": "Number of source code lines to extract above and below the error location (default: 10)."
+                                    }
                                 },
                                 "required": ["log"]
                             }
                         },
                         {
                             "name": "search_stack_overflow",
-                            "description": "Search Stack Overflow for a specific error query",
+                            "description": "Queries Stack Overflow API for solutions matching a sanitized error signature.",
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {
-                                    "query": { "type": "string" }
+                                    "query": {
+                                        "type": "string",
+                                        "description": "Targeted, sanitized exception message or error signature (free of secrets and local file paths)."
+                                    }
                                 },
                                 "required": ["query"]
                             }
                         },
                         {
                             "name": "apply_code_patch",
-                            "description": "Applies a code patch to a specific file by replacing original_code with new_code.",
+                            "description": "Applies an atomic code patch to a specific file by replacing original_code with new_code, with automatic syntax validation and rollback.",
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {
-                                    "file_path": { "type": "string", "description": "Absolute path to the file" },
-                                    "original_code": { "type": "string", "description": "The exact code block to be replaced" },
-                                    "new_code": { "type": "string", "description": "The new code block" }
+                                    "file_path": {
+                                        "type": "string",
+                                        "description": "Absolute path to the file within the workspace boundary."
+                                    },
+                                    "original_code": {
+                                        "type": "string",
+                                        "description": "The exact code block to be replaced (must match uniquely)."
+                                    },
+                                    "new_code": {
+                                        "type": "string",
+                                        "description": "The replacement code block."
+                                    }
                                 },
                                 "required": ["file_path", "original_code", "new_code"]
                             }
                         }
                     ]
-                })))
-            }
+                }),
+            )),
             "tools/call" => {
                 let params = req.get("params");
                 let name = params.and_then(|p| p.get("name")).and_then(|n| n.as_str());
@@ -187,31 +206,61 @@ pub async fn run_server() -> anyhow::Result<()> {
                     match name {
                         "get_error_context" => {
                             if let Some(log) = args.get("log").and_then(|l| l.as_str()) {
-                                let context_lines = args.get("context_lines").and_then(|c| c.as_u64()).unwrap_or(10) as usize;
-                                // P1: Redact secrets BEFORE extracting context so raw credentials never enter AST or memory
+                                let context_lines = args
+                                    .get("context_lines")
+                                    .and_then(|c| c.as_u64())
+                                    .unwrap_or(10) as usize;
+                                // P1: Redact secrets BEFORE extracting context
                                 let safe_log = redact::redact_secrets(log);
-                                let (context, _) = extractor::extract_context_with_boundary(&safe_log, context_lines, Some(&boundary));
-                                let mut combined = format!("Log:\n{}\nContext:\n{}", safe_log, context);
+                                let (context, _) = extractor::extract_context_with_boundary(
+                                    &safe_log,
+                                    context_lines,
+                                    Some(&boundary),
+                                );
+                                let mut combined =
+                                    format!("Log:\n{}\nContext:\n{}", safe_log, context);
                                 if let Some(git_diff) = git::get_recent_changes() {
                                     let safe_diff = redact::redact_secrets(&git_diff);
-                                    combined.push_str(&format!("\n\nRecent Git Changes:\n{}", safe_diff));
+                                    combined.push_str(&format!(
+                                        "\n\nRecent Git Changes:\n{}",
+                                        safe_diff
+                                    ));
                                 }
-                                Some(success_response(id.unwrap_or(Value::Null), json!({
-                                    "content": [{ "type": "text", "text": combined }]
-                                })))
+                                Some(success_response(
+                                    id.unwrap_or(Value::Null),
+                                    json!({
+                                        "content": [{ "type": "text", "text": combined }]
+                                    }),
+                                ))
                             } else {
-                                Some(error_response(id, -32602, "Missing 'log' argument"))
+                                Some(success_response(
+                                    id.unwrap_or(Value::Null),
+                                    json!({
+                                        "content": [{ "type": "text", "text": "Error: Missing required 'log' argument." }],
+                                        "isError": true
+                                    }),
+                                ))
                             }
                         }
                         "search_stack_overflow" => {
                             if let Some(query) = args.get("query").and_then(|q| q.as_str()) {
                                 let results = search::search_stackoverflow(query).await;
-                                let text = results.unwrap_or_else(|| "No results found".to_string());
-                                Some(success_response(id.unwrap_or(Value::Null), json!({
-                                    "content": [{ "type": "text", "text": text }]
-                                })))
+                                let text = results
+                                    .unwrap_or_else(|| "No results found".to_string());
+                                Some(success_response(
+                                    id.unwrap_or(Value::Null),
+                                    json!({
+                                        "content": [{ "type": "text", "text": text }]
+                                    }),
+                                ))
                             } else {
-                                Some(error_response(id, -32602, "Missing 'query' argument"))
+                                Some(success_response(
+                                    id.unwrap_or(Value::Null),
+                                    json!({
+                                        "content": [{ "type": "text", "text": "Error: Missing required 'query' argument." }],
+                                        "isError": true
+                                    }),
+                                ))
                             }
                         }
                         "apply_code_patch" => {
@@ -219,52 +268,106 @@ pub async fn run_server() -> anyhow::Result<()> {
                             let original = args.get("original_code").and_then(|o| o.as_str());
                             let new_code = args.get("new_code").and_then(|n| n.as_str());
 
-                            if let (Some(fp), Some(orig), Some(new_c)) = (file_path, original, new_code) {
+                            if let (Some(fp), Some(orig), Some(new_c)) =
+                                (file_path, original, new_code)
+                            {
                                 match boundary.resolve(fp) {
-                                    Err(e) => {
-                                        Some(error_response(id, -32602, &format!("Security Error: {}", e)))
-                                    }
+                                    Err(e) => Some(success_response(
+                                        id.unwrap_or(Value::Null),
+                                        json!({
+                                            "content": [{ "type": "text", "text": format!("Security Error: {}", e) }],
+                                            "isError": true
+                                        }),
+                                    )),
                                     Ok(safe_path) => {
-                                        let result = match boundary.read(&safe_path) {
+                                        match boundary.read(&safe_path) {
                                             Ok(content) => {
                                                 let count = content.matches(orig).count();
                                                 if count == 0 {
-                                                    "Error: original_code not found in the file. Make sure it matches exactly.".to_string()
+                                                    Some(success_response(
+                                                        id.unwrap_or(Value::Null),
+                                                        json!({
+                                                            "content": [{ "type": "text", "text": "Error: original_code not found in the file. Make sure it matches exactly." }],
+                                                            "isError": true
+                                                        }),
+                                                    ))
                                                 } else if count > 1 {
-                                                    format!("Error: original_code found {} times. Please provide a more specific code block.", count)
+                                                    Some(success_response(
+                                                        id.unwrap_or(Value::Null),
+                                                        json!({
+                                                            "content": [{ "type": "text", "text": format!("Error: original_code found {} times. Please provide a more specific code block.", count) }],
+                                                            "isError": true
+                                                        }),
+                                                    ))
                                                 } else {
                                                     let backup = content.clone();
                                                     let updated = content.replacen(orig, new_c, 1);
                                                     match boundary.write(&safe_path, updated.as_bytes()) {
-                                                        Ok(_) => {
-                                                            // P0-2: Verify patch and rollback on failure (0 dirty diff)
-                                                            match verify_patch(&safe_path) {
-                                                                Ok(_) => "Patch applied and verified successfully.".to_string(),
-                                                                Err(verify_err) => {
-                                                                    // Automatic rollback!
-                                                                    let _ = boundary.write(&safe_path, backup.as_bytes());
-                                                                    format!("Patch rejected and automatically rolled back: {}", verify_err)
-                                                                }
+                                                        Ok(_) => match verify_patch(&safe_path) {
+                                                            Ok(_) => Some(success_response(
+                                                                id.unwrap_or(Value::Null),
+                                                                json!({
+                                                                    "content": [{ "type": "text", "text": "Patch applied and verified successfully." }]
+                                                                }),
+                                                            )),
+                                                            Err(verify_err) => {
+                                                                let rollback_status = if let Err(rb_err) =
+                                                                    boundary.write(&safe_path, backup.as_bytes())
+                                                                {
+                                                                    format!(
+                                                                        "CRITICAL: Patch verification failed ({}), and rollback ALSO failed: {}",
+                                                                        verify_err, rb_err
+                                                                    )
+                                                                } else {
+                                                                    format!(
+                                                                        "Patch rejected and automatically rolled back: {}",
+                                                                        verify_err
+                                                                    )
+                                                                };
+                                                                Some(success_response(
+                                                                    id.unwrap_or(Value::Null),
+                                                                    json!({
+                                                                        "content": [{ "type": "text", "text": rollback_status }],
+                                                                        "isError": true
+                                                                    }),
+                                                                ))
                                                             }
-                                                        }
-                                                        Err(e) => format!("Failed to write file: {}", e),
+                                                        },
+                                                        Err(e) => Some(success_response(
+                                                            id.unwrap_or(Value::Null),
+                                                            json!({
+                                                                "content": [{ "type": "text", "text": format!("Failed to write file: {}", e) }],
+                                                                "isError": true
+                                                            }),
+                                                        )),
                                                     }
                                                 }
                                             }
-                                            Err(e) => format!("Failed to read file: {}", e),
-                                        };
-                                        Some(success_response(id.unwrap_or(Value::Null), json!({
-                                            "content": [{ "type": "text", "text": result }]
-                                        })))
+                                            Err(e) => Some(success_response(
+                                                id.unwrap_or(Value::Null),
+                                                json!({
+                                                    "content": [{ "type": "text", "text": format!("Failed to read file: {}", e) }],
+                                                    "isError": true
+                                                }),
+                                            )),
+                                        }
                                     }
                                 }
                             } else {
-                                Some(error_response(id, -32602, "Missing required arguments for apply_code_patch"))
+                                Some(success_response(
+                                    id.unwrap_or(Value::Null),
+                                    json!({
+                                        "content": [{ "type": "text", "text": "Missing required arguments for apply_code_patch." }],
+                                        "isError": true
+                                    }),
+                                ))
                             }
                         }
-                        _ => {
-                            Some(error_response(id, -32601, &format!("Tool '{}' not found", name)))
-                        }
+                        _ => Some(error_response(
+                            id,
+                            -32601,
+                            &format!("Tool '{}' not found", name),
+                        )),
                     }
                 }
             }
