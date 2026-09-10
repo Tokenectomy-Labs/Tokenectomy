@@ -13,7 +13,7 @@ const { spawn } = require('child_process');
 
 const pkg = require('../package.json');
 
-const REPO = 'daffa2555/Tokenectomy';
+const REPO = 'Tokenectomy-Labs/Tokenectomy';
 const VERSION = pkg.version;
 
 function getPlatformAsset() {

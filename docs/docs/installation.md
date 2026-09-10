@@ -30,7 +30,7 @@ cargo install tokenectomy
 ## Method 3: Build from Source
 
 ```bash
-git clone https://github.com/daffa2555/Tokenectomy.git
+git clone https://github.com/Tokenectomy-Labs/Tokenectomy.git
 cd Tokenectomy
 cargo build --release
 sudo cp target/release/razor /usr/local/bin/razor

@@ -15,4 +15,4 @@ description: Security invariants, vulnerability disclosure, and audit informatio
 
 ## Vulnerability Disclosure
 
-Please refer to the full [SECURITY.md](https://github.com/daffa2555/Tokenectomy/blob/main/SECURITY.md) for vulnerability disclosure procedures.
+Please refer to the full [SECURITY.md](https://github.com/Tokenectomy-Labs/Tokenectomy/blob/main/SECURITY.md) for vulnerability disclosure procedures.

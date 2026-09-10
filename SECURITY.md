@@ -77,7 +77,7 @@ Tokenectomy Razor is architected with uncompromising security-first principles f
 ### Private Disclosure Channels
 
 1. **GitHub Security Advisory (Recommended)**:  
-   👉 **[Open a Private Security Advisory](https://github.com/daffa2555/Tokenectomy/security/advisories/new)**
+   👉 **[Open a Private Security Advisory](https://github.com/Tokenectomy-Labs/Tokenectomy/security/advisories/new)**
 2. **Direct Maintainer Contact**:  
    Contact maintainer directly via GitHub profile: **[@daffa2555](https://github.com/daffa2555)**.
 

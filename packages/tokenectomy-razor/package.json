@@ -31,11 +31,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/daffa2555/Tokenectomy.git"
+    "url": "https://github.com/Tokenectomy-Labs/Tokenectomy.git"
   },
   "bugs": {
-    "url": "https://github.com/daffa2555/Tokenectomy/issues"
+    "url": "https://github.com/Tokenectomy-Labs/Tokenectomy/issues"
   },
-  "homepage": "https://github.com/daffa2555/Tokenectomy#readme",
+  "homepage": "https://github.com/Tokenectomy-Labs/Tokenectomy#readme",
   "preferGlobal": true
 }
