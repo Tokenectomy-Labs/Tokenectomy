@@ -105,7 +105,7 @@ Tokenectomy Razor is architected with uncompromising security-first principles f
    ```yaml
    - name: Sanitize Failure Logs
      if: failure()
-     uses: daffa2555/tokenectomy-action@v1
+     uses: Tokenectomy-Labs/Tokenectomy@v1
      with:
        log-file: 'build.log'
        output-file: 'sanitized.log'
