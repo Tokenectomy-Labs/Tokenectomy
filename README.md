@@ -220,9 +220,80 @@ Add to `.cursor/mcp.json` in your project root:
 }
 ```
 
-### Cline / Roo Code / Windsurf / VS Code
+### VS Code (Native MCP / GitHub Copilot Agent / Continue)
 
-Add to your client configuration (`cline_mcp_settings.json` or `settings.json`):
+For VS Code with native MCP support, create or edit `.vscode/mcp.json` in your workspace:
+
+```json
+{
+  "mcpServers": {
+    "tokenectomy": {
+      "command": "npx",
+      "args": ["-y", "tokenectomy-razor", "--mcp"]
+    }
+  }
+}
+```
+
+*Or use the ultra-low latency native binary (if installed via `cargo install tokenectomy`):*
+
+```json
+{
+  "mcpServers": {
+    "tokenectomy": {
+      "command": "razor",
+      "args": ["--mcp"]
+    }
+  }
+}
+```
+
+### VS Code + Cline
+
+Open Cline Settings in VS Code (or edit `cline_mcp_settings.json`):
+- **macOS:** `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
+- **Linux:** `~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
+- **Windows:** `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`
+
+```json
+{
+  "mcpServers": {
+    "tokenectomy": {
+      "command": "npx",
+      "args": ["-y", "tokenectomy-razor", "--mcp"],
+      "disabled": false,
+      "autoApprove": [
+        "get_error_context",
+        "search_stack_overflow",
+        "analyze_code"
+      ]
+    }
+  }
+}
+```
+
+### VS Code + Roo Code
+
+In Roo Code Settings (or edit `cline_mcp_settings.json` in Roo storage):
+- **Linux:** `~/.config/Code/User/globalStorage/rooveterinaryinc.roo-cline/settings/cline_mcp_settings.json`
+- **macOS:** `~/Library/Application Support/Code/User/globalStorage/rooveterinaryinc.roo-cline/settings/cline_mcp_settings.json`
+
+```json
+{
+  "mcpServers": {
+    "tokenectomy": {
+      "command": "npx",
+      "args": ["-y", "tokenectomy-razor", "--mcp"],
+      "disabled": false,
+      "autoApprove": ["get_error_context", "analyze_code"]
+    }
+  }
+}
+```
+
+### Windsurf (Codeium)
+
+Add to `~/.codeium/windsurf/mcp_config.json`:
 
 ```json
 {
@@ -268,7 +339,7 @@ agy mcp add tokenectomy-razor -- npx -y tokenectomy-razor --mcp
 # Add to your workflow (.github/workflows/build.yml)
 - name: Sanitize Build Failure Log
   if: failure()
-  uses: Tokenectomy-Labs/Tokenectomy@v1
+  uses: daffa2555/tokenectomy-action@v1
   with:
     log-file: 'build.log'
     output-file: 'sanitized.log'
@@ -282,7 +353,7 @@ Parameters:
 | `log-file` | String | `''` | Path to raw error log file to process |
 | `log-content` | String | `''` | Direct string content if file is not specified |
 | `output-file` | String | `tokenectomy-sanitized.log` | Path for scrubbed output file |
-| `version` | String | `v1.1.6` | Binary release target version |
+| `version` | String | `v1.2.1` | Binary release target version |
 
 ### I want max privacy (air-gapped environment)
 
