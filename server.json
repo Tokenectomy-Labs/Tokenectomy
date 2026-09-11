@@ -1,26 +1,18 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.tokenectomy-labs/razor",
+  "name": "io.github.Tokenectomy-Labs/razor",
   "title": "Tokenectomy Razor",
   "description": "Autonomous log surgery & secret redaction MCP server for AI coding agents.",
   "repository": {
     "url": "https://github.com/Tokenectomy-Labs/Tokenectomy",
     "source": "github"
   },
-  "version": "1.1.6",
+  "version": "1.1.7",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "tokenectomy-razor",
-      "version": "1.1.6",
-      "transport": {
-        "type": "stdio"
-      }
-    },
-    {
-      "registryType": "cargo",
-      "identifier": "tokenectomy",
-      "version": "1.1.6",
+      "version": "1.1.7",
       "transport": {
         "type": "stdio"
       }
