@@ -16,9 +16,12 @@ pub trait TraceParser: Send + Sync {
     fn extract_locations(&self, log: &str) -> Vec<CodeLocation>;
 }
 
-pub fn is_dependency_file(path: &str) -> bool {
-    let lower_path = path.to_lowercase();
-    
+/// Determines whether a file path or stack trace line represents framework, runtime, or dependency noise.
+pub fn is_framework_noise(line_or_path: &str) -> bool {
+    let lower = line_or_path.to_lowercase();
+    let trimmed = line_or_path.trim_start();
+
+    // 1. Common file dependency directory substrings
     let ignores = [
         "node_modules",        // JS/Node/TS
         "site-packages",       // Python
@@ -38,14 +41,155 @@ pub fn is_dependency_file(path: &str) -> bool {
         "usr/lib",             // C/C++ system libraries
         "vcpkg_installed",     // C++ vcpkg
         "target/debug/build",  // Rust build scripts
+        "node:internal/",      // Node.js internal runtime
+        "<frozen importlib",   // Python internal importlib
+        "build/glibc-",        // Glibc internals
     ];
 
     for ignore in ignores.iter() {
-        if lower_path.contains(ignore) {
+        if lower.contains(ignore) {
             return true;
         }
     }
+
+    // 2. Java / Kotlin enterprise framework stack frames (Spring Boot, Tomcat, Hibernate, Netty, Undertow, JDK)
+    let java_framework_prefixes = [
+        "at org.springframework.",
+        "at org.apache.catalina.",
+        "at org.apache.tomcat.",
+        "at org.apache.coyote.",
+        "at org.hibernate.",
+        "at org.eclipse.jetty.",
+        "at jakarta.servlet.",
+        "at javax.servlet.",
+        "at io.netty.",
+        "at io.undertow.",
+        "at com.zaxxer.hikari.",
+        "at java.base/",
+        "at java.lang.reflect.",
+        "at jdk.internal.",
+        "at sun.reflect.",
+        "at kotlinx.coroutines.",
+        "at org.junit.",
+    ];
+    for prefix in java_framework_prefixes.iter() {
+        if trimmed.starts_with(prefix) {
+            return true;
+        }
+    }
+    if trimmed.starts_with("... ") && trimmed.ends_with("common frames omitted") {
+        return true;
+    }
+
+    // 3. C / C++ ASan, GDB, glibc, libstdc++ runtime frames
+    let cpp_runtime_markers = [
+        "__libc_start_main",
+        "__libc_start_call_main",
+        "libc-start.c",
+        "libc_start_call_main.h",
+        "/lib/x86_64-linux-gnu/libc.so",
+        "/lib/x86_64-linux-gnu/libasan.so",
+        "/usr/lib/x86_64-linux-gnu/libasan.so",
+        "/usr/lib/x86_64-linux-gnu/libstdc++.so",
+        "libasan.so",
+        "libstdc++.so",
+        "__sanitizer::",
+        "__asan::",
+        "__asan_",
+        "(/lib/x86_64-linux-gnu/",
+        "(/usr/lib/x86_64-linux-gnu/",
+        "sysdeps/nptl/",
+    ];
+    for marker in cpp_runtime_markers.iter() {
+        if line_or_path.contains(marker) {
+            return true;
+        }
+    }
+    if trimmed.contains(" in _start (") || trimmed.ends_with(" in _start") {
+        return true;
+    }
+
+    // 4. Go runtime goroutine idle states & internal scheduler frames
+    let go_idle_markers = [
+        "[force gc (idle)]",
+        "[GC sweep wait]",
+        "[GC scavenge wait]",
+        "[finalizer wait]",
+        "[scavenge wait]",
+        "[select (no cases)]",
+    ];
+    for marker in go_idle_markers.iter() {
+        if line_or_path.contains(marker) {
+            return true;
+        }
+    }
+
+    let go_runtime_frames = [
+        "runtime.gopark(",
+        "runtime.forcegchelper(",
+        "runtime.goexit(",
+        "runtime.gcBgMarkWorker(",
+        "runtime.bgsweep(",
+        "runtime.bgscavenge(",
+        "runtime.runfinq(",
+    ];
+    for frame in go_runtime_frames.iter() {
+        if trimmed.starts_with(frame) {
+            return true;
+        }
+    }
+
     false
+}
+
+/// Backward-compatible parallel-bridge shim for `is_dependency_file`.
+/// Retains 100% compatibility with existing callers while delegating to `is_framework_noise`.
+#[inline]
+pub fn is_dependency_file(path: &str) -> bool {
+    is_framework_noise(path)
+}
+
+/// Surgically prunes framework noise, internal runtime stack lines, and idle Go goroutines from a raw log.
+pub fn prune_framework_noise(raw: &str) -> String {
+    let mut cleaned_lines = Vec::new();
+    let mut in_idle_goroutine = false;
+
+    for line in raw.lines() {
+        let trimmed = line.trim();
+
+        // Detect Go goroutine block headers
+        if trimmed.starts_with("goroutine ") {
+            if trimmed.contains("[force gc (idle)]")
+                || trimmed.contains("[GC sweep wait]")
+                || trimmed.contains("[GC scavenge wait]")
+                || trimmed.contains("[finalizer wait]")
+                || trimmed.contains("[scavenge wait]")
+                || trimmed.contains("[select (no cases)]")
+            {
+                in_idle_goroutine = true;
+                continue;
+            } else {
+                in_idle_goroutine = false;
+            }
+        }
+
+        // If inside an idle goroutine, skip lines until next non-indented block or empty line
+        if in_idle_goroutine {
+            if line.is_empty() {
+                in_idle_goroutine = false;
+            }
+            continue;
+        }
+
+        // Check if the individual line is framework noise
+        if is_framework_noise(line) {
+            continue;
+        }
+
+        cleaned_lines.push(line);
+    }
+
+    cleaned_lines.join("\n")
 }
 
 pub fn extract_context(log: &str, context_lines: usize, strict_cwd: bool) -> (String, Vec<String>) {

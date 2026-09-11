@@ -268,3 +268,161 @@ fn test_verify_patch_and_auto_rollback_on_syntax_error() {
     let _ = std::fs::remove_dir_all(&temp_dir);
 }
 
+#[test]
+fn test_spring_boot_deep_stack_trace_pruning() {
+    let raw_trace = r#"
+org.springframework.web.util.NestedServletException: Request processing failed: java.lang.NullPointerException: user repository returned null
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:914)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:590)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:205)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:492)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:130)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:343)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:390)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:926)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1790)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1191)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:61)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+Caused by: java.lang.NullPointerException: user repository returned null
+	at com.example.service.OrderService.processOrder(OrderService.java:64)
+	at com.example.controller.OrderController.handleCheckout(OrderController.kt:32)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:255)
+	... 42 common frames omitted
+"#;
+
+    let parser = JavaTraceParser;
+    assert!(parser.detect(raw_trace));
+
+    let locs = parser.extract_locations(raw_trace);
+    // Framework frames (FrameworkServlet, HttpServlet, ApplicationFilterChain, WsFilter, Thread, DirectMethodHandleAccessor, Method, InvocableHandlerMethod) MUST be discarded.
+    // Only user code locations (OrderService.java:64, OrderController.kt:32) should remain.
+    assert_eq!(locs.len(), 2);
+    assert_eq!(locs[0].file, "OrderService.java");
+    assert_eq!(locs[0].line, 64);
+    assert_eq!(locs[1].file, "OrderController.kt");
+    assert_eq!(locs[1].line, 32);
+
+    // Test prune_framework_noise removes Spring and Tomcat frames
+    let cleaned = tokenectomy::extractor::prune_framework_noise(raw_trace);
+    assert!(!cleaned.contains("org.springframework.web.servlet"));
+    assert!(!cleaned.contains("org.apache.catalina"));
+    assert!(!cleaned.contains("org.apache.tomcat"));
+    assert!(!cleaned.contains("org.apache.coyote"));
+    assert!(!cleaned.contains("java.base/"));
+    assert!(!cleaned.contains("common frames omitted"));
+    assert!(cleaned.contains("OrderService.java:64"));
+    assert!(cleaned.contains("OrderController.kt:32"));
+}
+
+#[test]
+fn test_cpp_asan_deep_stack_trace_pruning() {
+    let asan_log = r#"
+==38291==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x603000000048 at pc 0x55dc12 bp 0x7ffd12 sp 0x7ffd10
+READ of size 8 at 0x603000000048 thread T0
+    #0 0x7f9a1234 in __asan_memcpy (/usr/lib/x86_64-linux-gnu/libasan.so.8+0x1234)
+    #1 0x555555555149 in process_tensor(float const*, int) src/core/tensor.cpp:88
+    #2 0x55555555518b in main src/main.cpp:24
+    #3 0x7f9a5678 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #4 0x7f9a5700 in __libc_start_main_impl ../csu/libc-start.c:360
+    #5 0x555555555020 in _start (/app/bin/server+0x101)
+0x603000000048 is located 0 bytes to the right of 40-byte region [0x603000000020,0x603000000048)
+"#;
+
+    let parser = CppTraceParser;
+    assert!(parser.detect(asan_log));
+
+    let locs = parser.extract_locations(asan_log);
+    // __libc_start_main_impl, libc-start.c, and libc_start_call_main.h should be filtered out
+    assert_eq!(locs.len(), 2);
+    assert_eq!(locs[0].file, "src/core/tensor.cpp");
+    assert_eq!(locs[0].line, 88);
+    assert_eq!(locs[1].file, "src/main.cpp");
+    assert_eq!(locs[1].line, 24);
+
+    let cleaned = tokenectomy::extractor::prune_framework_noise(asan_log);
+    assert!(!cleaned.contains("__asan_memcpy"));
+    assert!(!cleaned.contains("libasan.so"));
+    assert!(!cleaned.contains("__libc_start_call_main"));
+    assert!(!cleaned.contains("__libc_start_main_impl"));
+    assert!(!cleaned.contains("in _start"));
+    assert!(cleaned.contains("src/core/tensor.cpp:88"));
+    assert!(cleaned.contains("src/main.cpp:24"));
+}
+
+#[test]
+fn test_go_goroutine_panic_compression() {
+    let go_dump = r#"
+panic: runtime error: invalid memory address or nil pointer dereference
+[signal SIGSEGV: code=0x1 addr=0x0 pc=0x498a72]
+
+goroutine 1 [running]:
+main.processOrder(0x0)
+	/app/src/order.go:45 +0x3a
+main.main()
+	/app/src/main.go:18 +0x22
+
+goroutine 2 [force gc (idle)]:
+runtime.gopark(0x4a0120, 0x0, 0x11, 0x14, 0x1)
+	/usr/local/go/src/runtime/proc.go:381 +0xd6
+runtime.forcegchelper()
+	/usr/local/go/src/runtime/proc.go:320 +0xb8
+runtime.goexit()
+	/usr/local/go/src/runtime/asm_amd64.s:1598 +0x1
+
+goroutine 3 [GC sweep wait]:
+runtime.gopark(0x4a0120, 0x0, 0x0c, 0x14, 0x1)
+	/usr/local/go/src/runtime/proc.go:381 +0xd6
+runtime.bgsweep()
+	/usr/local/go/src/runtime/mgcsweep.go:161 +0x8e
+runtime.goexit()
+	/usr/local/go/src/runtime/asm_amd64.s:1598 +0x1
+
+goroutine 4 [finalizer wait]:
+runtime.gopark(0x4a0120, 0x0, 0x10, 0x14, 0x1)
+	/usr/local/go/src/runtime/proc.go:381 +0xd6
+runtime.runfinq()
+	/usr/local/go/src/runtime/mfinal.go:193 +0xb5
+runtime.goexit()
+	/usr/local/go/src/runtime/asm_amd64.s:1598 +0x1
+"#;
+
+    let parser = GoTraceParser;
+    assert!(parser.detect(go_dump));
+
+    let locs = parser.extract_locations(go_dump);
+    // Go runtime internals (/usr/local/go/src/runtime/...) should be filtered out
+    assert_eq!(locs.len(), 2);
+    assert_eq!(locs[0].file, "/app/src/order.go");
+    assert_eq!(locs[0].line, 45);
+    assert_eq!(locs[1].file, "/app/src/main.go");
+    assert_eq!(locs[1].line, 18);
+
+    // Prune idle goroutines: goroutines 2, 3, and 4 should be completely pruned away!
+    let cleaned = tokenectomy::extractor::prune_framework_noise(go_dump);
+    assert!(cleaned.contains("goroutine 1 [running]:"));
+    assert!(cleaned.contains("/app/src/order.go:45"));
+    assert!(cleaned.contains("/app/src/main.go:18"));
+    assert!(!cleaned.contains("[force gc (idle)]"));
+    assert!(!cleaned.contains("[GC sweep wait]"));
+    assert!(!cleaned.contains("[finalizer wait]"));
+    assert!(!cleaned.contains("runtime.forcegchelper"));
+    assert!(!cleaned.contains("runtime.bgsweep"));
+    assert!(!cleaned.contains("runtime.runfinq"));
+}
+

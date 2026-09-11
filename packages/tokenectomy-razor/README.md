@@ -37,7 +37,7 @@ Tokenectomy Razor equips agents with 4 high-performance tools adhering strictly 
 
 | Tool Name | Capability Description |
 |---|---|
-| `get_error_context` | Performs trace surgery on error dumps, removes 90%+ framework noise (`node_modules`, `site-packages`, `.cargo/registry`), redacts credentials, and extracts local source context bounded to the workspace. |
+| `get_error_context` | Performs deep polyglot trace surgery on error dumps, removes 90%+ framework noise (`node_modules`, `site-packages`, `.cargo/registry`, Spring Boot, Tomcat, Hibernate, ASan, Go idle goroutines), redacts credentials, and extracts local source context bounded to the workspace. |
 | `analyze_code` | Performs static AST code analysis to detect resource leaks, unclosed handles, and security vulnerabilities with bounded execution limits and precise LSP UTF-16 coordinates. |
 | `apply_code_patch` | Applies atomic file modifications with post-write language syntax verification (`cargo check`, `node --check`, `py_compile`) and automated zero-dirty-diff rollback on validation failure. |
 | `search_stack_overflow` | Queries Stack Exchange API for relevant error signatures using sanitized search terms. |

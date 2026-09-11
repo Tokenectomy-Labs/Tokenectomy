@@ -1,5 +1,4 @@
 use crate::redact::redact_secrets;
-use crate::extractor::is_dependency_file;
 use serde_json::Value;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -28,22 +27,8 @@ pub fn sanitize_prompt_payload(payload: &Value) -> (Value, ProxySanitizeStats) {
                     stats.secrets_redacted += 1;
                 }
 
-                // 2. Strip noisy framework stack traces if detected
-                let mut cleaned_lines = Vec::new();
-                for line in redacted.lines() {
-                    let is_noise = line.trim_start().starts_with("at ")
-                        || line.trim_start().starts_with("File \"")
-                        || line.trim_start().starts_with("#")
-                        || line.trim_start().starts_with("goroutine ");
-
-                    if is_noise && is_dependency_file(line) {
-                        // Skip internal runtime / vendor frames
-                        continue;
-                    }
-                    cleaned_lines.push(line);
-                }
-
-                let final_content = cleaned_lines.join("\n");
+                // 2. Strip noisy framework stack traces and idle goroutines if detected
+                let final_content = crate::extractor::prune_framework_noise(&redacted);
                 stats.sanitized_chars += final_content.len();
 
                 if let Some(c_field) = msg.get_mut("content") {

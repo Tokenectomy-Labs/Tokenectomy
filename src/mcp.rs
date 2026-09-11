@@ -216,12 +216,7 @@ pub async fn run_server() -> anyhow::Result<()> {
                 let name = params.and_then(|p| p.get("name")).and_then(|n| n.as_str());
                 let args = params.and_then(|p| p.get("arguments"));
 
-                if name.is_none() || args.is_none() {
-                    Some(error_response(id, -32602, "Invalid params"))
-                } else {
-                    let name = name.unwrap();
-                    let args = args.unwrap();
-
+                if let (Some(name), Some(args)) = (name, args) {
                     match name {
                         "get_error_context" => {
                             if let Some(log) = args.get("log").and_then(|l| l.as_str()) {
@@ -423,6 +418,8 @@ pub async fn run_server() -> anyhow::Result<()> {
                             &format!("Tool '{}' not found", name),
                         )),
                     }
+                } else {
+                    Some(error_response(id, -32602, "Invalid params"))
                 }
             }
             _ => {

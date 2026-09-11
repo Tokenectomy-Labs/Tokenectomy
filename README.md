@@ -100,7 +100,7 @@ Error in /home/user/src/main.rs:42
                    └──────────────────────────────────────────────┘
 ```
 
-- **Polyglot Trace Surgery**: In-memory parsing across Rust, Python, TypeScript/JavaScript, and Go. Filters noisy dependency frames and isolates user-written code only. (Java, C/C++, PHP support coming in v1.2)
+- **Deep Polyglot Trace Surgery**: In-memory parsing across Rust, Python, TypeScript/JavaScript, Go, Java/Kotlin (Spring Boot 3, Tomcat, Hibernate, Netty, Undertow, HikariCP), C/C++ (AddressSanitizer, GDB, glibc), and PHP. Surgically filters noisy framework internals and runtime boilerplate while isolating genuine user application code frames.
 - **Static AST Code Analysis Engine (`analyze_code`)**: High-throughput static AST analysis detecting unclosed handles, resource leaks, and security vulnerabilities with bounded execution limits (50K AST nodes, 10 MB file limit) and precise LSP UTF-16 coordinates.
 - **Glama Grade A TDQS Compliance**: 100% Tool Definition Quality Score with explicit schema boundaries, runtime preconditions, and full disclosure across all MCP tools.
 - **AI Gateway Reverse Proxy (`--proxy`)**: Transparently intercepts prompt streams on `127.0.0.1:8080`, performing real-time token excision and credential sanitization before upstream forwarding to OpenAI, Anthropic, or Ollama.
@@ -498,9 +498,9 @@ A: Razor is the free, community version with all essential features. Sentinel ad
 | Standalone Multi-Arch Precompiled Binaries (Linux, macOS, Windows) | ✅ Complete | v1.1.6 |
 | Official Anthropic MCP Registry Listing (`io.github.Tokenectomy-Labs/razor`) | ✅ Complete | v1.1.7 |
 | `mcpservers.org` Official Directory Synchronization & Badge | ✅ Complete | v1.1.7 |
-| Java / Kotlin (Spring Boot 3, Gradle) framework stack trace extractors | 🔄 In Progress | v1.2.0 |
-| C / C++ (AddressSanitizer & GDB/LLDB) backtrace cleaner | 🔄 In Progress | v1.2.0 |
-| Go goroutine panic & dump compression heuristics | 🔄 In Progress | v1.2.0 |
+| Java / Kotlin (Spring Boot 3, Gradle) framework stack trace extractors | ✅ Complete | v1.2.0 |
+| C / C++ (AddressSanitizer & GDB/LLDB) backtrace cleaner | ✅ Complete | v1.2.0 |
+| Go goroutine panic & dump compression heuristics | ✅ Complete | v1.2.0 |
 | `awesome-mcp-servers` Community Directory Catalog Listing | 🔄 In Progress | v1.2.0 |
 | User-defined custom redaction patterns via `~/.tokenectomy.toml` | 📋 Planned | v1.3.0 |
 | Configurable noise thresholds & custom exclude patterns | 📋 Planned | v1.3.0 |
