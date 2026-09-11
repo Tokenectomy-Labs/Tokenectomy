@@ -13,7 +13,8 @@
   <a href="https://github.com/Tokenectomy-Labs/Tokenectomy/actions/workflows/ci.yml"><img src="https://github.com/Tokenectomy-Labs/Tokenectomy/actions/workflows/ci.yml/badge.svg" alt="Tokenectomy Razor CI build status" /></a>
   <a href="SECURITY.md"><img src="https://img.shields.io/badge/Security-Audited%20(RustSec)-2ea44f?logo=rust" alt="Tokenectomy Razor RustSec security audit status" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="Tokenectomy Razor MIT License" /></a>
-  <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/Official%20MCP%20Registry-io.github.tokenectomy--labs%2Frazor-brightgreen" alt="Tokenectomy Razor on official MCP Registry" /></a>
+  <a href="https://glama.ai/mcp/servers/Tokenectomy-Labs/Tokenectomy"><img src="https://img.shields.io/badge/Glama.ai-Tokenectomy--Razor-purple" alt="Tokenectomy Razor on Glama.ai" /></a>
+  <a href="https://mcpservers.org/servers/tokenectomy-labs/tokenectomy"><img src="https://img.shields.io/badge/mcpservers.org-Tokenectomy-orange" alt="Tokenectomy Razor on mcpservers.org" /></a>
   <a href="https://github.com/marketplace/actions/tokenectomy-razor"><img src="https://img.shields.io/badge/GitHub%20Marketplace-Tokenectomy%20Razor-blue?logo=githubactions" alt="Tokenectomy Razor GitHub Actions Marketplace" /></a>
   <a href="https://tokenectomy-labs.github.io/Tokenectomy"><img src="https://img.shields.io/badge/Docs-GitHub%20Pages-blue?logo=googledocs" alt="Tokenectomy Razor documentation site" /></a>
 </p>
