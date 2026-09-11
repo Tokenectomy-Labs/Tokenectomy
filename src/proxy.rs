@@ -338,9 +338,19 @@ pub async fn run_reverse_proxy_configured(
                         let status = upstream_resp.status();
                         let mut head = format!("HTTP/1.1 {} {}\r\n", status.as_u16(), status.canonical_reason().unwrap_or(""));
                         for (k, v) in upstream_resp.headers() {
+                            let k_lower = k.as_str().to_ascii_lowercase();
+                            // RFC 7230 §6.1: Strip hop-by-hop headers to prevent chunked framing mismatches
+                            if k_lower == "transfer-encoding"
+                                || k_lower == "connection"
+                                || k_lower == "keep-alive"
+                                || k_lower == "proxy-connection"
+                                || k_lower == "upgrade"
+                            {
+                                continue;
+                            }
                             head.push_str(&format!("{}: {}\r\n", k.as_str(), v.to_str().unwrap_or("")));
                         }
-                        head.push_str("\r\n");
+                        head.push_str("Connection: close\r\n\r\n");
                         let _ = socket.write_all(head.as_bytes()).await;
 
                         while let Ok(Some(chunk)) = upstream_resp.chunk().await {
@@ -348,6 +358,7 @@ pub async fn run_reverse_proxy_configured(
                                 break;
                             }
                         }
+                        let _ = socket.flush().await;
                     }
                     Err(e) => {
                         let err_json = serde_json::json!({

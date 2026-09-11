@@ -251,6 +251,19 @@ fn check_subsequent_try_finally(
 }
 
 fn contains_close_call(node: &Node, var_name: &str, source: &[u8]) -> bool {
+    contains_close_call_bounded(node, var_name, source, 0, 32)
+}
+
+fn contains_close_call_bounded(
+    node: &Node,
+    var_name: &str,
+    source: &[u8],
+    current_depth: usize,
+    max_depth: usize,
+) -> bool {
+    if current_depth > max_depth {
+        return false;
+    }
     let expected = format!("{}.close", var_name);
     let mut cursor = node.walk();
 
@@ -264,7 +277,7 @@ fn contains_close_call(node: &Node, var_name: &str, source: &[u8]) -> bool {
                 }
             }
         }
-        if contains_close_call(&child, var_name, source) {
+        if contains_close_call_bounded(&child, var_name, source, current_depth + 1, max_depth) {
             return true;
         }
     }

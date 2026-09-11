@@ -1,7 +1,12 @@
 use super::{CodeLocation, TraceParser};
 use regex::Regex;
+use std::sync::LazyLock;
 
 pub struct RustTraceParser;
+
+static RUST_LOC_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"([a-zA-Z0-9_/\.\-]+\.rs):(\d+)").unwrap()
+});
 
 impl TraceParser for RustTraceParser {
     fn detect(&self, log: &str) -> bool {
@@ -10,9 +15,7 @@ impl TraceParser for RustTraceParser {
 
     fn extract_locations(&self, log: &str) -> Vec<CodeLocation> {
         let mut locations = Vec::new();
-        let re = Regex::new(r"([a-zA-Z0-9_/\.\-]+\.rs):(\d+)").unwrap();
-        
-        for cap in re.captures_iter(log) {
+        for cap in RUST_LOC_REGEX.captures_iter(log) {
             if let (Some(file), Some(line_str)) = (cap.get(1), cap.get(2)) {
                 if let Ok(line) = line_str.as_str().parse::<usize>() {
                     locations.push(CodeLocation {

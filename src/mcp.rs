@@ -31,6 +31,7 @@ pub fn verify_patch(path: &std::path::Path) -> Result<(), String> {
             "rs" => {
                 if let Ok(output) = std::process::Command::new("cargo")
                     .args(["check", "--quiet", "--message-format=short"])
+                    .stdin(std::process::Stdio::null())
                     .output()
                 {
                     if !output.status.success() {
@@ -61,6 +62,7 @@ pub fn verify_patch(path: &std::path::Path) -> Result<(), String> {
                 // Secondary: OS runtime compiler validation if python3 is available
                 if let Ok(output) = std::process::Command::new("python3")
                     .args(["-m", "py_compile", path.to_str().unwrap_or("")])
+                    .stdin(std::process::Stdio::null())
                     .output()
                 {
                     if !output.status.success() {
@@ -72,6 +74,7 @@ pub fn verify_patch(path: &std::path::Path) -> Result<(), String> {
             "go" => {
                 if let Ok(output) = std::process::Command::new("go")
                     .args(["vet", path.to_str().unwrap_or("")])
+                    .stdin(std::process::Stdio::null())
                     .output()
                 {
                     if !output.status.success() {
@@ -83,6 +86,7 @@ pub fn verify_patch(path: &std::path::Path) -> Result<(), String> {
             "js" | "mjs" | "cjs" => {
                 if let Ok(output) = std::process::Command::new("node")
                     .args(["--check", path.to_str().unwrap_or("")])
+                    .stdin(std::process::Stdio::null())
                     .output()
                 {
                     if !output.status.success() {
@@ -94,6 +98,7 @@ pub fn verify_patch(path: &std::path::Path) -> Result<(), String> {
             "php" => {
                 if let Ok(output) = std::process::Command::new("php")
                     .args(["-l", path.to_str().unwrap_or("")])
+                    .stdin(std::process::Stdio::null())
                     .output()
                 {
                     if !output.status.success() {

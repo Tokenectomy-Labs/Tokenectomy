@@ -164,16 +164,18 @@ impl WorkspaceBoundary {
         Ok(content)
     }
 
-    /// Writes data safely to a file within the workspace boundary.
-    /// Ensures parent directories exist.
+    /// Writes data safely to a file within the workspace boundary using atomic write-and-rename.
+    /// Ensures parent directories exist and guarantees zero corrupt diff on process crash.
     pub fn write<P: AsRef<Path>, C: AsRef<[u8]>>(&self, path: P, content: C) -> Result<(), BoundaryError> {
         let safe_path = self.resolve(path)?;
-        if let Some(parent) = safe_path.parent() {
-            if !parent.exists() {
-                fs::create_dir_all(parent)?;
-            }
+        let parent = safe_path.parent().unwrap_or(&self.root);
+        if !parent.exists() {
+            fs::create_dir_all(parent)?;
         }
-        fs::write(&safe_path, content)?;
+        let file_name = safe_path.file_name().and_then(|n| n.to_str()).unwrap_or("tmp");
+        let tmp_path = parent.join(format!(".{}.tmp.{}", file_name, std::process::id()));
+        fs::write(&tmp_path, content)?;
+        fs::rename(&tmp_path, &safe_path)?;
         Ok(())
     }
 }
