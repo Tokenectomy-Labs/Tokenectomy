@@ -1,6 +1,7 @@
 // src/analyzer/mod.rs — High-Performance M2M AST Code Analysis Engine for Tokenectomy Razor
 
 pub mod python_open;
+pub mod python_exec;
 
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
@@ -72,6 +73,7 @@ impl AppState {
     pub fn new() -> Self {
         let mut rules: Vec<Box<dyn Rule>> = Vec::new();
         rules.push(Box::new(python_open::PythonUnclosedOpenRule));
+        rules.push(Box::new(python_exec::PythonDangerousExecRule));
 
         Self {
             rules: Arc::new(rules),
@@ -82,6 +84,7 @@ impl AppState {
     pub fn with_config(config: AnalysisConfig) -> Self {
         let mut rules: Vec<Box<dyn Rule>> = Vec::new();
         rules.push(Box::new(python_open::PythonUnclosedOpenRule));
+        rules.push(Box::new(python_exec::PythonDangerousExecRule));
 
         Self {
             rules: Arc::new(rules),

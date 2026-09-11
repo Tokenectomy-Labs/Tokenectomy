@@ -1,12 +1,97 @@
 use reqwest::Client;
 use serde_json::Value;
 
+/// Extracts the core error message or exception signature from a multi-line log.
+/// Filters out stack frames, memory addresses, and truncation boilerplate.
+pub fn extract_error_query(log: &str) -> Option<String> {
+    // 1. Prioritize root cause lines (Java Caused by)
+    for line in log.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("Caused by:") {
+            let msg = trimmed.trim_start_matches("Caused by:").trim();
+            return Some(clean_query(msg));
+        }
+    }
+
+    // 2. Check for explicit panics or sanitizer violations
+    for line in log.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("panic:") {
+            let msg = trimmed.trim_start_matches("panic:").trim();
+            return Some(clean_query(msg));
+        }
+        if trimmed.starts_with("thread ") && trimmed.contains("panicked at") {
+            if let Some((_, msg)) = trimmed.split_once("panicked at") {
+                return Some(clean_query(msg.trim().trim_matches('\'').trim_matches('"')));
+            }
+        }
+        if trimmed.contains("AddressSanitizer:") {
+            if let Some((_, msg)) = trimmed.split_once("AddressSanitizer:") {
+                let token = msg.split_whitespace().next().unwrap_or("heap-buffer-overflow");
+                return Some(clean_query(token));
+            }
+        }
+    }
+
+    // 3. Scan lines for standard exception / error headers
+    for line in log.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("Exception in thread") {
+            if let Some((_, msg)) = trimmed.split_once(':') {
+                return Some(clean_query(msg.trim()));
+            }
+        }
+        if trimmed.contains("Error: ") || trimmed.contains("Exception: ") {
+            if !trimmed.starts_with("at ") && !trimmed.starts_with("File \"") && !trimmed.starts_with('#') {
+                return Some(clean_query(trimmed));
+            }
+        }
+    }
+
+    // 4. Fallback: Find the most descriptive non-stack, non-noise line from bottom up
+    for line in log.lines().rev() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        // Discard stack frames and runtime metadata
+        if trimmed.starts_with("at ")
+            || trimmed.starts_with("File \"")
+            || trimmed.starts_with('#')
+            || trimmed.starts_with("goroutine ")
+            || trimmed.starts_with("... ")
+            || trimmed.starts_with("+0x")
+            || trimmed.starts_with("runtime.")
+            || trimmed.starts_with("exit status")
+        {
+            continue;
+        }
+        return Some(clean_query(trimmed));
+    }
+
+    None
+}
+
+fn clean_query(raw: &str) -> String {
+    // Strip raw memory pointers (0x...) and file path fragments
+    let words: Vec<&str> = raw.split_whitespace().collect();
+    let cleaned: Vec<&str> = words
+        .into_iter()
+        .filter(|w| !w.starts_with("0x") && !w.contains('/') && !w.contains('\\'))
+        .collect();
+    let res = if cleaned.is_empty() {
+        raw.to_string()
+    } else {
+        cleaned.join(" ")
+    };
+    res.chars().take(100).collect()
+}
+
 pub async fn search_stackoverflow(log: &str) -> Option<String> {
-    // Cari baris terakhir yang tidak kosong sebagai kueri (biasanya berisi inti error)
-    let query = log.lines().rev().find(|l| !l.trim().is_empty())?.trim();
-    
-    // Batasi kueri maksimal 100 karakter agar API tidak menolak
-    let query: String = query.chars().take(100).collect();
+    let query = extract_error_query(log)?;
+    if query.trim().is_empty() {
+        return None;
+    }
 
     let url = format!(
         "https://api.stackexchange.com/2.3/search/advanced?order=desc&sort=relevance&q={}&site=stackoverflow",
@@ -26,13 +111,20 @@ pub async fn search_stackoverflow(log: &str) -> Option<String> {
     let mut found = false;
 
     if let Some(items) = json.get("items").and_then(|i| i.as_array()) {
-        // Ambil 3 diskusi teratas
         for item in items.iter().take(3) {
-            if let (Some(title), Some(link), Some(is_answered)) = (item.get("title"), item.get("link"), item.get("is_answered")) {
+            if let (Some(title), Some(link), Some(is_answered)) = (
+                item.get("title"),
+                item.get("link"),
+                item.get("is_answered"),
+            ) {
                 let title = title.as_str().unwrap_or("");
                 let link = link.as_str().unwrap_or("");
-                let answered = if is_answered.as_bool().unwrap_or(false) { "✅ Answered" } else { "⏳ Unanswered" };
-                
+                let answered = if is_answered.as_bool().unwrap_or(false) {
+                    "✅ Answered"
+                } else {
+                    "⏳ Unanswered"
+                };
+
                 results.push_str(&format!("- [{}] {}\n  {}\n", answered, title, link));
                 found = true;
             }
@@ -43,5 +135,50 @@ pub async fn search_stackoverflow(log: &str) -> Option<String> {
         Some(results)
     } else {
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_error_query_java_caused_by() {
+        let log = r#"
+org.springframework.web.util.NestedServletException: Request processing failed
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+Caused by: java.lang.NullPointerException: user repository returned null
+	at com.example.service.OrderService.processOrder(OrderService.java:64)
+	... 42 common frames omitted
+"#;
+        let query = extract_error_query(log).expect("should extract query");
+        assert!(query.contains("NullPointerException"));
+        assert!(!query.contains("common frames omitted"));
+        assert!(!query.contains("OrderService.java"));
+    }
+
+    #[test]
+    fn test_extract_error_query_go_panic() {
+        let log = r#"
+panic: runtime error: index out of range [3] with length 2
+goroutine 1 [running]:
+main.main()
+	/app/main.go:15 +0x2b
+"#;
+        let query = extract_error_query(log).expect("should extract query");
+        assert!(query.contains("runtime error: index out of range"));
+        assert!(!query.contains("main.go"));
+    }
+
+    #[test]
+    fn test_extract_error_query_python_error() {
+        let log = r#"
+Traceback (most recent call last):
+  File "app.py", line 12, in <module>
+    run()
+TypeError: unsupported operand type(s) for +: 'int' and 'str'
+"#;
+        let query = extract_error_query(log).expect("should extract query");
+        assert!(query.contains("TypeError"));
     }
 }

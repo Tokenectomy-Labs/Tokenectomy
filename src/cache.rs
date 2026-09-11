@@ -54,10 +54,57 @@ pub fn get_cached_response(payload: &str) -> Option<String> {
     }
 }
 
+const MAX_CACHE_ENTRIES: usize = 1000;
+const CACHE_TTL_SECS: u64 = 86400; // 24 hours
+
 pub fn save_cached_response(payload: &str, response: &str) {
     if let Some(dir) = get_cache_dir() {
         let hash = hash_payload(payload);
         let cache_file = dir.join(format!("{}.txt", hash));
-        let _ = fs::write(cache_file, response);
+        let tmp_file = dir.join(format!("{}.tmp.{}", hash, std::process::id()));
+
+        // Atomic write: write to temp file then atomic rename
+        if fs::write(&tmp_file, response).is_ok() {
+            let _ = fs::rename(&tmp_file, &cache_file);
+        }
+
+        // Bounded capacity housekeeping
+        prune_cache_if_needed(&dir);
+    }
+}
+
+/// Enforces cache TTL and maximum entry bounds to prevent disk exhaustion.
+fn prune_cache_if_needed(dir: &std::path::Path) {
+    let entries = match fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+
+    let mut files_with_mtime = Vec::new();
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) == Some("txt") {
+            if let Ok(meta) = entry.metadata() {
+                if let Ok(mtime) = meta.modified() {
+                    if let Ok(elapsed) = mtime.elapsed() {
+                        if elapsed.as_secs() > CACHE_TTL_SECS {
+                            let _ = fs::remove_file(&path);
+                            continue;
+                        }
+                    }
+                    files_with_mtime.push((path, mtime));
+                }
+            }
+        }
+    }
+
+    // If still exceeds maximum capacity, evict oldest entries
+    if files_with_mtime.len() > MAX_CACHE_ENTRIES {
+        files_with_mtime.sort_by_key(|(_, mtime)| *mtime);
+        let to_remove = files_with_mtime.len() - MAX_CACHE_ENTRIES;
+        for (path, _) in files_with_mtime.into_iter().take(to_remove) {
+            let _ = fs::remove_file(path);
+        }
     }
 }

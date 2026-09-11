@@ -46,6 +46,19 @@ pub fn verify_patch(path: &std::path::Path) -> Result<(), String> {
                 }
             }
             "py" => {
+                // Primary: In-process Tree-sitter AST validation (zero external subprocess dependency)
+                let mut parser = tree_sitter::Parser::new();
+                let lang = &tree_sitter_python::LANGUAGE.into();
+                if parser.set_language(lang).is_ok() {
+                    if let Ok(source) = std::fs::read_to_string(path) {
+                        if let Some(tree) = parser.parse(&source, None) {
+                            if tree.root_node().has_error() {
+                                return Err("Python syntax error detected by Tree-sitter AST parser".to_string());
+                            }
+                        }
+                    }
+                }
+                // Secondary: OS runtime compiler validation if python3 is available
                 if let Ok(output) = std::process::Command::new("python3")
                     .args(["-m", "py_compile", path.to_str().unwrap_or("")])
                     .output()
@@ -53,6 +66,17 @@ pub fn verify_patch(path: &std::path::Path) -> Result<(), String> {
                     if !output.status.success() {
                         let stderr = String::from_utf8_lossy(&output.stderr);
                         return Err(format!("Python syntax check failed: {}", stderr.trim()));
+                    }
+                }
+            }
+            "go" => {
+                if let Ok(output) = std::process::Command::new("go")
+                    .args(["vet", path.to_str().unwrap_or("")])
+                    .output()
+                {
+                    if !output.status.success() {
+                        let stderr = String::from_utf8_lossy(&output.stderr);
+                        return Err(format!("Go vet syntax check failed: {}", stderr.trim()));
                     }
                 }
             }
@@ -64,6 +88,19 @@ pub fn verify_patch(path: &std::path::Path) -> Result<(), String> {
                     if !output.status.success() {
                         let stderr = String::from_utf8_lossy(&output.stderr);
                         return Err(format!("Node syntax check failed: {}", stderr.trim()));
+                    }
+                }
+            }
+            "php" => {
+                if let Ok(output) = std::process::Command::new("php")
+                    .args(["-l", path.to_str().unwrap_or("")])
+                    .output()
+                {
+                    if !output.status.success() {
+                        let stderr = String::from_utf8_lossy(&output.stderr);
+                        let stdout = String::from_utf8_lossy(&output.stdout);
+                        let err = if !stderr.trim().is_empty() { stderr.trim() } else { stdout.trim() };
+                        return Err(format!("PHP lint check failed: {}", err));
                     }
                 }
             }
