@@ -5,6 +5,17 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.0] — 2026-09-12
+
+### Added
+- **Deep Polyglot Surgery Engine**:
+  - **Java/Kotlin Spring Boot 3 & Enterprise Framework Filtering**: Surgically detects and prunes enterprise stack frame noise from Spring Boot (`org.springframework.*`), Tomcat (`org.apache.catalina.*`, `org.apache.tomcat.*`), Hibernate (`org.hibernate.*`), Netty (`io.netty.*`), Undertow (`io.undertow.*`), HikariCP (`com.zaxxer.hikari.*`), Coroutines (`kotlinx.coroutines.*`), and JDK internals (`jdk.internal.*`, `java.base/Thread`), isolating strictly user application code frames.
+  - **C/C++ AddressSanitizer (ASan) & GDB Surgery**: Automatically discards sanitizer runtime internals (`__asan_memcpy`, `libasan.so`, `__sanitizer::`), glibc startup wrappers (`__libc_start_call_main`, `libc-start.c`, `sysdeps/`), and binary entry points (`_start`), extracting genuine application source coordinates (`.cpp`, `.cc`, `.c`, `.hpp`).
+  - **Go Goroutine Dump Compression**: Detects and prunes idle runtime goroutines (`[force gc (idle)]`, `[GC sweep wait]`, `[finalizer wait]`, `runtime.gopark`, `runtime.forcegchelper`), preserving crashing and active user goroutines.
+- **Surgical Pruning Function**: Introduced `extractor::prune_framework_noise` for comprehensive multi-language runtime log compression.
+- **Parallel-Bridge Pattern**: Retained 100% backward compatibility for `extractor::is_dependency_file` via an inline zero-overhead delegation shim to `is_framework_noise`.
+- **Adversarial Hardening**: Eliminated unchecked unwraps across MCP parameters in `src/mcp.rs`.
+
 ## [1.1.7] — 2026-09-12
 
 ### Changed

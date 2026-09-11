@@ -7,12 +7,12 @@
     "url": "https://github.com/Tokenectomy-Labs/Tokenectomy",
     "source": "github"
   },
-  "version": "1.1.7",
+  "version": "1.2.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "tokenectomy-razor",
-      "version": "1.1.7",
+      "version": "1.2.0",
       "transport": {
         "type": "stdio"
       }

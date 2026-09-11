@@ -25,9 +25,14 @@ impl TraceParser for CppTraceParser {
         let mut locations = Vec::new();
         for cap in CPP_LOC_REGEX.captures_iter(log) {
             if let (Some(file), Some(line_str)) = (cap.get(1), cap.get(2)) {
+                let file_str = file.as_str();
+                if super::is_framework_noise(file_str) {
+                    continue;
+                }
+
                 if let Ok(line) = line_str.as_str().parse::<usize>() {
                     locations.push(CodeLocation {
-                        file: file.as_str().to_string(),
+                        file: file_str.to_string(),
                         line,
                     });
                 }

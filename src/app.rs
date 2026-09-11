@@ -38,14 +38,8 @@ pub async fn run_cli() -> anyhow::Result<()> {
             io::stdin().take(50 * 1024 * 1024).read_to_string(&mut raw)?;
         }
 
-        let mut pruned = Vec::new();
-        for line in raw.lines() {
-            if !extractor::is_dependency_file(line) {
-                pruned.push(line);
-            }
-        }
-        let joined = pruned.join("\n");
-        let safe = redact::redact_secrets(&joined);
+        let pruned = extractor::prune_framework_noise(&raw);
+        let safe = redact::redact_secrets(&pruned);
         print!("{}", safe);
         if !safe.ends_with('\n') {
             println!();
