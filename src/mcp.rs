@@ -138,17 +138,17 @@ pub async fn run_server() -> anyhow::Result<()> {
                     "tools": [
                         {
                             "name": "get_error_context",
-                            "description": "Extracts detailed source code context and git diff from an error log, removing framework noise and redacting secrets.",
+                            "description": "Extracts focused source code snippets and git diffs from a raw error log or stack trace, stripping framework noise (node_modules, site-packages) and redacting credentials.\n\n• Side Effects: None. Strictly read-only; does not modify workspace files, git state, or environment variables.\n• Auth & Permissions: None required. Reads local filesystem within the current workspace boundary.\n• Rate Limits: None. Runs entirely locally on native machine code.\n• Return Shape: Returns a JSON object with 'sanitized_trace' (string without secrets/noise), 'source_frames' (array of objects with file, line, code_snippet), and 'git_diff' (string or null).\n• Failure Modes: If source files referenced in the trace do not exist locally, omits code snippets for those frames while still returning the sanitized trace. Returns an error JSON on unreadable input.\n• When to use: Call immediately when receiving a runtime exception, test failure, or compiler error to isolate the root cause before planning code fixes.\n• When NOT to use: Do NOT use to search web solutions (use search_stack_overflow), do NOT use to modify files (use apply_code_patch), and do NOT use to statically lint clean code without an error log (use analyze_code).\n• Prerequisites: Workspace directory must be accessible locally; git repository recommended for diff extraction.",
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {
                                     "log": {
                                         "type": "string",
-                                        "description": "The raw error stack trace or compiler panic message string to sanitize and extract context from."
+                                        "description": "Raw error stack trace, compiler panic, or terminal stderr string to analyze (e.g. Python traceback, Node.js error, Rust panic). Must be non-empty UTF-8 text up to 1MB. Automatically sanitized of API keys, JWTs, and passwords."
                                     },
                                     "context_lines": {
                                         "type": "integer",
-                                        "description": "Number of source code lines to extract above and below the error location (default: 10)."
+                                        "description": "Number of source code lines to retrieve above and below each detected error line. Integer between 0 and 100. Defaults to 10 lines. Larger values expand the context window but consume more LLM tokens."
                                     }
                                 },
                                 "required": ["log"]
@@ -156,13 +156,13 @@ pub async fn run_server() -> anyhow::Result<()> {
                         },
                         {
                             "name": "search_stack_overflow",
-                            "description": "Queries Stack Overflow API for solutions matching a sanitized error signature.",
+                            "description": "Queries the public Stack Overflow / Stack Exchange API for verified programming solutions and discussions matching an error signature.\n\n• Side Effects: None. Strictly read-only network search; does not mutate local files or repository state.\n• Auth & Permissions: No API key required for standard rate-limited anonymous queries.\n• Rate Limits: Subject to public Stack Exchange API rate limits (~300 requests/day per IP). Results are cached locally when possible.\n• Return Shape: Returns a JSON object containing 'query', 'total_results', and 'results' (array of objects with title, url, score, is_answered, answer_count, and answer excerpt).\n• Failure Modes: Returns empty results array if no matching questions exist. Returns an error message if network connectivity fails or API quota is exhausted.\n• When to use: Use when local code context from get_error_context is insufficient and external community patterns, known library bugs, or API migration examples are needed.\n• When NOT to use: Do NOT use with raw un-sanitized logs containing private tokens or file paths, do NOT use for local codebase inspection (use get_error_context), and do NOT use to edit code (use apply_code_patch).\n• Prerequisites: Outbound HTTP internet access to api.stackexchange.com.",
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {
                                     "query": {
                                         "type": "string",
-                                        "description": "Targeted, sanitized exception message or error signature (free of secrets and local file paths)."
+                                        "description": "Targeted search query string (e.g. 'ValueError: unsupported operand type(s) for +: int and str'). Must be free of project-specific paths, private tokens, or proprietary variable names. 3 to 150 characters recommended."
                                     }
                                 },
                                 "required": ["query"]
@@ -170,21 +170,21 @@ pub async fn run_server() -> anyhow::Result<()> {
                         },
                         {
                             "name": "apply_code_patch",
-                            "description": "Applies an atomic code patch to a specific file by replacing original_code with new_code, with automatic syntax validation and rollback.",
+                            "description": "Applies an atomic, verified code edit to a specific file by substituting original_code with new_code, with automatic syntax validation and instant rollback on failure.\n\n• Side Effects: Modifies the target file on the local filesystem. If syntax checks pass, the file is overwritten with patched contents; if syntax validation fails, the file is immediately restored to its exact original state (zero dirty diff).\n• Auth & Permissions: Requires write permissions for the target file on the host filesystem within the workspace boundary. Path traversal outside workspace root is blocked.\n• Rate Limits: None. Local disk I/O.\n• Return Shape: Returns a JSON object with 'status' ('success' or 'error'), 'file_path', 'lines_changed', 'verification' ('passed' or 'reverted'), and 'message'.\n• Failure Modes: Fails and aborts without touching the file if file_path is not found, if original_code does not match the file content uniquely, or if the compiler/linter check fails after patch application.\n• When to use: Use when you have finalized a bug fix or refactoring snippet and need safe, transactional application with zero risk of syntax corruption.\n• When NOT to use: Do NOT use for speculative edits without prior diagnosis (use get_error_context first), and do NOT use for whole-file generation when only a small block changes.\n• Prerequisites: Target file must exist and be within the current workspace directory.",
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {
                                     "file_path": {
                                         "type": "string",
-                                        "description": "Absolute path to the file within the workspace boundary."
+                                        "description": "Target file path to modify. Can be relative to the workspace root or an absolute path located inside the workspace boundary. Path traversal outside the workspace is rejected."
                                     },
                                     "original_code": {
                                         "type": "string",
-                                        "description": "The exact code block to be replaced (must match uniquely)."
+                                        "description": "The exact character-for-character contiguous code block to be replaced, including exact leading indentation, newlines, and whitespace. Must match exactly one location in the file."
                                     },
                                     "new_code": {
                                         "type": "string",
-                                        "description": "The replacement code block."
+                                        "description": "The replacement code block to substitute in place of original_code. Must maintain correct language syntax and indentation matching the surrounding code."
                                     }
                                 },
                                 "required": ["file_path", "original_code", "new_code"]
@@ -192,17 +192,17 @@ pub async fn run_server() -> anyhow::Result<()> {
                         },
                         {
                             "name": "analyze_code",
-                            "description": "Performs static AST code analysis to detect resource leaks, security vulnerabilities, and code defects with bounded execution limits and precise LSP UTF-16 coordinates.",
+                            "description": "Performs static AST code analysis using Tree-sitter to detect resource leaks (such as unclosed file handles), security vulnerabilities, and logic flaws with bounded execution limits and precise LSP UTF-16 coordinates.\n\n• Side Effects: None. Strictly read-only analysis of in-memory code; does not execute code, spawn subprocesses, or write to disk.\n• Auth & Permissions: None required. Fully offline, in-memory parser.\n• Rate Limits: None. Bounded to 1MB max source size, 128 max AST depth, and 50,000 max node visits per call.\n• Return Shape: Returns a JSON object containing 'language', 'findings_count', 'duration_ms' (latency metric), and 'findings' (array of objects with rule_id, message, severity, line [1-indexed], column [1-indexed UTF-16 code units], and remediation).\n• Failure Modes: Returns findings: [] if the code contains no detected defects. Returns an error message if the language is unsupported or if source code exceeds the 1MB or 128 AST depth limits.\n• When to use: Use proactively before committing or running code, or when reviewing Python files for unclosed file handles, resource leaks, or AST defects.\n• When NOT to use: Do NOT use when you have an active runtime crash log (use get_error_context instead), and do NOT use to apply fixes automatically (use apply_code_patch instead).\n• Prerequisites: Supported languages currently include Python ('python', 'py').",
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {
                                     "language": {
                                         "type": "string",
-                                        "description": "Programming language of the code to analyze (e.g. 'python', 'py')."
+                                        "description": "Programming language identifier for the code snippet. Case-insensitive. Supported values: 'python', 'py'."
                                     },
                                     "code": {
                                         "type": "string",
-                                        "description": "Raw source code to analyze."
+                                        "description": "Raw source code string to analyze. Must not exceed 1,000,000 bytes (1MB). Does not execute runtime code; strictly parsed via Tree-sitter AST."
                                     }
                                 },
                                 "required": ["language", "code"]
