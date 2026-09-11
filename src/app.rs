@@ -70,13 +70,14 @@ pub async fn run_cli() -> anyhow::Result<()> {
 /_/  \____/_/|_|\___/_/ /_/\___/\___/\__/\____/_/ /_/ /_/\__, /  
                                                         /____/   "#;
             println!("{}", banner.yellow().bold());
-            println!("{:>70}", "v1.1.0 | AI-Powered Debugger".bright_black());
+            let version_label = format!("v{} | AI-Powered Debugger", env!("CARGO_PKG_VERSION"));
+            println!("{:>70}", version_label.bright_black());
             
             // 2. Dashboard with Bug ASCII Art & Solid Background Colors
             let prov_val = format!("{:?}", app_config.default_provider.clone().unwrap_or(ProviderChoice::Ollama)).to_lowercase();
             let ctx_val = format!("{} lines", context_lines);
             
-            let title = "   🗡️ TOKENECTOMY RAZOR v1.1.0 (COMMUNITY OSS) 🗡️   ";
+            let title = format!("   🗡️ TOKENECTOMY RAZOR v{} (COMMUNITY OSS) 🗡️   ", env!("CARGO_PKG_VERSION"));
             println!("╭{}╮", "─".repeat(70).yellow());
             println!("│{:^70}│", title.black().on_yellow().bold());
             println!("├{}┤", "─".repeat(70).yellow());
@@ -197,7 +198,8 @@ pub async fn run_cli() -> anyhow::Result<()> {
 
     let max_chars = args.max_context_chars.unwrap_or(app_config.max_context_chars.unwrap_or(10_000));
     if context.len() > max_chars {
-        context.truncate(max_chars);
+        let boundary = context.floor_char_boundary(max_chars);
+        context.truncate(boundary);
         context.push_str("\n... (context truncated due to limit)\n");
     }
     

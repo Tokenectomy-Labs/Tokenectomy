@@ -42,8 +42,8 @@ static REDACT_RULES: LazyLock<Vec<RedactRule>> = LazyLock::new(|| {
         },
         // 3. AWS Secret Access Key
         RedactRule {
-            regex: Regex::new(r#"(?i)(aws_secret[a-z_]*)[=:\s"']+([a-zA-Z0-9/+=]{40})"#).unwrap(),
-            replacement: "$1 = [AWS_SECRET_REDACTED]",
+            regex: Regex::new(r#"(?i)(["']?aws_secret[a-z0-9_]*["']?\s*[:=]\s*["']?)([a-zA-Z0-9/+=]{40})(["']?)"#).unwrap(),
+            replacement: "${1}[AWS_SECRET_REDACTED]${3}",
         },
         // 4. JWT Tokens
         RedactRule {
@@ -66,15 +66,15 @@ static REDACT_RULES: LazyLock<Vec<RedactRule>> = LazyLock::new(|| {
             replacement: "Authorization: Bearer [REDACTED]",
         },
         // 8. Generic Key/Token patterns (fallback for other credentials)
-        // 8a. Quoted values with complex special characters
+        // 8a. Quoted values: preserves JSON/YAML keys, colons, and quotes
         RedactRule {
-            regex: Regex::new(r#"(?i)(api_key|token|password|secret|auth|bearer)[\s:="']+["']([^"'\r\n]{4,})["']"#).unwrap(),
-            replacement: "$1 = \"[REDACTED]\"",
+            regex: Regex::new(r#"(?i)(["']?(?:api_key|token|password|secret|auth|bearer)[a-z0-9_]*["']?\s*[:=]\s*)(["'])(?:[^"'\r\n]{4,})(["'])"#).unwrap(),
+            replacement: "${1}${2}[REDACTED]${3}",
         },
-        // 8b. Unquoted words
+        // 8b. Unquoted words: preserves keys and colons/equals
         RedactRule {
-            regex: Regex::new(r#"(?i)(api_key|token|password|secret|auth|bearer)[\s:="']+([a-zA-Z0-9_\-\.]{10,})"#).unwrap(),
-            replacement: "$1 = [REDACTED]",
+            regex: Regex::new(r#"(?i)(["']?(?:api_key|token|password|secret|auth|bearer)[a-z0-9_]*["']?\s*[:=]\s*)([a-zA-Z0-9_\-\.]{10,})"#).unwrap(),
+            replacement: "${1}[REDACTED]",
         },
     ]
 });
@@ -155,5 +155,17 @@ mod tests {
         let res_anthropic = redact_secrets(log_anthropic);
         assert!(res_anthropic.contains("[ANTHROPIC_KEY_REDACTED]"));
         assert!(!res_anthropic.contains("abcdef1234567890"));
+    }
+
+    #[test]
+    fn test_redact_preserves_valid_json() {
+        let json_input = r#"{"db_host": "localhost", "db_password": "my_super_secret_12345", "api_token": "token_abc123456"}"#;
+        let res = redact_secrets(json_input);
+        assert!(res.contains(r#""db_password": "[REDACTED]""#));
+        assert!(res.contains(r#""api_token": "[REDACTED]""#));
+        // Must still parse as valid JSON
+        let parsed: serde_json::Value = serde_json::from_str(&res).expect("JSON must remain valid after redaction");
+        assert_eq!(parsed["db_password"], "[REDACTED]");
+        assert_eq!(parsed["api_token"], "[REDACTED]");
     }
 }

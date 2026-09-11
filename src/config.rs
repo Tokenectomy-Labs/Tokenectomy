@@ -33,9 +33,16 @@ impl AppConfig {
         }
 
         if let Some(path) = config_path {
-            if let Ok(content) = fs::read_to_string(path) {
-                if let Ok(config) = toml::from_str(&content) {
-                    return config;
+            if let Ok(content) = fs::read_to_string(&path) {
+                match toml::from_str(&content) {
+                    Ok(config) => return config,
+                    Err(e) => {
+                        eprintln!(
+                            "⚠️  Warning: Failed to parse configuration from '{}': {}",
+                            path.display(),
+                            e
+                        );
+                    }
                 }
             }
         }
