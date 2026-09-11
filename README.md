@@ -488,15 +488,27 @@ A: Razor is the free, community version with all essential features. Sentinel ad
 
 ## Roadmap
 
-| Feature | Status | Target Version |
-|---------|--------|---|
-| Java/Kotlin extractor | 🔄 In Progress | v1.2 |
-| Go extractor improvements | 🔄 In Progress | v1.2 |
-| Custom redaction rules (TOML config) | 📋 Planned | v1.3 |
-| VS Code extension | 📋 Planned | v1.4 |
-| Tree-sitter AST healing | ✅ Sentinel (Paid) | Now |
-| Multi-file atomic transactions | ✅ Sentinel (Paid) | Now |
-| Time machine undo engine | ✅ Sentinel (Paid) | Now |
+| Milestone / Capability | Status | Target Version |
+|---|:---:|:---:|
+| Core Polyglot Log Surgery & $O(N)$ ReDoS-Immune Secret Redaction | ✅ Complete | v1.0.0 |
+| AI Gateway Reverse Proxy (`--proxy`) & SHA-256 Idempotency Cache | ✅ Complete | v1.1.0 |
+| Multi-arch Docker (GHCR) & GitHub Actions Marketplace Action | ✅ Complete | v1.1.3 |
+| Static AST Code Analysis Engine (`analyze_code`) & UTF-16 LSP Offsets | ✅ Complete | v1.1.5 |
+| Glama.ai Tool Definition Quality Score (TDQS Grade A) | ✅ Complete | v1.1.5 |
+| Standalone Multi-Arch Precompiled Binaries (Linux, macOS, Windows) | ✅ Complete | v1.1.6 |
+| Official Anthropic MCP Registry Listing (`io.github.Tokenectomy-Labs/razor`) | ✅ Complete | v1.1.7 |
+| `mcpservers.org` Official Directory Synchronization & Badge | ✅ Complete | v1.1.7 |
+| Java / Kotlin (Spring Boot 3, Gradle) framework stack trace extractors | 🔄 In Progress | v1.2.0 |
+| C / C++ (AddressSanitizer & GDB/LLDB) backtrace cleaner | 🔄 In Progress | v1.2.0 |
+| Go goroutine panic & dump compression heuristics | 🔄 In Progress | v1.2.0 |
+| `awesome-mcp-servers` Community Directory Catalog Listing | 🔄 In Progress | v1.2.0 |
+| User-defined custom redaction patterns via `~/.tokenectomy.toml` | 📋 Planned | v1.3.0 |
+| Configurable noise thresholds & custom exclude patterns | 📋 Planned | v1.3.0 |
+| Local agent token savings & cost reduction metrics dashboard | 📋 Planned | v1.3.0 |
+| Native VS Code & JetBrains companion extensions | 📋 Planned | v1.4.0 |
+| Server-Sent Events (SSE) remote MCP transport | 📋 Planned | v1.4.0 |
+| Tree-sitter AST syntax healing & repair | ✅ Sentinel (Paid) | Available Now |
+| Multi-file atomic transactions & Time-machine rollback (`--undo`) | ✅ Sentinel (Paid) | Available Now |
 
 ---
 

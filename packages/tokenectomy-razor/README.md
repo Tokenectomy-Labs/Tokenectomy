@@ -125,6 +125,18 @@ npm test 2>&1 | razor --scrub > sanitized.log
 
 ---
 
+## 🗺️ Roadmap & Ecosystem Milestones
+
+- ✅ **v1.0.0 - v1.1.0:** Core polyglot log surgery, O(N) ReDoS-immune redaction, AI reverse proxy gateway (`--proxy`).
+- ✅ **v1.1.3:** Multi-architecture Docker images (GHCR) & GitHub Actions Marketplace Action.
+- ✅ **v1.1.5:** Static AST code analysis engine (`analyze_code`) & Glama.ai TDQS Grade A compliance.
+- ✅ **v1.1.6:** Precompiled standalone native binaries (Linux, macOS Apple Silicon/Intel, Windows).
+- ✅ **v1.1.7:** Canonical Anthropic MCP Registry validation (`io.github.Tokenectomy-Labs/razor`) & `mcpservers.org` directory listing.
+- 🔄 **v1.2.0 (In Progress):** Java/Kotlin (Spring Boot 3) & C/C++ backtrace surgery, `awesome-mcp-servers` directory PR.
+- 📋 **v1.3.0 (Planned):** User-defined custom redaction rules (`~/.tokenectomy.toml`) & local agent token savings metrics.
+
+---
+
 ## 🔗 Official Links & Resources
 
 - **GitHub Repository:** [https://github.com/Tokenectomy-Labs/Tokenectomy](https://github.com/Tokenectomy-Labs/Tokenectomy)

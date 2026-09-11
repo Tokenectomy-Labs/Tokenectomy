@@ -161,15 +161,29 @@ cargo audit
 
 ## 🎯 Project Roadmap
 
-- **Phase 1: Foundation (Current)**
-  - ✅ Polyglot trace parsing & framework frame stripping
-  - ✅ Deterministic regex-based secret redaction
+- **Phase 1: Foundation (Completed — v1.0 - v1.1)**
+  - ✅ Polyglot trace parsing & framework frame stripping (Rust, Python, TS/JS, Go)
+  - ✅ Deterministic regex-based secret redaction with $O(N)$ ReDoS immunity
+  - ✅ AI Gateway Reverse Proxy (`--proxy`) & SHA-256 idempotency cache
   - ✅ JSON-RPC 2.0 stdio MCP server implementation
-  - ✅ Crates.io crate & GitHub Marketplace Action
-- **Phase 2: Expansion**
-  - 🔄 Additional framework noise filters (Next.js 15, FastAPI, Axum, Spring Boot 3)
-  - 🔄 Extended secret patterns (GCP service account keys, Vault tokens)
-  - 🔄 Enhanced MCP server tools for IDE background daemons
+  - ✅ Crates.io crate (`tokenectomy`) & npm package (`tokenectomy-razor`)
+  - ✅ GitHub Marketplace Action & GHCR Multi-Arch Docker containers
+- **Phase 2: Static Analysis & Canonical Ecosystem Recognition (Completed — v1.1.5 - v1.1.7)**
+  - ✅ Static AST code analysis engine (`analyze_code`) & LSP UTF-16 coordinates
+  - ✅ Glama.ai Tool Definition Quality Score (TDQS Grade A) & Verified Maintainer
+  - ✅ Precompiled multi-architecture release binaries (Linux x86_64/arm64/musl, macOS, Windows)
+  - ✅ Official Anthropic MCP Registry publication (`io.github.Tokenectomy-Labs/razor`)
+  - ✅ `mcpservers.org` directory listing and badge integration
+- **Phase 3: Deep Polyglot Expansion & Integrations (Current — v1.2.0)**
+  - 🔄 Java / Kotlin (Spring Boot 3, Gradle) framework stack trace extractors
+  - 🔄 C / C++ AddressSanitizer (ASan) & GDB/LLDB backtrace sanitization
+  - 🔄 Go goroutine dump compression & panic trace heuristics
+  - 🔄 `awesome-mcp-servers` community catalog PR
+- **Phase 4: Ecosystem Extensibility (Planned — v1.3.0+)**
+  - 📋 User-defined custom redaction rules via `~/.tokenectomy.toml`
+  - 📋 Local token savings & cost reduction metrics dashboard
+  - 📋 Native IDE companion extensions (VS Code, JetBrains)
+  - 📋 Server-Sent Events (SSE) remote MCP transport
 
 ---
 
