@@ -1,5 +1,11 @@
 # tokenectomy-razor 🗡️
 
+<p align="left">
+  <a href="https://mcpservers.org/servers/tokenectomy-labs/tokenectomy"><img src="https://mcpservers.org/badge.svg" alt="Listed on mcpservers.org" /></a>
+  <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/Official%20MCP%20Registry-io.github.Tokenectomy--Labs%2Frazor-brightgreen" alt="Official MCP Registry" /></a>
+  <a href="https://www.npmjs.com/package/tokenectomy-razor"><img src="https://img.shields.io/npm/v/tokenectomy-razor.svg?logo=npm" alt="npm version" /></a>
+</p>
+
 Autonomous M2M Model Context Protocol (MCP) server & log surgery engine for AI coding agents (Claude Desktop, Cursor, Cline, Antigravity, Windsurf).
 
 ## 🚀 Instant Usage with npx
