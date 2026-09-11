@@ -123,13 +123,14 @@ pub async fn run_reverse_proxy_configured(
     let upstream = Arc::new(upstream_url.trim_end_matches('/').to_string());
     let required_token = auth_token.map(|t| Arc::new(t.trim().to_string()));
     let semaphore = Arc::new(tokio::sync::Semaphore::new(MAX_CONCURRENT_CONNECTIONS));
+    let analyzer_state = Arc::new(crate::analyzer::AppState::new());
 
     println!("⚡ Tokenectomy AI Gateway Proxy active on http://{}", bind_addr);
     println!("🔗 Forwarding to upstream: {}", upstream);
     if !loopback {
         println!("🔒 Remote mode ACTIVE (Protected with mandatory bearer authentication)");
     }
-    println!("🛡️ Active filters: Zero-Leak Redaction + Polyglot Framework Surgery");
+    println!("🛡️ Active filters: Zero-Leak Redaction + Polyglot Framework Surgery + AST Analyzer");
 
     loop {
         let (mut socket, peer_addr) = listener.accept().await?;
@@ -146,6 +147,7 @@ pub async fn run_reverse_proxy_configured(
         let client_clone = Arc::clone(&client);
         let upstream_clone = Arc::clone(&upstream);
         let token_clone = required_token.clone();
+        let analyzer_clone = Arc::clone(&analyzer_state);
 
         tokio::spawn(async move {
             let _permit = permit;
@@ -202,7 +204,10 @@ pub async fn run_reverse_proxy_configured(
 
                 // Health check endpoint
                 if path == "/health" || path == "/v1/health" {
-                    let resp = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"status\":\"ok\",\"service\":\"tokenectomy-gateway\",\"version\":\"1.1.3\"}\r\n";
+                    let resp = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{{\"status\":\"ok\",\"service\":\"tokenectomy-gateway\",\"version\":\"{}\"}}\r\n",
+                        env!("CARGO_PKG_VERSION")
+                    );
                     let _ = socket.write_all(resp.as_bytes()).await;
                     return;
                 }
@@ -255,6 +260,53 @@ pub async fn run_reverse_proxy_configured(
                         Ok(0) => break,
                         Ok(n) => body_bytes.extend_from_slice(&temp[..n]),
                         Err(_) => break,
+                    }
+                }
+
+                // Handle /v1/analyze or /analyze directly on the gateway (#17, #18, #19, #20)
+                if method == "POST" && (path == "/v1/analyze" || path == "/analyze") {
+                    if let Ok(analyze_req) = serde_json::from_slice::<crate::analyzer::AnalyzeRequest>(&body_bytes) {
+                        match crate::analyzer::analyze_source(&analyzer_clone, &analyze_req.language, &analyze_req.code) {
+                            Ok(resp) => {
+                                eprintln!(
+                                    "⚡ [Proxy] /v1/analyze from {}: {} findings, {:.2}ms",
+                                    peer_addr, resp.total_findings, resp.duration_ms
+                                );
+                                let res_json = serde_json::to_string(&resp).unwrap_or_default();
+                                let resp_http = format!(
+                                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                                    res_json.len(),
+                                    res_json
+                                );
+                                let _ = socket.write_all(resp_http.as_bytes()).await;
+                                return;
+                            }
+                            Err(e) => {
+                                let err_json = serde_json::json!({
+                                    "version": "v1",
+                                    "status": "error",
+                                    "error": e
+                                }).to_string();
+                                let resp_http = format!(
+                                    "HTTP/1.1 422 Unprocessable Entity\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                                    err_json.len(),
+                                    err_json
+                                );
+                                let _ = socket.write_all(resp_http.as_bytes()).await;
+                                return;
+                            }
+                        }
+                    } else {
+                        let err_json = serde_json::json!({
+                            "error": "Invalid JSON payload for /v1/analyze"
+                        }).to_string();
+                        let resp_http = format!(
+                            "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                            err_json.len(),
+                            err_json
+                        );
+                        let _ = socket.write_all(resp_http.as_bytes()).await;
+                        return;
                     }
                 }
 

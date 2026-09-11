@@ -78,6 +78,7 @@ pub async fn run_server() -> anyhow::Result<()> {
         WorkspaceBoundary::new(std::env::current_dir().unwrap_or_default())
             .expect("workspace boundary initialization")
     });
+    let analyzer_state = crate::analyzer::AppState::new();
     let stdin = io::stdin();
     let mut stdout = io::stdout();
 
@@ -187,6 +188,24 @@ pub async fn run_server() -> anyhow::Result<()> {
                                     }
                                 },
                                 "required": ["file_path", "original_code", "new_code"]
+                            }
+                        },
+                        {
+                            "name": "analyze_code",
+                            "description": "Performs static AST code analysis to detect resource leaks, security vulnerabilities, and code defects with bounded execution limits and precise LSP UTF-16 coordinates.",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "language": {
+                                        "type": "string",
+                                        "description": "Programming language of the code to analyze (e.g. 'python', 'py')."
+                                    },
+                                    "code": {
+                                        "type": "string",
+                                        "description": "Raw source code to analyze."
+                                    }
+                                },
+                                "required": ["language", "code"]
                             }
                         }
                     ]
@@ -358,6 +377,41 @@ pub async fn run_server() -> anyhow::Result<()> {
                                     id.unwrap_or(Value::Null),
                                     json!({
                                         "content": [{ "type": "text", "text": "Missing required arguments for apply_code_patch." }],
+                                        "isError": true
+                                    }),
+                                ))
+                            }
+                        }
+                        "analyze_code" => {
+                            let language = args.get("language").and_then(|l| l.as_str());
+                            let code = args.get("code").and_then(|c| c.as_str());
+
+                            if let (Some(lang), Some(source)) = (language, code) {
+                                match crate::analyzer::analyze_source(&analyzer_state, lang, source) {
+                                    Ok(resp) => {
+                                        let json_output = serde_json::to_string_pretty(&resp).unwrap_or_default();
+                                        Some(success_response(
+                                            id.unwrap_or(Value::Null),
+                                            json!({
+                                                "content": [{ "type": "text", "text": json_output }]
+                                            }),
+                                        ))
+                                    }
+                                    Err(e) => {
+                                        Some(success_response(
+                                            id.unwrap_or(Value::Null),
+                                            json!({
+                                                "content": [{ "type": "text", "text": format!("Analysis error: {}", e) }],
+                                                "isError": true
+                                            }),
+                                        ))
+                                    }
+                                }
+                            } else {
+                                Some(success_response(
+                                    id.unwrap_or(Value::Null),
+                                    json!({
+                                        "content": [{ "type": "text", "text": "Error: Missing required 'language' or 'code' argument." }],
                                         "isError": true
                                     }),
                                 ))

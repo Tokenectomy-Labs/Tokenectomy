@@ -1,6 +1,6 @@
 {
   "name": "tokenectomy-razor",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "Tokenectomy Razor 🗡️ — Autonomous M2M Model Context Protocol (MCP) server & log surgery engine for AI coding agents",
   "main": "index.js",
   "bin": {

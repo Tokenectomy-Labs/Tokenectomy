@@ -234,6 +234,7 @@ agy mcp add tokenectomy-razor -- npx -y tokenectomy-razor --mcp
 | `get_error_context` | Performs trace surgery on error dumps, removes framework noise, redacts credentials, and extracts relevant local source context bounded to the workspace. |
 | `search_stack_overflow` | Queries Stack Exchange API for relevant error signatures using sanitized search terms. |
 | `apply_code_patch` | Applies atomic file modifications with post-write language syntax verification (`cargo check`, `py_compile`, `node --check`) and automated rollback on validation failure. |
+| `analyze_code` | Performs static AST code analysis to detect resource leaks, security vulnerabilities, and code defects with bounded execution limits and precise LSP UTF-16 coordinates. |
 
 ---
 

@@ -21,6 +21,7 @@
 //! assert!(sanitized.contains("[CONNECTION_STRING_REDACTED]"));
 //! ```
 
+pub mod analyzer;
 pub mod app;
 pub use crate::app::run_cli;
 

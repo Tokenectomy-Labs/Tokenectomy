@@ -1,6 +1,6 @@
 [package]
 name = "tokenectomy"
-version = "1.1.4"
+version = "1.1.5"
 edition = "2024"
 default-run = "razor"
 description = "Tokenectomy Razor 🗡️ — Autonomous M2M Model Context Protocol (MCP) server & log surgery engine for AI coding agents (Claude, Cursor, Cline, Antigravity)"
@@ -31,6 +31,8 @@ serde_json = "1.0.151"
 sha2 = "0.11.0"
 tokio = { version = "1.53.1", features = ["full"] }
 toml = "1.1.4"
+tree-sitter = "0.27.0"
+tree-sitter-python = "0.25.0"
 urlencoding = "2.1.3"
 
 [lib]
