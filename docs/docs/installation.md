@@ -27,7 +27,15 @@ npm install -g tokenectomy-razor
 cargo install tokenectomy
 ```
 
-## Method 3: Build from Source
+## Method 3: Precompiled Native Binaries (GitHub Releases)
+
+Download zero-dependency, precompiled standalone binaries directly from [GitHub Releases](https://github.com/Tokenectomy-Labs/Tokenectomy/releases):
+
+- **Linux:** `tokenectomy-linux-x86_64` (glibc), `tokenectomy-linux-x86_64-musl`, `tokenectomy-linux-aarch64`
+- **macOS:** `tokenectomy-darwin-arm64` (Apple Silicon), `tokenectomy-darwin-x86_64` (Intel)
+- **Windows:** `tokenectomy-windows-x86_64.exe`
+
+## Method 4: Build from Source
 
 ```bash
 git clone https://github.com/Tokenectomy-Labs/Tokenectomy.git
@@ -36,7 +44,7 @@ cargo build --release
 sudo cp target/release/razor /usr/local/bin/razor
 ```
 
-## Method 4: Multi-Arch Container (GHCR)
+## Method 5: Multi-Arch Container (GHCR)
 
 ```bash
 docker pull ghcr.io/tokenectomy-labs/razor:latest
