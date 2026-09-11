@@ -80,7 +80,7 @@ jobs:
     name: Publish npm Package
     needs: [build]
     runs-on: ubuntu-latest
-    if: (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch') && (github.event.inputs.publish_npm != false)
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.publish_npm != false)
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -113,7 +113,7 @@ jobs:
     name: Publish Crates.io Package
     needs: [build]
     runs-on: ubuntu-latest
-    if: (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch') && (github.event.inputs.publish_cargo != false)
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.publish_cargo != false)
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
