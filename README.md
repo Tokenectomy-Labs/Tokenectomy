@@ -14,13 +14,13 @@
   <a href="SECURITY.md"><img src="https://img.shields.io/badge/Security-Audited%20(RustSec)-2ea44f?logo=rust" alt="Tokenectomy Razor RustSec security audit status" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="Tokenectomy Razor MIT License" /></a>
   <a href="https://glama.ai/mcp/servers/Tokenectomy-Labs/Tokenectomy"><img src="https://img.shields.io/badge/Glama.ai-Tokenectomy--Razor-purple" alt="Tokenectomy Razor on Glama.ai" /></a>
-  <a href="https://mcpservers.org/servers/tokenectomy-labs/tokenectomy"><img src="https://img.shields.io/badge/mcpservers.org-Tokenectomy-orange" alt="Tokenectomy Razor on mcpservers.org" /></a>
-  <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/Official%20MCP%20Registry-io.github.tokenectomy--labs%2Frazor-brightgreen" alt="Official MCP Registry" /></a>
+  <a href="https://mcpservers.org/servers/tokenectomy-labs/tokenectomy"><img src="https://mcpservers.org/badge.svg" alt="Listed on mcpservers.org" /></a>
+  <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/Official%20MCP%20Registry-io.github.Tokenectomy--Labs%2Frazor-brightgreen" alt="Official MCP Registry" /></a>
   <a href="https://github.com/marketplace/actions/tokenectomy-razor"><img src="https://img.shields.io/badge/GitHub%20Marketplace-Tokenectomy%20Razor-blue?logo=githubactions" alt="Tokenectomy Razor GitHub Actions Marketplace" /></a>
   <a href="https://tokenectomy-labs.github.io/Tokenectomy"><img src="https://img.shields.io/badge/Docs-GitHub%20Pages-blue?logo=googledocs" alt="Tokenectomy Razor documentation site" /></a>
 </p>
 
-- **Official MCP Registry:** `mcp-name: io.github.tokenectomy-labs/razor`
+- **Official MCP Registry:** `mcp-name: io.github.Tokenectomy-Labs/razor`
 
 ---
 
@@ -101,6 +101,8 @@ Error in /home/user/src/main.rs:42
 ```
 
 - **Polyglot Trace Surgery**: In-memory parsing across Rust, Python, TypeScript/JavaScript, and Go. Filters noisy dependency frames and isolates user-written code only. (Java, C/C++, PHP support coming in v1.2)
+- **Static AST Code Analysis Engine (`analyze_code`)**: High-throughput static AST analysis detecting unclosed handles, resource leaks, and security vulnerabilities with bounded execution limits (50K AST nodes, 10 MB file limit) and precise LSP UTF-16 coordinates.
+- **Glama Grade A TDQS Compliance**: 100% Tool Definition Quality Score with explicit schema boundaries, runtime preconditions, and full disclosure across all MCP tools.
 - **AI Gateway Reverse Proxy (`--proxy`)**: Transparently intercepts prompt streams on `127.0.0.1:8080`, performing real-time token excision and credential sanitization before upstream forwarding to OpenAI, Anthropic, or Ollama.
 - **Zero-Knowledge Secret Redaction**: Linear-time deterministic regex engine strips JWTs, API tokens, cloud access keys, connection strings, and private keys prior to network transmission. All processing happens locally.
 - **SHA-256 Idempotency Cache**: Stores deterministic responses with a 24-hour TTL. Repeated CI/CD or agent loop failures incur zero upstream API cost.
@@ -158,7 +160,15 @@ npm install -g tokenectomy-razor
 cargo install tokenectomy
 ```
 
-### Method 3: Build from Source
+### Method 3: Precompiled Native Binaries (GitHub Releases)
+
+Download zero-dependency, precompiled standalone binaries directly from [GitHub Releases](https://github.com/Tokenectomy-Labs/Tokenectomy/releases):
+
+- **Linux:** `tokenectomy-linux-x86_64` (glibc), `tokenectomy-linux-x86_64-musl`, `tokenectomy-linux-aarch64`
+- **macOS:** `tokenectomy-darwin-arm64` (Apple Silicon M1/M2/M3/M4), `tokenectomy-darwin-x86_64` (Intel)
+- **Windows:** `tokenectomy-windows-x86_64.exe`
+
+### Method 4: Build from Source
 
 ```bash
 git clone https://github.com/Tokenectomy-Labs/Tokenectomy.git
@@ -167,7 +177,7 @@ cargo build --release
 sudo cp target/release/razor /usr/local/bin/razor
 ```
 
-### Method 4: Multi-Arch Container (GHCR)
+### Method 5: Multi-Arch Container (GHCR)
 
 ```bash
 docker pull ghcr.io/tokenectomy-labs/razor:latest
@@ -272,7 +282,7 @@ Parameters:
 | `log-file` | String | `''` | Path to raw error log file to process |
 | `log-content` | String | `''` | Direct string content if file is not specified |
 | `output-file` | String | `tokenectomy-sanitized.log` | Path for scrubbed output file |
-| `version` | String | `v1.1.3` | Binary release target version |
+| `version` | String | `v1.1.6` | Binary release target version |
 
 ### I want max privacy (air-gapped environment)
 

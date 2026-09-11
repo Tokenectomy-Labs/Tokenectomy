@@ -63,5 +63,6 @@ agy mcp add tokenectomy-razor -- npx -y tokenectomy-razor --mcp
 | Tool Name | Description |
 |---|---|
 | `get_error_context` | Trace surgery on error dumps, removes framework noise, redacts credentials |
-| `search_stack_overflow` | Queries Stack Exchange API for relevant error signatures |
+| `analyze_code` | Static AST code analysis detecting leaks, unclosed handles, and vulnerabilities |
 | `apply_code_patch` | Atomic file modifications with syntax verification and rollback |
+| `search_stack_overflow` | Queries Stack Exchange API for relevant error signatures |

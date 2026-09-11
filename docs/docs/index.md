@@ -7,6 +7,9 @@ description: High-performance MCP server for AI coding agents. Purge 90%+ framew
 
 **High-Performance Log Surgery & Secret Redaction Engine for AI Coding Agents**
 
+[![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/tokenectomy-labs/tokenectomy)
+[![Official MCP Registry](https://img.shields.io/badge/Official%20MCP%20Registry-io.github.Tokenectomy--Labs%2Frazor-brightgreen)](https://registry.modelcontextprotocol.io)
+[![Glama.ai](https://img.shields.io/badge/Glama.ai-Tokenectomy--Razor-purple)](https://glama.ai/mcp/servers/Tokenectomy-Labs/Tokenectomy)
 [![Crates.io](https://img.shields.io/crates/v/tokenectomy.svg?logo=rust)](https://crates.io/crates/tokenectomy)
 [![npm](https://img.shields.io/npm/v/tokenectomy-razor.svg?logo=npm)](https://www.npmjs.com/package/tokenectomy-razor)
 [![CI](https://github.com/Tokenectomy-Labs/Tokenectomy/actions/workflows/ci.yml/badge.svg)](https://github.com/Tokenectomy-Labs/Tokenectomy/actions/workflows/ci.yml)
@@ -18,6 +21,7 @@ Tokenectomy Razor is an autonomous, machine-to-machine (M2M) **Model Context Pro
 
 - **Purges 90%+ of framework noise** from error traces (`node_modules`, `site-packages`, `.cargo/registry`)
 - **Redacts secrets** (API keys, JWTs, connection strings) with O(N) ReDoS-immune regex
+- **Static AST Code Analysis** (`analyze_code`) — detects unclosed handles, resource leaks, and vulnerabilities with zero-external-binary inspection
 - **Sub-millisecond latency** — designed for real-time agent loops
 - **SHA-256 idempotency cache** — zero repeated API cost for identical failures
 

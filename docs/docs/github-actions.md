@@ -25,4 +25,4 @@ Sanitize build failure logs and prevent credential leakage in automated workflow
 | `log-file` | String | `''` | Path to raw error log file |
 | `log-content` | String | `''` | Direct string content (if no file) |
 | `output-file` | String | `tokenectomy-sanitized.log` | Path for scrubbed output |
-| `version` | String | `v1.1.3` | Binary release target version |
+| `version` | String | `v1.1.6` | Binary release target version |
