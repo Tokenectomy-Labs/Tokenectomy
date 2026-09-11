@@ -1,6 +1,9 @@
 name: Release Binaries
 
 on:
+  push:
+    tags:
+      - 'v*'
   release:
     types: [created, published]
   workflow_dispatch:
