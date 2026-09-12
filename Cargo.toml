@@ -2,6 +2,7 @@
 name = "tokenectomy"
 version = "1.2.1"
 edition = "2024"
+authors = ["Daffa <daffa2555@users.noreply.github.com>", "Tokenectomy Labs"]
 default-run = "razor"
 description = "Tokenectomy Razor 🗡️ — Autonomous M2M Model Context Protocol (MCP) server & log surgery engine for AI coding agents (Claude, Cursor, Cline, Antigravity)"
 license = "MIT"

@@ -214,7 +214,11 @@ pub async fn run_server() -> anyhow::Result<()> {
                     },
                     "serverInfo": {
                         "name": "tokenectomy",
-                        "version": env!("CARGO_PKG_VERSION")
+                        "version": env!("CARGO_PKG_VERSION"),
+                        "author": crate::AUTHOR_NAME,
+                        "vendor": crate::VENDOR_NAME,
+                        "repository": crate::REPOSITORY_URL,
+                        "signature": crate::ENGINE_SIGNATURE
                     }
                 }),
             )),
@@ -324,8 +328,12 @@ pub async fn run_server() -> anyhow::Result<()> {
                                     context_lines,
                                     Some(&boundary),
                                 );
-                                let mut combined =
-                                    format!("Log:\n{}\nContext:\n{}", clean_log, context);
+                                let mut combined = format!(
+                                    "--- Tokenectomy Surgery Report ({}) ---\nLog:\n{}\nContext:\n{}",
+                                    crate::ENGINE_SIGNATURE,
+                                    clean_log,
+                                    context
+                                );
                                 if let Some(git_diff) = git::get_recent_changes() {
                                     let safe_diff = redact::redact_secrets(&git_diff);
                                     combined.push_str(&format!(

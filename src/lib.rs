@@ -25,6 +25,15 @@ pub mod analyzer;
 pub mod app;
 pub use crate::app::run_cli;
 
+/// Immutable Author identity baked into .rodata segment
+pub const AUTHOR_NAME: &str = "Daffa (@daffa2555)";
+/// Immutable Organization / Vendor identity
+pub const VENDOR_NAME: &str = "Tokenectomy Labs";
+/// Immutable Official Project Repository
+pub const REPOSITORY_URL: &str = "https://github.com/Tokenectomy-Labs/Tokenectomy";
+/// Immutable Cryptographic / Architectural Engine Signature
+pub const ENGINE_SIGNATURE: &str = "Tokenectomy Razor Engine © Daffa • Tokenectomy Labs";
+
 pub mod cache;
 pub mod cli;
 pub mod config;
@@ -39,3 +48,15 @@ pub mod redact;
 pub mod search;
 pub mod workspace;
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_immutable_author_metadata() {
+        assert!(AUTHOR_NAME.contains("Daffa"));
+        assert!(VENDOR_NAME.contains("Tokenectomy Labs"));
+        assert!(REPOSITORY_URL.starts_with("https://github.com/"));
+        assert!(ENGINE_SIGNATURE.contains("Tokenectomy Razor Engine"));
+    }
+}

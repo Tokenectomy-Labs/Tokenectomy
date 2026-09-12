@@ -70,7 +70,7 @@ pub async fn run_cli() -> anyhow::Result<()> {
 /_/  \____/_/|_|\___/_/ /_/\___/\___/\__/\____/_/ /_/ /_/\__, /  
                                                         /____/   "#;
             println!("{}", banner.yellow().bold());
-            let version_label = format!("v{} | AI-Powered Debugger", env!("CARGO_PKG_VERSION"));
+            let version_label = format!("v{} • by Daffa (@daffa2555) • Tokenectomy Labs", env!("CARGO_PKG_VERSION"));
             println!("{:>70}", version_label.bright_black());
             
             // 2. Dashboard with Bug ASCII Art & Solid Background Colors
