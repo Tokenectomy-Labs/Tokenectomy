@@ -3,7 +3,13 @@ use std::path::PathBuf;
 use std::fs;
 use crate::cli::ProviderChoice;
 
-#[derive(Deserialize, Default, Debug)]
+#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
+pub struct CustomRedactRuleConfig {
+    pub pattern: String,
+    pub replacement: Option<String>,
+}
+
+#[derive(Deserialize, Default, Debug, Clone)]
 pub struct AppConfig {
     pub default_provider: Option<ProviderChoice>,
     pub local_only: Option<bool>,
@@ -13,6 +19,11 @@ pub struct AppConfig {
     pub openai_api_key: Option<String>,
     pub anthropic_api_key: Option<String>,
     pub ollama_base_url: Option<String>,
+    pub custom_redact_rules: Option<Vec<CustomRedactRuleConfig>>,
+    pub custom_noise_patterns: Option<Vec<String>>,
+    pub proxy_bind: Option<String>,
+    pub upstream_url: Option<String>,
+    pub proxy_token: Option<String>,
 }
 
 impl AppConfig {

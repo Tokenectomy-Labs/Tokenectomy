@@ -95,6 +95,52 @@ pub fn verify_patch(path: &std::path::Path) -> Result<(), String> {
                     }
                 }
             }
+            "ts" | "mts" | "cts" | "tsx" => {
+                if let Ok(output) = std::process::Command::new("tsc")
+                    .args(["--noEmit", path.to_str().unwrap_or("")])
+                    .stdin(std::process::Stdio::null())
+                    .output()
+                {
+                    if !output.status.success() {
+                        let stderr = String::from_utf8_lossy(&output.stderr);
+                        let stdout = String::from_utf8_lossy(&output.stdout);
+                        let err = if !stderr.trim().is_empty() { stderr.trim() } else { stdout.trim() };
+                        return Err(format!("TypeScript compiler check failed: {}", err));
+                    }
+                }
+            }
+            "json" => {
+                if let Ok(content) = std::fs::read_to_string(path) {
+                    if let Err(e) = serde_json::from_str::<serde_json::Value>(&content) {
+                        return Err(format!("JSON syntax validation failed: {}", e));
+                    }
+                }
+            }
+            "toml" => {
+                if let Ok(content) = std::fs::read_to_string(path) {
+                    if let Err(e) = toml::from_str::<toml::Value>(&content) {
+                        return Err(format!("TOML syntax validation failed: {}", e));
+                    }
+                }
+            }
+            "yaml" | "yml" => {
+                if let Ok(content) = std::fs::read_to_string(path) {
+                    for (i, line) in content.lines().enumerate() {
+                        let trimmed_start = line.trim_start();
+                        let indent_len = line.len() - trimmed_start.len();
+                        let indent = &line[..indent_len];
+                        if indent.contains('\t') {
+                            return Err(format!(
+                                "YAML syntax error on line {}: Tabs are forbidden for indentation in YAML",
+                                i + 1
+                            ));
+                        }
+                    }
+                    if let Err(e) = serde_yaml::from_str::<serde_yaml::Value>(&content) {
+                        return Err(format!("YAML syntax validation failed: {}", e));
+                    }
+                }
+            }
             "php" => {
                 if let Ok(output) = std::process::Command::new("php")
                     .args(["-l", path.to_str().unwrap_or("")])
@@ -227,6 +273,10 @@ pub async fn run_server() -> anyhow::Result<()> {
                                     "new_code": {
                                         "type": "string",
                                         "description": "The replacement code block to substitute in place of original_code. Must maintain correct language syntax and indentation matching the surrounding code."
+                                    },
+                                    "dry_run": {
+                                        "type": "boolean",
+                                        "description": "Optional. When true, validates that the patch matches uniquely and checks syntax without writing any changes to disk. Defaults to false."
                                     }
                                 },
                                 "required": ["file_path", "original_code", "new_code"]
@@ -266,15 +316,16 @@ pub async fn run_server() -> anyhow::Result<()> {
                                     .get("context_lines")
                                     .and_then(|c| c.as_u64())
                                     .unwrap_or(10) as usize;
-                                // P1: Redact secrets BEFORE extracting context
+                                // P1: Redact secrets and prune framework noise BEFORE extracting context
                                 let safe_log = redact::redact_secrets(log);
+                                let clean_log = extractor::prune_framework_noise(&safe_log);
                                 let (context, _) = extractor::extract_context_with_boundary(
                                     &safe_log,
                                     context_lines,
                                     Some(&boundary),
                                 );
                                 let mut combined =
-                                    format!("Log:\n{}\nContext:\n{}", safe_log, context);
+                                    format!("Log:\n{}\nContext:\n{}", clean_log, context);
                                 if let Some(git_diff) = git::get_recent_changes() {
                                     let safe_diff = redact::redact_secrets(&git_diff);
                                     combined.push_str(&format!(
@@ -323,6 +374,7 @@ pub async fn run_server() -> anyhow::Result<()> {
                             let file_path = args.get("file_path").and_then(|f| f.as_str());
                             let original = args.get("original_code").and_then(|o| o.as_str());
                             let new_code = args.get("new_code").and_then(|n| n.as_str());
+                            let dry_run = args.get("dry_run").and_then(|d| d.as_bool()).unwrap_or(false);
 
                             if let (Some(fp), Some(orig), Some(new_c)) =
                                 (file_path, original, new_code)
@@ -355,6 +407,36 @@ pub async fn run_server() -> anyhow::Result<()> {
                                                             "isError": true
                                                         }),
                                                     ))
+                                                } else if dry_run {
+                                                    let updated = content.replacen(orig, new_c, 1);
+                                                    let ext = safe_path.extension().and_then(|e| e.to_str()).unwrap_or("tmp");
+                                                    let temp_file = safe_path.with_file_name(format!(
+                                                        ".dry_run_{}.tmp.{}",
+                                                        std::process::id(),
+                                                        ext
+                                                    ));
+                                                    let _ = std::fs::write(&temp_file, updated.as_bytes());
+                                                    let verify_result = verify_patch(&temp_file);
+                                                    let _ = std::fs::remove_file(&temp_file);
+
+                                                    match verify_result {
+                                                        Ok(_) => Some(success_response(
+                                                            id.unwrap_or(Value::Null),
+                                                            json!({
+                                                                "content": [{ "type": "text", "text": "Dry-run succeeded: target code block matched uniquely and syntax verification passed. Target file was not modified." }],
+                                                                "dry_run": true,
+                                                                "status": "success"
+                                                            }),
+                                                        )),
+                                                        Err(verify_err) => Some(success_response(
+                                                            id.unwrap_or(Value::Null),
+                                                            json!({
+                                                                "content": [{ "type": "text", "text": format!("Dry-run verification failed: {}", verify_err) }],
+                                                                "isError": true,
+                                                                "dry_run": true
+                                                            }),
+                                                        )),
+                                                    }
                                                 } else {
                                                     let backup = content.clone();
                                                     let updated = content.replacen(orig, new_c, 1);

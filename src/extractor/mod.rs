@@ -5,6 +5,8 @@ pub mod go;
 pub mod java;
 pub mod cpp;
 pub mod php;
+pub mod csharp;
+pub mod ruby;
 
 pub struct CodeLocation {
     pub file: String,
@@ -42,8 +44,15 @@ pub fn is_framework_noise(line_or_path: &str) -> bool {
         "vcpkg_installed",     // C++ vcpkg
         "target/debug/build",  // Rust build scripts
         "node:internal/",      // Node.js internal runtime
-        "<frozen importlib",   // Python internal importlib
+        "<frozen ",            // Python internal frozen modules & importlib
+        "asyncio/base_events", // Python asyncio internals
+        "asyncio/events.py",   // Python asyncio internals
+        "starlette/routing",   // Starlette / FastAPI routing frames
+        "uvicorn/protocols/",  // Uvicorn server frames
+        "gunicorn/workers/",   // Gunicorn worker frames
         "build/glibc-",        // Glibc internals
+        "System.Private.CoreLib", // .NET CoreLib
+        "Microsoft.AspNetCore.",  // ASP.NET Core
     ];
 
     for ignore in ignores.iter() {
@@ -71,6 +80,8 @@ pub fn is_framework_noise(line_or_path: &str) -> bool {
         "at sun.reflect.",
         "at kotlinx.coroutines.",
         "at org.junit.",
+        "at System.",
+        "at Microsoft.AspNetCore.",
     ];
     for prefix in java_framework_prefixes.iter() {
         if trimmed.starts_with(prefix) {
@@ -149,8 +160,27 @@ pub fn is_dependency_file(path: &str) -> bool {
     is_framework_noise(path)
 }
 
+/// Checks if a line or path is framework noise, incorporating user-defined custom patterns.
+pub fn is_framework_noise_with_custom(line_or_path: &str, custom_noise: &[String]) -> bool {
+    if is_framework_noise(line_or_path) {
+        return true;
+    }
+    let lower = line_or_path.to_lowercase();
+    for pat in custom_noise {
+        if !pat.is_empty() && lower.contains(&pat.to_lowercase()) {
+            return true;
+        }
+    }
+    false
+}
+
 /// Surgically prunes framework noise, internal runtime stack lines, and idle Go goroutines from a raw log.
 pub fn prune_framework_noise(raw: &str) -> String {
+    prune_framework_noise_with_custom(raw, &[])
+}
+
+/// Surgically prunes framework noise including user-defined custom noise patterns.
+pub fn prune_framework_noise_with_custom(raw: &str, custom_noise: &[String]) -> String {
     let mut cleaned_lines = Vec::new();
     let mut in_idle_goroutine = false;
 
@@ -182,7 +212,7 @@ pub fn prune_framework_noise(raw: &str) -> String {
         }
 
         // Check if the individual line is framework noise
-        if is_framework_noise(line) {
+        if is_framework_noise_with_custom(line, custom_noise) {
             continue;
         }
 
@@ -214,15 +244,23 @@ pub fn extract_context_with_boundary(
         Box::new(java::JavaTraceParser),
         Box::new(cpp::CppTraceParser),
         Box::new(php::PhpTraceParser),
+        Box::new(csharp::CSharpTraceParser),
+        Box::new(ruby::RubyTraceParser),
     ];
 
     let mut context_output = String::new();
     let mut extracted_files = Vec::new();
+    let mut seen_locations: std::collections::HashSet<(String, usize)> = std::collections::HashSet::new();
 
     for parser in parsers {
         if parser.detect(log) {
             let locations = parser.extract_locations(log);
             for loc in locations {
+                // Deduplicate across polyglot parsers and repetitive trace frames
+                if !seen_locations.insert((loc.file.clone(), loc.line)) {
+                    continue;
+                }
+
                 // Filter cerdas: Abaikan file internal framework/library/dependency
                 if is_dependency_file(&loc.file) {
                     log::debug!("Ignoring framework/dependency file: {}", loc.file);
@@ -244,7 +282,9 @@ pub fn extract_context_with_boundary(
                 };
 
                 if let Some(content) = content_opt {
-                    extracted_files.push(loc.file.clone());
+                    if !extracted_files.contains(&loc.file) {
+                        extracted_files.push(loc.file.clone());
+                    }
                     
                     let lines: Vec<&str> = content.lines().collect();
                     let start = loc.line.saturating_sub(context_lines).saturating_sub(1);
@@ -257,7 +297,6 @@ pub fn extract_context_with_boundary(
                     context_output.push_str("\n");
                 }
             }
-            break;
         }
     }
 

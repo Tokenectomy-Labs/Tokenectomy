@@ -203,13 +203,14 @@ pub async fn run_cli() -> anyhow::Result<()> {
         context.push_str("\n... (context truncated due to limit)\n");
     }
     
-    let mut combined = format!("Log:\n{}\nContext:\n{}", log, context);
+    let pruned_log = extractor::prune_framework_noise(&log);
+    let mut combined = format!("Log:\n{}\nContext:\n{}", pruned_log, context);
 
     if let Some(git_diff) = git::get_recent_changes() {
         combined.push_str(&format!("\n\nRecent Git Changes:\n{}", git_diff));
     }
 
-    if let Some(so_results) = search::search_stackoverflow(&log).await {
+    if let Some(so_results) = search::search_stackoverflow(&pruned_log).await {
         combined.push_str(&format!("\n\nStack Overflow References (context for AI):\n{}", so_results));
     }
 
@@ -240,7 +241,7 @@ pub async fn run_cli() -> anyhow::Result<()> {
     );
     pb.set_message("Analyzing error with AI...");
 
-    let explanation_result = provider.explain(&log, &context).await;
+    let explanation_result = provider.explain(&pruned_log, &context).await;
     
     pb.finish_and_clear();
 

@@ -35,6 +35,36 @@ static REDACT_RULES: LazyLock<Vec<RedactRule>> = LazyLock::new(|| {
             regex: Regex::new(r"\bsk-(?:proj-)?[a-zA-Z0-9_\-]{20,}\b").unwrap(),
             replacement: "[OPENAI_KEY_REDACTED]",
         },
+        // 1f. HuggingFace tokens (hf_...)
+        RedactRule {
+            regex: Regex::new(r"\bhf_[a-zA-Z0-9]{34,}\b").unwrap(),
+            replacement: "[HUGGINGFACE_TOKEN_REDACTED]",
+        },
+        // 1g. npm access tokens (npm_...)
+        RedactRule {
+            regex: Regex::new(r"\bnpm_[a-zA-Z0-9]{30,}\b").unwrap(),
+            replacement: "[NPM_TOKEN_REDACTED]",
+        },
+        // 1h. PyPI upload tokens (pypi-AgEI...)
+        RedactRule {
+            regex: Regex::new(r"\bpypi-AgEIcHlwaS5vcmc[a-zA-Z0-9_\-]{50,}\b").unwrap(),
+            replacement: "[PYPI_TOKEN_REDACTED]",
+        },
+        // 1i. Stripe API keys (sk_live_..., rk_live_..., sk_test_...)
+        RedactRule {
+            regex: Regex::new(r"\b(?:sk|rk)_(?:live|test)_[a-zA-Z0-9]{24,}\b").unwrap(),
+            replacement: "[STRIPE_KEY_REDACTED]",
+        },
+        // 1j. GitLab personal access tokens (glpat-...)
+        RedactRule {
+            regex: Regex::new(r"\bglpat-[a-zA-Z0-9_\-]{20,}\b").unwrap(),
+            replacement: "[GITLAB_TOKEN_REDACTED]",
+        },
+        // 1k. SendGrid API keys (SG...)
+        RedactRule {
+            regex: Regex::new(r"\bSG\.[a-zA-Z0-9_\-\.]{60,}\b").unwrap(),
+            replacement: "[SENDGRID_KEY_REDACTED]",
+        },
         // 2. AWS Access Key ID
         RedactRule {
             regex: Regex::new(r"(?i)\b(AKIA|ASIA)[0-9A-Z]{16}\b").unwrap(),
@@ -80,10 +110,28 @@ static REDACT_RULES: LazyLock<Vec<RedactRule>> = LazyLock::new(|| {
 });
 
 pub fn redact_secrets(input: &str) -> String {
+    redact_secrets_with_custom(input, &[])
+}
+
+pub fn redact_secrets_with_custom(
+    input: &str,
+    custom_rules: &[crate::config::CustomRedactRuleConfig],
+) -> String {
     let mut redacted = input.to_string();
     for rule in REDACT_RULES.iter() {
         if let Cow::Owned(new_str) = rule.regex.replace_all(&redacted, rule.replacement) {
             redacted = new_str;
+        }
+    }
+    for custom in custom_rules {
+        if let Ok(re) = Regex::new(&custom.pattern) {
+            let repl = custom
+                .replacement
+                .as_deref()
+                .unwrap_or("[CUSTOM_SECRET_REDACTED]");
+            if let Cow::Owned(new_str) = re.replace_all(&redacted, repl) {
+                redacted = new_str;
+            }
         }
     }
     redacted
@@ -167,5 +215,61 @@ mod tests {
         let parsed: serde_json::Value = serde_json::from_str(&res).expect("JSON must remain valid after redaction");
         assert_eq!(parsed["db_password"], "[REDACTED]");
         assert_eq!(parsed["api_token"], "[REDACTED]");
+    }
+
+    #[test]
+    fn test_redact_developer_and_cloud_tokens() {
+        let dummy_hf = format!("{}_{}", "hf", "0123456789abcdef0123456789abcdef0123");
+        let log_hf = format!("Downloading model with {}", dummy_hf);
+        let res_hf = redact_secrets(&log_hf);
+        assert_eq!(res_hf, "Downloading model with [HUGGINGFACE_TOKEN_REDACTED]");
+
+        let dummy_npm = format!("{}_{}", "npm", "0123456789abcdef0123456789abcdef12");
+        let log_npm = format!("Publishing package with {}", dummy_npm);
+        let res_npm = redact_secrets(&log_npm);
+        assert_eq!(res_npm, "Publishing package with [NPM_TOKEN_REDACTED]");
+
+        let dummy_pypi = format!("{}-{}", "pypi", "AgEIcHlwaS5vcmcCJDEyMzQ1Njc4LTBhYmMtNGFiYy05YWJjLTBhYmNkZWYwMTIzNAACTDF");
+        let log_pypi = format!("Twine upload token: {}", dummy_pypi);
+        let res_pypi = redact_secrets(&log_pypi);
+        assert_eq!(res_pypi, "Twine upload token: [PYPI_TOKEN_REDACTED]");
+
+        let dummy_stripe = format!("{}_{}_{}", "sk", "live", "51A2B3C4D5E6F7G8H9I0J1K2L3");
+        let log_stripe = format!("Stripe webhook error with secret key {}", dummy_stripe);
+        let res_stripe = redact_secrets(&log_stripe);
+        assert_eq!(res_stripe, "Stripe webhook error with secret key [STRIPE_KEY_REDACTED]");
+
+        let dummy_gitlab = format!("{}-{}", "glpat", "abcdef1234567890ABCD");
+        let log_gitlab = format!("GitLab CI clone error: {}", dummy_gitlab);
+        let res_gitlab = redact_secrets(&log_gitlab);
+        assert_eq!(res_gitlab, "GitLab CI clone error: [GITLAB_TOKEN_REDACTED]");
+
+        let dummy_sendgrid = format!("{}.{}", "SG", "abcdefghijklmnopqrstuvwxyz0123456789012345678901234567890123456789");
+        let log_sendgrid = format!("Email delivery failed with api key {}", dummy_sendgrid);
+        let res_sendgrid = redact_secrets(&log_sendgrid);
+        assert_eq!(res_sendgrid, "Email delivery failed with api key [SENDGRID_KEY_REDACTED]");
+    }
+
+    #[test]
+    fn test_redact_with_custom_rules() {
+        let custom_rules = vec![
+            crate::config::CustomRedactRuleConfig {
+                pattern: r"ACME-[0-9]{5}-[A-Z]+".to_string(),
+                replacement: Some("[ACME_LICENSE_REDACTED]".to_string()),
+            },
+            crate::config::CustomRedactRuleConfig {
+                pattern: r"internal_secret_[a-z0-9]+".to_string(),
+                replacement: None, // Should fallback to [CUSTOM_SECRET_REDACTED]
+            },
+        ];
+
+        let log = "Connecting ACME-12345-PROD with token internal_secret_9988aabb and key sk-ant-api03-abcdef1234567890abcdef12345";
+        let res = redact_secrets_with_custom(log, &custom_rules);
+
+        assert!(res.contains("[ACME_LICENSE_REDACTED]"));
+        assert!(res.contains("[CUSTOM_SECRET_REDACTED]"));
+        assert!(res.contains("[ANTHROPIC_KEY_REDACTED]"));
+        assert!(!res.contains("ACME-12345-PROD"));
+        assert!(!res.contains("internal_secret_9988aabb"));
     }
 }

@@ -95,25 +95,83 @@ pub fn sanitize_prompt_payload(payload: &Value) -> (Value, ProxySanitizeStats) {
     let mut stats = ProxySanitizeStats::default();
     let mut modified = payload.clone();
 
+    fn clean_string(text: &str, stats: &mut ProxySanitizeStats) -> String {
+        stats.raw_chars += text.len();
+        let redacted = redact_secrets(text);
+        if redacted != text {
+            stats.secrets_redacted += 1;
+        }
+        let final_content = crate::extractor::prune_framework_noise(&redacted);
+        stats.sanitized_chars += final_content.len();
+        final_content
+    }
+
+    // 1. Process "messages" array (OpenAI, Anthropic, Ollama chat completions)
     if let Some(messages) = modified.get_mut("messages").and_then(|m| m.as_array_mut()) {
         for msg in messages {
-            if let Some(content) = msg.get("content").and_then(|c| c.as_str()) {
-                stats.raw_chars += content.len();
-                
-                // 1. Redact credentials
-                let redacted = redact_secrets(content);
-                if redacted != content {
-                    stats.secrets_redacted += 1;
-                }
-
-                // 2. Strip noisy framework stack traces and idle goroutines if detected
-                let final_content = crate::extractor::prune_framework_noise(&redacted);
-                stats.sanitized_chars += final_content.len();
-
-                if let Some(c_field) = msg.get_mut("content") {
-                    *c_field = Value::String(final_content);
+            if let Some(content) = msg.get_mut("content") {
+                match content {
+                    Value::String(s) => {
+                        *s = clean_string(s, &mut stats);
+                    }
+                    Value::Array(parts) => {
+                        for part in parts {
+                            if let Some(text_val) = part.get_mut("text").and_then(|t| t.as_str()) {
+                                let cleaned = clean_string(text_val, &mut stats);
+                                part["text"] = Value::String(cleaned);
+                            } else if let Some(content_val) = part.get_mut("content").and_then(|c| c.as_str()) {
+                                let cleaned = clean_string(content_val, &mut stats);
+                                part["content"] = Value::String(cleaned);
+                            }
+                        }
+                    }
+                    _ => {}
                 }
             }
+        }
+    }
+
+    // 2. Process top-level "system" prompt (Anthropic Claude Messages API)
+    if let Some(system) = modified.get_mut("system") {
+        match system {
+            Value::String(s) => {
+                *s = clean_string(s, &mut stats);
+            }
+            Value::Array(parts) => {
+                for part in parts {
+                    if let Some(text_val) = part.get_mut("text").and_then(|t| t.as_str()) {
+                        let cleaned = clean_string(text_val, &mut stats);
+                        part["text"] = Value::String(cleaned);
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    // 3. Process top-level "prompt" (OpenAI Completions API, Ollama /api/generate)
+    if let Some(prompt) = modified.get_mut("prompt") {
+        if let Some(s) = prompt.as_str() {
+            let cleaned = clean_string(s, &mut stats);
+            *prompt = Value::String(cleaned);
+        }
+    }
+
+    // 4. Process top-level "input" (OpenAI Embeddings / Transforms)
+    if let Some(input) = modified.get_mut("input") {
+        match input {
+            Value::String(s) => {
+                *s = clean_string(s, &mut stats);
+            }
+            Value::Array(items) => {
+                for item in items {
+                    if let Some(s) = item.as_str() {
+                        let cleaned = clean_string(s, &mut stats);
+                        *item = Value::String(cleaned);
+                    }
+                }
+            }
+            _ => {}
         }
     }
 
@@ -268,7 +326,13 @@ pub async fn run_reverse_proxy_configured(
                 }
 
                 let method = parts[0];
-                let path = parts[1];
+                let full_path = parts[1];
+                let (raw_path_no_query, _) = full_path.split_once('?').unwrap_or((full_path, ""));
+                let path = if raw_path_no_query.len() > 1 && raw_path_no_query.ends_with('/') {
+                    raw_path_no_query.trim_end_matches('/')
+                } else {
+                    raw_path_no_query
+                };
 
                 // Health check endpoint
                 if path == "/health" || path == "/v1/health" {
@@ -330,18 +394,35 @@ pub async fn run_reverse_proxy_configured(
                     return;
                 }
 
-                // Extract Content-Length & Authorization
+                // Extract Content-Length & Authorization, and collect client headers for upstream forwarding
                 let mut content_length = 0;
                 let mut client_auth = None;
+                let mut forward_headers = Vec::new();
+
                 for h in raw_headers.lines().skip(1) {
                     if let Some((k, v)) = h.split_once(':') {
-                        let k_lower = k.trim().to_lowercase();
+                        let k_clean = k.trim();
+                        let v_clean = v.trim();
+                        let k_lower = k_clean.to_ascii_lowercase();
+
                         if k_lower == "content-length" {
-                            content_length = v.trim().parse::<usize>().unwrap_or(0);
+                            content_length = v_clean.parse::<usize>().unwrap_or(0);
                         } else if k_lower == "authorization" {
-                            client_auth = Some(v.trim().to_string());
+                            client_auth = Some(v_clean.to_string());
                         } else if k_lower == "x-api-key" && client_auth.is_none() {
-                            client_auth = Some(format!("Bearer {}", v.trim()));
+                            client_auth = Some(format!("Bearer {}", v_clean));
+                        }
+
+                        // RFC 7230 §6.1: Strip hop-by-hop headers and Host header
+                        if k_lower != "content-length"
+                            && k_lower != "connection"
+                            && k_lower != "transfer-encoding"
+                            && k_lower != "keep-alive"
+                            && k_lower != "proxy-connection"
+                            && k_lower != "upgrade"
+                            && k_lower != "host"
+                        {
+                            forward_headers.push((k_clean.to_string(), v_clean.to_string()));
                         }
                     }
                 }
@@ -451,8 +532,8 @@ pub async fn run_reverse_proxy_configured(
                     metrics_clone.record_request();
                 }
 
-                // Forward to upstream
-                let target_url = format!("{}{}", upstream_clone, path);
+                // Forward to upstream with complete query string preserved
+                let target_url = format!("{}{}", upstream_clone, full_path);
                 let mut req_builder = match method {
                     "POST" => client_clone.post(&target_url),
                     "GET" => client_clone.get(&target_url),
@@ -461,6 +542,10 @@ pub async fn run_reverse_proxy_configured(
                         &target_url,
                     ),
                 };
+
+                for (hk, hv) in forward_headers {
+                    req_builder = req_builder.header(hk, hv);
+                }
 
                 if let Some(auth) = client_auth {
                     req_builder = req_builder.header("Authorization", auth);

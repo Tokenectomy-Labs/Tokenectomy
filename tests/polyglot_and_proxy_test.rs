@@ -455,3 +455,316 @@ async fn test_proxy_finops_metrics_and_dashboard() {
     assert!(html.contains("/v1/metrics"));
 }
 
+#[test]
+fn test_polyglot_multi_trace_detection() {
+    let polyglot_log = r#"
+=== Next.js Frontend Failure ===
+TypeError: Cannot read properties of undefined (reading 'token')
+    at AuthForm (/app/src/components/Auth.tsx:42:15)
+    at Object.<anonymous> (node_modules/react-dom/index.js:50:2)
+
+=== Python Backend Subprocess Crash ===
+Traceback (most recent call last):
+  File "/app/backend/api/auth.py", line 95, in verify_jwt
+    raise ValueError("Invalid signature")
+  File "/app/.venv/lib/python3.11/site-packages/jwt/api_jwt.py", line 12, in decode
+    return payload
+"#;
+
+    let (_context, _extracted_files) = tokenectomy::extractor::extract_context(polyglot_log, 5, false);
+    // Even if the files don't exist on disk, let's verify both parsers detect their respective traces
+    let js_parser = JsTraceParser;
+    let py_parser = tokenectomy::extractor::python::PythonTraceParser;
+
+    assert!(js_parser.detect(polyglot_log));
+    assert!(py_parser.detect(polyglot_log));
+
+    let js_locs = js_parser.extract_locations(polyglot_log);
+    let py_locs = py_parser.extract_locations(polyglot_log);
+
+    assert_eq!(js_locs.len(), 1);
+    assert_eq!(js_locs[0].file, "/app/src/components/Auth.tsx");
+    assert_eq!(js_locs[0].line, 42);
+
+    assert_eq!(py_locs.len(), 1);
+    assert_eq!(py_locs[0].file, "/app/backend/api/auth.py");
+    assert_eq!(py_locs[0].line, 95);
+}
+
+#[test]
+fn test_proxy_multi_part_content_and_system_sanitization() {
+    let dummy_stripe = format!("{}_{}_{}", "sk", "live", "512345678901234567890123");
+    let inbound_payload = serde_json::json!({
+        "model": "claude-3-5-sonnet-20241022",
+        "system": "You are a backend assistant with admin secret=supersecret12345! to database postgresql://user:pass@db:5432/main",
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": format!("Please fix this error with stripe key {}", dummy_stripe)
+                    },
+                    {
+                        "type": "tool_result",
+                        "content": "Error: connection failed\n    at query (/app/src/db.ts:10:5)\n    at node_modules/pg/client.js:12:3"
+                    }
+                ]
+            }
+        ]
+    });
+
+    let (sanitized, stats) = sanitize_prompt_payload(&inbound_payload);
+
+    // Verify system prompt was sanitized
+    let sys = sanitized["system"].as_str().unwrap();
+    assert!(!sys.contains("supersecret12345!"));
+    assert!(!sys.contains("user:pass@db"));
+    assert!(sys.contains("[CONNECTION_STRING_REDACTED]"));
+
+    // Verify multi-part text was sanitized
+    let part0 = sanitized["messages"][0]["content"][0]["text"].as_str().unwrap();
+    assert!(!part0.contains(&dummy_stripe));
+    assert!(part0.contains("[STRIPE_KEY_REDACTED]"));
+
+    // Verify multi-part tool_result was sanitized and pruned
+    let part1 = sanitized["messages"][0]["content"][1]["content"].as_str().unwrap();
+    assert!(!part1.contains("node_modules"));
+    assert!(part1.contains("/app/src/db.ts:10:5"));
+
+    assert!(stats.secrets_redacted >= 2);
+}
+
+#[test]
+fn test_verify_patch_json_and_toml() {
+    let temp_dir = std::env::temp_dir().join(format!("tokenectomy_config_test_{}", std::process::id()));
+    let _ = std::fs::create_dir_all(&temp_dir);
+
+    // 1. JSON Verification
+    let json_path = temp_dir.join("config.json");
+    std::fs::write(&json_path, r#"{"name": "tokenectomy", "enabled": true}"#).unwrap();
+    assert!(tokenectomy::mcp::verify_patch(&json_path).is_ok());
+
+    std::fs::write(&json_path, r#"{"name": "tokenectomy", "enabled": true,"#).unwrap(); // trailing comma / invalid syntax
+    assert!(tokenectomy::mcp::verify_patch(&json_path).is_err());
+
+    // 2. TOML Verification
+    let toml_path = temp_dir.join("Cargo.toml");
+    std::fs::write(&toml_path, "[package]\nname = \"test-crate\"\nversion = \"1.0.0\"\n").unwrap();
+    assert!(tokenectomy::mcp::verify_patch(&toml_path).is_ok());
+
+    std::fs::write(&toml_path, "[package\nname = \"broken\"\n").unwrap(); // missing closing bracket
+    assert!(tokenectomy::mcp::verify_patch(&toml_path).is_err());
+
+    let _ = std::fs::remove_dir_all(&temp_dir);
+}
+
+#[test]
+fn test_prune_python_async_and_dotnet_noise() {
+    let dirty_trace = r#"
+Traceback (most recent call last):
+  File "<frozen importlib._bootstrap>", line 1178, in _find_and_load
+  File "/app/env/lib/python3.11/asyncio/base_events.py", line 640, in run_until_complete
+  File "/app/env/lib/python3.11/site-packages/starlette/routing.py", line 670, in __call__
+  File "/app/env/lib/python3.11/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in handle_events
+  File "/app/src/main.py", line 45, in endpoint
+    raise RuntimeError("Custom app crash")
+RuntimeError: Custom app crash
+"#;
+
+    let cleaned = tokenectomy::extractor::prune_framework_noise(dirty_trace);
+    assert!(!cleaned.contains("<frozen"));
+    assert!(!cleaned.contains("asyncio/base_events"));
+    assert!(!cleaned.contains("starlette/routing"));
+    assert!(!cleaned.contains("uvicorn/protocols"));
+    assert!(cleaned.contains("/app/src/main.py"));
+    assert!(cleaned.contains("Custom app crash"));
+}
+
+#[test]
+fn test_mcp_get_error_context_framework_pruning() {
+    let dirty_trace = r#"
+java.lang.NullPointerException: DB fail
+    at com.example.MyService.run(MyService.java:10)
+    at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+    at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149)
+    at java.base/java.lang.Thread.run(Thread.java:1583)
+"#;
+    let safe_log = tokenectomy::redact::redact_secrets(dirty_trace);
+    let clean_log = tokenectomy::extractor::prune_framework_noise(&safe_log);
+    assert!(!clean_log.contains("org.springframework"));
+    assert!(!clean_log.contains("org.apache.catalina"));
+    assert!(!clean_log.contains("java.base/"));
+    assert!(clean_log.contains("com.example.MyService.run"));
+}
+
+#[tokio::test]
+async fn test_proxy_query_parameters_and_trailing_slash() {
+    let bind_addr = "127.0.0.1:18098";
+    tokio::spawn(async move {
+        let _ = tokenectomy::proxy::run_reverse_proxy(bind_addr, "http://127.0.0.1:11434").await;
+    });
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
+    let client = reqwest::Client::new();
+
+    // 1. Health check with query parameters: /health?format=json
+    let resp1 = client.get("http://127.0.0.1:18098/health?format=json").send().await.expect("query health");
+    assert_eq!(resp1.status(), 200);
+
+    // 2. Metrics with query parameters: /v1/metrics?refresh=true
+    let resp2 = client.get("http://127.0.0.1:18098/v1/metrics?refresh=true").send().await.expect("query metrics");
+    assert_eq!(resp2.status(), 200);
+
+    // 3. Dashboard with trailing slash: /dashboard/
+    let resp3 = client.get("http://127.0.0.1:18098/dashboard/").send().await.expect("trailing slash dashboard");
+    assert_eq!(resp3.status(), 200);
+}
+
+#[test]
+fn test_verify_patch_yaml_syntax() {
+    let temp_dir = std::env::temp_dir().join(format!("tokenectomy_yaml_test_{}", std::process::id()));
+    let _ = std::fs::create_dir_all(&temp_dir);
+
+    // 1. Valid YAML with spaces
+    let valid_yaml = temp_dir.join("compose.yaml");
+    std::fs::write(&valid_yaml, "services:\n  web:\n    image: nginx:alpine\n    ports:\n      - \"80:80\"\n").unwrap();
+    assert!(tokenectomy::mcp::verify_patch(&valid_yaml).is_ok());
+
+    // 2. Invalid YAML containing tab characters for indentation
+    let invalid_yaml = temp_dir.join("broken.yaml");
+    std::fs::write(&invalid_yaml, "services:\n\tweb:\n\t\timage: nginx\n").unwrap();
+    let res = tokenectomy::mcp::verify_patch(&invalid_yaml);
+    assert!(res.is_err());
+    let err_str = res.unwrap_err();
+    assert!(err_str.contains("Tabs are forbidden for indentation in YAML"));
+
+    // 3. Invalid YAML syntax without tabs (malformed parser error)
+    let broken_syntax_yaml = temp_dir.join("syntax_error.yaml");
+    std::fs::write(&broken_syntax_yaml, "services:\n  web: [broken unclosed list\n").unwrap();
+    let res2 = tokenectomy::mcp::verify_patch(&broken_syntax_yaml);
+    assert!(res2.is_err());
+    let err_str2 = res2.unwrap_err();
+    assert!(err_str2.contains("YAML syntax validation failed"));
+
+    let _ = std::fs::remove_dir_all(&temp_dir);
+}
+
+#[test]
+fn test_extractor_custom_noise_patterns() {
+    let custom_noise = vec![
+        "my_internal_pipeline/".to_string(),
+        "build_artifacts/".to_string(),
+    ];
+
+    let dirty_log = r#"
+Error: Service failure
+    at processData (/app/src/index.ts:15:2)
+    at runInternal (/app/my_internal_pipeline/executor.ts:88:12)
+    at generatedStubs (/app/build_artifacts/stubs.ts:4:1)
+"#;
+
+    let cleaned = tokenectomy::extractor::prune_framework_noise_with_custom(dirty_log, &custom_noise);
+    assert!(cleaned.contains("/app/src/index.ts:15:2"));
+    assert!(!cleaned.contains("my_internal_pipeline"));
+    assert!(!cleaned.contains("build_artifacts"));
+}
+
+#[test]
+fn test_apply_code_patch_dry_run_simulation() {
+    let temp_dir = std::env::temp_dir().join(format!("tokenectomy_dryrun_test_{}", std::process::id()));
+    let _ = std::fs::create_dir_all(&temp_dir);
+
+    let py_file = temp_dir.join("calc.py");
+    let original_content = "def add(a: int, b: int) -> int:\n    return a + b\n";
+    std::fs::write(&py_file, original_content).unwrap();
+
+    let boundary = tokenectomy::workspace::WorkspaceBoundary::new(&temp_dir).unwrap();
+
+    // Verify boundary reads content
+    let content = boundary.read(&py_file).unwrap();
+    assert_eq!(content, original_content);
+
+    // Dry-run patch: file content on disk MUST remain unchanged
+    let original_code = "return a + b";
+    let new_code = "return a + b + 0";
+    let updated = content.replacen(original_code, new_code, 1);
+
+    let temp_file = py_file.with_file_name(format!(".dry_run_sim_{}.py", std::process::id()));
+    std::fs::write(&temp_file, updated.as_bytes()).unwrap();
+    let check = tokenectomy::mcp::verify_patch(&temp_file);
+    let _ = std::fs::remove_file(&temp_file);
+
+    assert!(check.is_ok());
+
+    // Disk file must be exactly original
+    let current_disk = std::fs::read_to_string(&py_file).unwrap();
+    assert_eq!(current_disk, original_content, "Dry-run must never mutate disk file");
+
+    let _ = std::fs::remove_dir_all(&temp_dir);
+}
+
+#[test]
+fn test_csharp_and_ruby_polyglot_detection() {
+    use tokenectomy::extractor::csharp::CSharpTraceParser;
+    use tokenectomy::extractor::ruby::RubyTraceParser;
+
+    let cs_trace = r#"
+System.InvalidOperationException: Database connection timed out.
+   at Enterprise.Core.Repository.FindOrder(Int32 id) in /app/src/Repository/OrderRepo.cs:line 104
+   at Enterprise.Web.Controllers.OrderController.Get(Int32 id) in /app/src/Controllers/OrderController.cs:line 37
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ActionMethodExecutor.Execute() in Microsoft.AspNetCore.Mvc.Core.dll:line 50
+"#;
+    let cs_parser = CSharpTraceParser;
+    assert!(cs_parser.detect(cs_trace));
+    let cs_locs = cs_parser.extract_locations(cs_trace);
+    assert_eq!(cs_locs.len(), 2);
+    assert_eq!(cs_locs[0].file, "/app/src/Repository/OrderRepo.cs");
+    assert_eq!(cs_locs[0].line, 104);
+    assert_eq!(cs_locs[1].file, "/app/src/Controllers/OrderController.cs");
+    assert_eq!(cs_locs[1].line, 37);
+
+    let rb_trace = r#"
+ActionController::RoutingError (No route matches [GET] "/checkout"):
+  app/controllers/application_controller.rb:14:in `authenticate_user!'
+  app/services/checkout_service.rb:88:in `execute'
+  gems/actionpack-7.0.4/lib/action_dispatch/middleware/debug_exceptions.rb:28:in `call'
+"#;
+    let rb_parser = RubyTraceParser;
+    assert!(rb_parser.detect(rb_trace));
+    let rb_locs = rb_parser.extract_locations(rb_trace);
+    assert_eq!(rb_locs.len(), 2);
+    assert_eq!(rb_locs[0].file, "app/controllers/application_controller.rb");
+    assert_eq!(rb_locs[0].line, 14);
+    assert_eq!(rb_locs[1].file, "app/services/checkout_service.rb");
+    assert_eq!(rb_locs[1].line, 88);
+}
+
+#[test]
+fn test_adversarial_redos_and_extreme_inputs() {
+    // 1. ReDoS stress: 50,000 repeating characters simulating catastrophic backtracking attack
+    let redos_attempt = "sk-".repeat(1000) + &"a".repeat(20000);
+    let start = std::time::Instant::now();
+    let redacted = tokenectomy::redact::redact_secrets(&redos_attempt);
+    let elapsed = start.elapsed();
+    // In debug mode without optimizations, 15 regex passes over 23KB takes ~80ms; in release mode with SIMD it takes ~1.1ms.
+    // Threshold is 250ms to detect catastrophic exponential/polynomial backtracking (which would take seconds or minutes) without failing on unoptimized debug builds.
+    assert!(elapsed.as_millis() < 250, "Catastrophic ReDoS detected: evaluation took {}ms", elapsed.as_millis());
+    assert!(!redacted.is_empty());
+
+    // 2. High entropy boundary strings and unicode stress
+    let weird_unicode = "Error: 🔥 💥 🦀 at /path/with/emojis/🚀.rs:42:1 in ñañdú \0 null-byte";
+    let cleaned = tokenectomy::extractor::prune_framework_noise(weird_unicode);
+    assert!(cleaned.contains("🚀.rs:42:1"));
+
+    // 3. Truncated secrets: ensure partial keys don't falsely redact or panic
+    let truncated_hf = "hf_short";
+    assert_eq!(tokenectomy::redact::redact_secrets(truncated_hf), "hf_short");
+
+    let truncated_sk = format!("{}_{}_{}", "sk", "live", "123");
+    assert_eq!(tokenectomy::redact::redact_secrets(&truncated_sk), truncated_sk);
+}
+
+
+
+

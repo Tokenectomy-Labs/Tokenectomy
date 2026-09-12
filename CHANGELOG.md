@@ -5,6 +5,27 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Polyglot Multi-Trace Analysis**: Full continuous detection across all matching language parsers with cross-parser coordinate deduplication (supporting mixed stacks e.g. Node + Python, Rust + C FFI).
+- **Extended Language & Framework Support**:
+  - Added native **C# (.NET)** stack trace parser (`extractor::csharp::CSharpTraceParser`) extracting `.cs:line` coordinates.
+  - Added native **Ruby on Rails** stack trace parser (`extractor::ruby::RubyTraceParser`) extracting `.rb:line` locations and filtering gem frames.
+  - Python parser enhanced with `.pyi` / `.pyx` extensions and pytest assertion failure format detection.
+  - JavaScript / TypeScript parser enhanced with webpack paths (`webpack:///`), URIs (`file:///`), and npm scoped packages (`@org/pkg`).
+  - Added runtime noise filters for Python AsyncIO (`asyncio/base_events`), Starlette / FastAPI routing frames (`starlette/routing`), Uvicorn server frames (`uvicorn/protocols`), Gunicorn workers (`gunicorn/workers`), and .NET Core runtime frames (`System.Private.CoreLib`, `Microsoft.AspNetCore`).
+- **User-Defined Custom Redaction & Noise Configuration**:
+  - Dynamic `custom_redact_rules` and `custom_noise_patterns` support via project-level (`.tokenectomy.toml`) or user-level (`~/.tokenectomy.toml`) configuration without recompilation.
+- **Gateway HTTP Path Normalization**:
+  - Robust query parameter (`/health?format=json`) and trailing slash (`/dashboard/`) normalization for internal proxy endpoints, while preserving full query strings when forwarding requests to upstream LLMs.
+- **YAML Syntax Validation & Dry-Run MCP Patching**:
+  - Added pure-Rust native YAML syntax validation via `serde_yaml` and strict tab indentation rejection (`.yaml` / `.yml`) in `verify_patch` to prevent syntax corruption in CI/CD and container manifests without relying on external python runtimes.
+  - Introduced `"dry_run": true` mode in MCP `apply_code_patch` tool allowing autonomous agents to simulate patch matching and syntax verification with zero disk mutation.
+- **Expanded Secret Redaction**: High-precision, linear-time zero-backtracking redaction for HuggingFace tokens (`hf_...`), npm access tokens (`npm_...`), PyPI upload tokens (`pypi-AgEI...`), Stripe API keys (`sk_live_...`, `rk_live_...`), GitLab personal access tokens (`glpat-...`), and SendGrid API keys (`SG....`).
+- **Universal Multi-Format Prompt Payload Sanitization**: Tokenectomy AI Gateway Proxy (`sanitize_prompt_payload`) now seamlessly handles Anthropic / OpenAI multi-part message content arrays (`[{"type": "text", ...}, {"type": "tool_result", ...}]`), top-level system prompts (string or block arrays), legacy completion prompts, and embedding inputs.
+- **Client Header Forwarding**: AI Gateway Proxy now securely extracts and forwards essential client headers (`x-api-key`, `anthropic-version`, `anthropic-beta`, `openai-organization`, `openai-project`, `user-agent`) to upstream LLM APIs, while strictly stripping RFC 7230 §6.1 hop-by-hop headers.
+- **Transactional Config Validation**: Added in-process syntax verification for `json` (via `serde_json`) and `toml` (via `toml`), plus TypeScript compilation checks (`ts`/`tsx` via `tsc`) in `apply_code_patch` with automatic zero-dirty-diff rollback.
+- **MCP Token Economy**: `get_error_context` now applies `prune_framework_noise` directly to the returned log, slashing prompt token usage by 90%+ for calling AI coding agents.
+
 ## [1.2.0] — 2026-09-12
 
 ### Added
