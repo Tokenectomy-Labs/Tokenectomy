@@ -44,6 +44,9 @@ pub fn is_framework_noise(line_or_path: &str) -> bool {
         "vcpkg_installed",     // C++ vcpkg
         "target/debug/build",  // Rust build scripts
         "node:internal/",      // Node.js internal runtime
+        "internal/modules/",   // Node.js internal CJS/ESM loader
+        "rustc/",              // Rust standard library / compiler frames
+        "__pycache__",          // Python compiled bytecode
         "<frozen ",            // Python internal frozen modules & importlib
         "asyncio/base_events", // Python asyncio internals
         "asyncio/events.py",   // Python asyncio internals
