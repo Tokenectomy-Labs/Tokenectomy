@@ -272,10 +272,22 @@ pub async fn run_reverse_proxy_configured(
 
                 // Health check endpoint
                 if path == "/health" || path == "/v1/health" {
-                    let resp = format!(
-                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{{\"status\":\"ok\",\"service\":\"tokenectomy-gateway\",\"version\":\"{}\"}}\r\n",
+                    let body = format!(
+                        "{{\"status\":\"ok\",\"service\":\"tokenectomy-gateway\",\"version\":\"{}\"}}\r\n",
                         env!("CARGO_PKG_VERSION")
                     );
+                    let resp = if method == "HEAD" {
+                        format!(
+                            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                            body.len()
+                        )
+                    } else {
+                        format!(
+                            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                            body.len(),
+                            body
+                        )
+                    };
                     let _ = socket.write_all(resp.as_bytes()).await;
                     return;
                 }
@@ -283,23 +295,37 @@ pub async fn run_reverse_proxy_configured(
                 // Prometheus / JSON Metrics API endpoint
                 if path == "/v1/metrics" || path == "/metrics" {
                     let metrics_json = metrics_clone.to_json().to_string();
-                    let resp = format!(
-                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-                        metrics_json.len(),
-                        metrics_json
-                    );
+                    let resp = if method == "HEAD" {
+                        format!(
+                            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                            metrics_json.len()
+                        )
+                    } else {
+                        format!(
+                            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                            metrics_json.len(),
+                            metrics_json
+                        )
+                    };
                     let _ = socket.write_all(resp.as_bytes()).await;
                     return;
                 }
 
                 // Embedded FinOps Dashboard UI
-                if method == "GET" && (path == "/dashboard" || path == "/" || path == "/ui") {
+                if (method == "GET" || method == "HEAD") && (path == "/dashboard" || path == "/" || path == "/ui") {
                     let html = crate::dashboard::render_dashboard_html();
-                    let resp = format!(
-                        "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-                        html.len(),
-                        html
-                    );
+                    let resp = if method == "HEAD" {
+                        format!(
+                            "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                            html.len()
+                        )
+                    } else {
+                        format!(
+                            "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                            html.len(),
+                            html
+                        )
+                    };
                     let _ = socket.write_all(resp.as_bytes()).await;
                     return;
                 }
