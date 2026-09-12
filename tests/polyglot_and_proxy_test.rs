@@ -426,3 +426,32 @@ runtime.goexit()
     assert!(!cleaned.contains("runtime.runfinq"));
 }
 
+#[tokio::test]
+async fn test_proxy_finops_metrics_and_dashboard() {
+    let bind_addr = "127.0.0.1:18097";
+
+    tokio::spawn(async move {
+        let _ = tokenectomy::proxy::run_reverse_proxy(bind_addr, "http://127.0.0.1:11434").await;
+    });
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
+    let client = reqwest::Client::new();
+
+    // 1. Check /v1/metrics returns 200 with initial FinOps JSON schema
+    let metrics_resp = client.get("http://127.0.0.1:18097/v1/metrics").send().await.expect("call /v1/metrics");
+    assert_eq!(metrics_resp.status(), 200);
+    let metrics_json: serde_json::Value = metrics_resp.json().await.expect("parse metrics json");
+    assert_eq!(metrics_json["service"], "tokenectomy-gateway");
+    assert!(metrics_json.get("estimated_cost_saved_usd").is_some());
+    assert!(metrics_json.get("estimated_tokens_saved").is_some());
+    assert!(metrics_json.get("total_requests").is_some());
+
+    // 2. Check /dashboard returns 200 with HTML content
+    let dash_resp = client.get("http://127.0.0.1:18097/dashboard").send().await.expect("call /dashboard");
+    assert_eq!(dash_resp.status(), 200);
+    let html = dash_resp.text().await.expect("read dashboard html");
+    assert!(html.contains("Tokenectomy Razor"));
+    assert!(html.contains("GATEWAY ACTIVE"));
+    assert!(html.contains("/v1/metrics"));
+}
+

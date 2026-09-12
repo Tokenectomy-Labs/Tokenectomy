@@ -4,11 +4,90 @@ use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Instant;
+
 #[derive(Debug, Clone, Default)]
 pub struct ProxySanitizeStats {
     pub raw_chars: usize,
     pub sanitized_chars: usize,
     pub secrets_redacted: usize,
+}
+
+/// Real-time thread-safe metrics collector for FinOps and token economics monitoring.
+#[derive(Debug)]
+pub struct ProxyMetrics {
+    pub start_time: Instant,
+    pub total_requests: AtomicU64,
+    pub total_raw_chars: AtomicU64,
+    pub total_sanitized_chars: AtomicU64,
+    pub total_secrets_redacted: AtomicU64,
+}
+
+impl Default for ProxyMetrics {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ProxyMetrics {
+    pub fn new() -> Self {
+        Self {
+            start_time: Instant::now(),
+            total_requests: AtomicU64::new(0),
+            total_raw_chars: AtomicU64::new(0),
+            total_sanitized_chars: AtomicU64::new(0),
+            total_secrets_redacted: AtomicU64::new(0),
+        }
+    }
+
+    pub fn record(&self, raw: usize, sanitized: usize, secrets: usize) {
+        self.total_requests.fetch_add(1, Ordering::Relaxed);
+        self.total_raw_chars.fetch_add(raw as u64, Ordering::Relaxed);
+        self.total_sanitized_chars.fetch_add(sanitized as u64, Ordering::Relaxed);
+        self.total_secrets_redacted.fetch_add(secrets as u64, Ordering::Relaxed);
+    }
+
+    pub fn record_request(&self) {
+        self.total_requests.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn to_json(&self) -> serde_json::Value {
+        let raw_chars = self.total_raw_chars.load(Ordering::Relaxed);
+        let sanitized_chars = self.total_sanitized_chars.load(Ordering::Relaxed);
+        let requests = self.total_requests.load(Ordering::Relaxed);
+        let secrets = self.total_secrets_redacted.load(Ordering::Relaxed);
+        let uptime = self.start_time.elapsed().as_secs();
+
+        let raw_tokens = raw_chars / 4;
+        let sanitized_tokens = sanitized_chars / 4;
+        let tokens_saved = raw_tokens.saturating_sub(sanitized_tokens);
+        let saved_pct = if raw_chars > 0 {
+            (raw_chars.saturating_sub(sanitized_chars) as f64 / raw_chars as f64) * 100.0
+        } else {
+            0.0
+        };
+
+        // Standard blended LLM input token pricing: ~$3.00 per 1M prompt tokens ($0.003/1K)
+        let cost_saved_usd = (tokens_saved as f64 / 1_000_000.0) * 3.0;
+
+        serde_json::json!({
+            "status": "ok",
+            "service": "tokenectomy-gateway",
+            "version": env!("CARGO_PKG_VERSION"),
+            "uptime_seconds": uptime,
+            "total_requests": requests,
+            "raw_characters": raw_chars,
+            "sanitized_characters": sanitized_chars,
+            "estimated_raw_tokens": raw_tokens,
+            "estimated_sanitized_tokens": sanitized_tokens,
+            "estimated_tokens_saved": tokens_saved,
+            "reduction_percentage": (saved_pct * 10.0).round() / 10.0,
+            "secrets_redacted": secrets,
+            "estimated_cost_saved_usd": (cost_saved_usd * 1000.0).round() / 1000.0,
+            "blended_rate_per_million": 3.00
+        })
+    }
 }
 
 /// Surgically cleans prompt payload: redacts secrets and strips framework dependency noise.
@@ -109,8 +188,11 @@ pub async fn run_reverse_proxy_configured(
     let required_token = auth_token.map(|t| Arc::new(t.trim().to_string()));
     let semaphore = Arc::new(tokio::sync::Semaphore::new(MAX_CONCURRENT_CONNECTIONS));
     let analyzer_state = Arc::new(crate::analyzer::AppState::new());
+    let metrics = Arc::new(ProxyMetrics::new());
 
     println!("⚡ Tokenectomy AI Gateway Proxy active on http://{}", bind_addr);
+    println!("📊 Real-Time FinOps Dashboard: http://{}/dashboard", bind_addr);
+    println!("📈 Prometheus / JSON Metrics: http://{}/v1/metrics", bind_addr);
     println!("🔗 Forwarding to upstream: {}", upstream);
     if !loopback {
         println!("🔒 Remote mode ACTIVE (Protected with mandatory bearer authentication)");
@@ -133,6 +215,7 @@ pub async fn run_reverse_proxy_configured(
         let upstream_clone = Arc::clone(&upstream);
         let token_clone = required_token.clone();
         let analyzer_clone = Arc::clone(&analyzer_state);
+        let metrics_clone = Arc::clone(&metrics);
 
         tokio::spawn(async move {
             let _permit = permit;
@@ -192,6 +275,30 @@ pub async fn run_reverse_proxy_configured(
                     let resp = format!(
                         "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{{\"status\":\"ok\",\"service\":\"tokenectomy-gateway\",\"version\":\"{}\"}}\r\n",
                         env!("CARGO_PKG_VERSION")
+                    );
+                    let _ = socket.write_all(resp.as_bytes()).await;
+                    return;
+                }
+
+                // Prometheus / JSON Metrics API endpoint
+                if path == "/v1/metrics" || path == "/metrics" {
+                    let metrics_json = metrics_clone.to_json().to_string();
+                    let resp = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                        metrics_json.len(),
+                        metrics_json
+                    );
+                    let _ = socket.write_all(resp.as_bytes()).await;
+                    return;
+                }
+
+                // Embedded FinOps Dashboard UI
+                if method == "GET" && (path == "/dashboard" || path == "/" || path == "/ui") {
+                    let html = crate::dashboard::render_dashboard_html();
+                    let resp = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                        html.len(),
+                        html
                     );
                     let _ = socket.write_all(resp.as_bytes()).await;
                     return;
@@ -299,6 +406,7 @@ pub async fn run_reverse_proxy_configured(
                 let mut final_body = body_bytes;
                 if let Ok(json) = serde_json::from_slice::<Value>(&final_body) {
                     let (sanitized, stats) = sanitize_prompt_payload(&json);
+                    metrics_clone.record(stats.raw_chars, stats.sanitized_chars, stats.secrets_redacted);
                     if stats.secrets_redacted > 0 || stats.raw_chars > stats.sanitized_chars {
                         let saved_pct = if stats.raw_chars > 0 {
                             (stats.raw_chars.saturating_sub(stats.sanitized_chars) as f64 / stats.raw_chars as f64) * 100.0
@@ -313,6 +421,8 @@ pub async fn run_reverse_proxy_configured(
                     if let Ok(new_bytes) = serde_json::to_vec(&sanitized) {
                         final_body = new_bytes;
                     }
+                } else {
+                    metrics_clone.record_request();
                 }
 
                 // Forward to upstream

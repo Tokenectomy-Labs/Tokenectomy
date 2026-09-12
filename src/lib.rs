@@ -28,6 +28,7 @@ pub use crate::app::run_cli;
 pub mod cache;
 pub mod cli;
 pub mod config;
+pub mod dashboard;
 pub mod extractor;
 pub mod formatter;
 pub mod git;

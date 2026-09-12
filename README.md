@@ -420,6 +420,13 @@ razor --proxy --proxy-bind 0.0.0.0:8080 --upstream-url https://api.openai.com/v1
 
 Resource limits enforced: `MAX_HEADER_SIZE` (64 KB), `MAX_BODY_SIZE` (10 MB), client/upstream timeouts (30s / 60s), and a 128-connection concurrency cap.
 
+**Real-Time FinOps Economics Dashboard & Metrics**
+
+Tokenectomy Razor features an embedded zero-dependency real-time FinOps dashboard and metrics exporter:
+- **Interactive UI**: Open `http://127.0.0.1:8080/dashboard` in any browser to inspect live token savings, dollars saved (blended LLM pricing), total requests, and active security redactions.
+- **Prometheus / JSON Metrics**: Poll `GET http://127.0.0.1:8080/v1/metrics` for programmatic FinOps telemetry integration.
+- **Health Check**: `GET http://127.0.0.1:8080/health` returns gateway operational status.
+
 ### Configuration
 
 Configuration values can be set via `~/.tokenectomy.toml`:
