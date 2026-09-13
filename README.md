@@ -8,17 +8,19 @@
   <p><b>The autonomous M2M sub-cortex for AI coding agents</b></p>
 
   <p>
+    <a href="https://tokenectomy-web.vercel.app"><img src="https://img.shields.io/badge/Website-tokenectomy--web.vercel.app-000000?style=flat-square&logo=vercel" alt="Tokenectomy Razor official website" /></a>
+    <a href="https://tokenectomy-labs.github.io/Tokenectomy"><img src="https://img.shields.io/badge/Documentation-GitHub%20Pages-2563eb?style=flat-square&logo=googledocs" alt="Documentation" /></a>
+    <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/Official%20MCP%20Registry-io.github.Tokenectomy--Labs%2Frazor-brightgreen?style=flat-square" alt="Official MCP Registry" /></a>
+    <br />
     <a href="https://crates.io/crates/tokenectomy"><img src="https://img.shields.io/crates/v/tokenectomy.svg?style=flat-square&color=ea580c&logo=rust" alt="crates.io" /></a>
     <a href="https://www.npmjs.com/package/tokenectomy-razor"><img src="https://img.shields.io/npm/v/tokenectomy-razor.svg?style=flat-square&color=cb3837&logo=npm" alt="npm" /></a>
-    <a href="https://tokenectomy-labs.github.io/Tokenectomy"><img src="https://img.shields.io/badge/Documentation-GitHub%20Pages-2563eb?style=flat-square&logo=googledocs" alt="Documentation" /></a>
-    <a href="https://github.com/Tokenectomy-Labs/Tokenectomy/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Tokenectomy-Labs/Tokenectomy/ci.yml?branch=main&style=flat-square&logo=githubactions&label=CI" alt="CI" /></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License" /></a>
-    <br />
-    <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/Official%20MCP%20Registry-io.github.Tokenectomy--Labs%2Frazor-brightgreen?style=flat-square" alt="Official MCP Registry" /></a>
     <a href="SECURITY.md"><img src="https://img.shields.io/badge/Security%20Audit-RustSec%20Audited-2ea44f?style=flat-square&logo=rust" alt="Security Audit" /></a>
     <a href="https://glama.ai/mcp/servers/Tokenectomy-Labs/Tokenectomy"><img src="https://img.shields.io/badge/Glama.ai-Grade%20A%20TDQS-purple?style=flat-square" alt="Glama.ai" /></a>
-    <a href="https://mcpservers.org/servers/tokenectomy-labs/tokenectomy"><img src="https://img.shields.io/badge/mcpservers.org-Listed-blueviolet?style=flat-square" alt="mcpservers.org" /></a>
+    <br />
+    <a href="https://github.com/Tokenectomy-Labs/Tokenectomy/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Tokenectomy-Labs/Tokenectomy/ci.yml?branch=main&style=flat-square&logo=githubactions&label=CI" alt="CI" /></a>
     <a href="https://github.com/marketplace/actions/tokenectomy-razor"><img src="https://img.shields.io/badge/GitHub%20Marketplace-Action%20v1-blue?style=flat-square&logo=githubactions" alt="GitHub Marketplace" /></a>
+    <a href="https://mcpservers.org/servers/tokenectomy-labs/tokenectomy"><img src="https://img.shields.io/badge/mcpservers.org-Listed-blueviolet?style=flat-square" alt="mcpservers.org" /></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License" /></a>
   </p>
 
   <p>
