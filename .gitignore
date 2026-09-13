@@ -1,12 +1,38 @@
+# Rust build artifacts
 /target
+
+# Tokenectomy local runtime & configs
 .tokenectomy/
 .tokenectomy.toml
+
+# Redaction benchmark suite artifacts & binaries
+benches/redaction_suite/bin/
+benches/redaction_suite/.venv/
+benches/redaction_suite/corpus/
+
+# Python cache & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# Environment files & secrets
+.env
+.env.local
+.env.*.local
+
+# OS & Editor artifacts
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Temporary scratch files & media
 error.log
 test_bug.py
 server.py
 mcp_call.json
 *.mp4
-benches/redaction_suite/bin/
-benches/redaction_suite/.venv/
-benches/redaction_suite/corpus/
-
