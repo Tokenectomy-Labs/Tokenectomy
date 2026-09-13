@@ -2,5 +2,13 @@
   "$schema": "https://glama.ai/mcp/schemas/server.json",
   "maintainers": [
     "daffa2555"
+  ],
+  "tags": [
+    "context-optimization",
+    "token-reduction",
+    "log-surgery",
+    "secret-redaction",
+    "m2m-sub-cortex",
+    "rust-engine"
   ]
 }

@@ -1,4 +1,11 @@
 version: 1
+description: Autonomous M2M log surgery & token reduction MCP server for AI coding agents. Excises 90%+ framework noise and redacts credentials in sub-milliseconds.
+tags:
+  - token-optimization
+  - log-surgery
+  - secret-redaction
+  - m2m-sub-cortex
+  - rust-engine
 startCommand:
   type: stdio
   config:
