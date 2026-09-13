@@ -5,6 +5,18 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.3] — 2026-09-14
+
+### Added
+- **M2M Cognitive Anchoring Control Plane**:
+  - Structured deterministic control plane envelope (`[:TOKENECTOMY:M2M_CONTROL_PLANE:v1.2.3]`) prepended to `get_error_context` output, anchoring LLM attention heads directly to system invariants and coordinates.
+  - Generates actionable `COGNITIVE_DIRECTIVE` and `PRIMARY_CRASH_COORDINATES` to steer downstream reasoning.
+- **Interactive Multi-Strategy Token Budgeting**:
+  - Introduced multi-tier pruning strategies (`aggressive`, `conservative`, `lossless_compact`) in `get_error_context` and `audit_context_health`.
+  - `audit_context_health` now returns structured `control_plane` state and `available_strategies` options with calculated token savings.
+- **Precision Secret Counter**:
+  - Implemented `redact_secrets_with_stats` providing exact counts of neutralized credentials with $O(N)$ linear-time DFA regexes.
+
 ## [1.2.2] — 2026-09-14
 
 ### Added
