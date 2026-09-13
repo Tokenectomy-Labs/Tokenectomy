@@ -418,7 +418,10 @@ docker run -i ghcr.io/tokenectomy-labs/razor:latest --mcp
 | User-defined custom redaction & noise rules (`~/.tokenectomy.toml`) | ✅ Complete | v1.2.2 |
 | Autonomous Context Health Audit (`audit_context_health`) & M2M Advisory | ✅ Complete | v1.2.2 |
 | Automated Redaction Benchmark & CI Gate | ✅ Complete | v1.2.2 |
-| `awesome-mcp-servers` Community Catalog Listing | 🔄 In Progress | v1.2.2 |
+| M2M Cognitive Anchoring Control Plane (`[:TOKENECTOMY:M2M_CONTROL_PLANE:v1.2.3]`) | ✅ Complete | v1.2.3 |
+| Interactive Multi-Strategy Budgeting (`aggressive`, `conservative`, `lossless_compact`) | ✅ Complete | v1.2.3 |
+| GitHub Actions OIDC Official Registry Publishing Gate | ✅ Complete | v1.2.3 |
+| `awesome-mcp-servers` Community Catalog Listing | 🔄 In Progress | v1.2.4 |
 | Native VS Code & JetBrains companion extensions | 📋 Planned | v1.3.0 |
 | Server-Sent Events (SSE) remote MCP transport | 📋 Planned | v1.3.0 |
 
