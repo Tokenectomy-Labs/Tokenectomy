@@ -1,0 +1,23 @@
+# Tokenectomy Razor
+
+> The autonomous M2M sub-cortex and log surgery engine for AI coding agents.
+
+Tokenectomy Razor is a zero-allocation, machine-to-machine (M2M) Model Context Protocol (MCP) server written in safe Rust. It sits between terminal execution and LLM context windows, excising 95%+ internal framework noise, redacting credentials with O(N) ReDoS-immune DFA regexes, and streaming sanitized context in sub-milliseconds with zero dirty git diff.
+
+## Core Documentation
+
+- [Quick Start & Overview](https://tokenectomy-labs.github.io/Tokenectomy/): Architecture, core capabilities, and verified benchmarks.
+- [Installation Guide](https://tokenectomy-labs.github.io/Tokenectomy/installation/): Cargo (`cargo install tokenectomy`), npm (`npx tokenectomy-razor`), Homebrew, Docker, and standalone binary downloads.
+- [MCP Server Setup](https://tokenectomy-labs.github.io/Tokenectomy/mcp-integration/): JSON configuration for Cursor Composer, Claude Desktop, Cline, Roo Code, Windsurf, and Antigravity.
+- [AI Gateway Proxy](https://tokenectomy-labs.github.io/Tokenectomy/proxy/): Local streaming proxy (`127.0.0.1:8080`) that sanitizes prompts and stack traces before forwarding to upstream LLMs.
+- [CLI Reference](https://tokenectomy-labs.github.io/Tokenectomy/cli/): Full flag reference including `--scrub`, `--mcp`, `--proxy`, `--port`, and `--verify-patch`.
+- [Security Model & Telemetry](https://tokenectomy-labs.github.io/Tokenectomy/security/): ReDoS immunity proof, zero-knowledge local architecture, and secret redaction rules.
+- [Verified Benchmarks](https://tokenectomy-labs.github.io/Tokenectomy/#verifiable-benchmarks): Sub-millisecond latency measurements, memory footprint (<77MB VmRSS), and Gitleaks head-to-head comparison.
+
+## MCP Tools Exposed
+
+1. `get_error_context`: Prunes framework stack traces from Python, Node/TS, Go, Rust, Java, C++, Ruby, PHP, and C#; auto-redacts credentials.
+2. `apply_code_patch`: AST-validated dry-run patching with automatic rollback on syntax error.
+3. `search_stack_overflow`: Sanitized web search extracting targeted programming error solutions.
+4. `inspect_docker`: Container log extraction with framework noise removal.
+5. `probe_database`: Health-check and query diagnostics without credential leakage.

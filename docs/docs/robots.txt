@@ -1,4 +1,18 @@
 User-agent: *
 Allow: /
 
+# Explicit AI Agent Crawlers (WebMCP & Agentic Browsing)
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
 Sitemap: https://tokenectomy-labs.github.io/Tokenectomy/sitemap.xml
+# AI Documentation Index: https://tokenectomy-labs.github.io/Tokenectomy/llms.txt
