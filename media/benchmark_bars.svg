@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 480" width="100%" height="100%" style="background:#0d1117; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;">
+  <defs>
+    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+    <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#34d399" />
+    </linearGradient>
+  </defs>
+
+  <!-- Title & Specs -->
+  <text x="40" y="45" fill="#f0f6fc" font-size="20" font-weight="700">Benchmark: Log Redaction &amp; Surgery Performance</text>
+  <text x="40" y="68" fill="#8b949e" font-size="13">Tested on Intel Core i5-1235U @ 15W • Arch Linux 6.13 • 250,000 Lines (24.44 MB) Enterprise Crash Dump</text>
+
+  <!-- Section 1: Throughput (Higher is better) -->
+  <g transform="translate(40, 95)">
+    <text x="0" y="18" fill="#58a6ff" font-size="14" font-weight="600">Throughput (Lines per Second) — Higher is better</text>
+    
+    <!-- Grid lines -->
+    <line x1="220" y1="30" x2="220" y2="155" stroke="#21262d" stroke-width="1" />
+    <line x1="375" y1="30" x2="375" y2="155" stroke="#21262d" stroke-width="1" stroke-dasharray="4,4" />
+    <line x1="530" y1="30" x2="530" y2="155" stroke="#21262d" stroke-width="1" stroke-dasharray="4,4" />
+    <line x1="685" y1="30" x2="685" y2="155" stroke="#21262d" stroke-width="1" stroke-dasharray="4,4" />
+    
+    <text x="220" y="170" fill="#6e7681" font-size="11" text-anchor="middle">0</text>
+    <text x="375" y="170" fill="#6e7681" font-size="11" text-anchor="middle">175k</text>
+    <text x="530" y="170" fill="#6e7681" font-size="11" text-anchor="middle">350k</text>
+    <text x="685" y="170" fill="#6e7681" font-size="11" text-anchor="middle">525k</text>
+
+    <!-- Bar 1: Tokenectomy (Rust) -->
+    <text x="205" y="55" fill="#f0f6fc" font-size="13" font-weight="600" text-anchor="end">Tokenectomy Razor (Rust)</text>
+    <rect x="220" y="38" width="469" height="24" rx="4" fill="url(#cyanGrad)" />
+    <text x="698" y="55" fill="#38bdf8" font-size="13" font-weight="700" font-family="monospace">530,735 l/s (10.2x)</text>
+
+    <!-- Bar 2: Go Log Sanitizer -->
+    <text x="205" y="88" fill="#c9d1d9" font-size="13" text-anchor="end">Go stdlib sanitizer</text>
+    <rect x="220" y="71" width="168" height="24" rx="4" fill="#30363d" />
+    <text x="396" y="88" fill="#8b949e" font-size="12" font-family="monospace">190,400 l/s</text>
+
+    <!-- Bar 3: Node.js Scrubber -->
+    <text x="205" y="121" fill="#c9d1d9" font-size="13" text-anchor="end">Node.js regex pipeline</text>
+    <rect x="220" y="104" width="46" height="24" rx="4" fill="#30363d" />
+    <text x="274" y="121" fill="#8b949e" font-size="12" font-family="monospace">52,100 l/s</text>
+
+    <!-- Bar 4: Python Scrubber -->
+    <text x="205" y="154" fill="#c9d1d9" font-size="13" text-anchor="end">Python re scrubber</text>
+    <rect x="220" y="137" width="22" height="24" rx="4" fill="#30363d" />
+    <text x="250" y="154" fill="#8b949e" font-size="12" font-family="monospace">24,500 l/s</text>
+  </g>
+
+  <!-- Section 2: Latency per crash dump (Lower is better) -->
+  <g transform="translate(40, 290)">
+    <text x="0" y="18" fill="#58a6ff" font-size="14" font-weight="600">Log Scrubbing Latency (ms) — Lower is better</text>
+
+    <!-- Grid lines -->
+    <line x1="220" y1="30" x2="220" y2="125" stroke="#21262d" stroke-width="1" />
+    <line x1="375" y1="30" x2="375" y2="125" stroke="#21262d" stroke-width="1" stroke-dasharray="4,4" />
+    <line x1="530" y1="30" x2="530" y2="125" stroke="#21262d" stroke-width="1" stroke-dasharray="4,4" />
+    <line x1="685" y1="30" x2="685" y2="125" stroke="#21262d" stroke-width="1" stroke-dasharray="4,4" />
+
+    <text x="220" y="140" fill="#6e7681" font-size="11" text-anchor="middle">0 ms</text>
+    <text x="375" y="140" fill="#6e7681" font-size="11" text-anchor="middle">15 ms</text>
+    <text x="530" y="140" fill="#6e7681" font-size="11" text-anchor="middle">30 ms</text>
+    <text x="685" y="140" fill="#6e7681" font-size="11" text-anchor="middle">45 ms</text>
+
+    <!-- Bar 1: Tokenectomy -->
+    <text x="205" y="55" fill="#f0f6fc" font-size="13" font-weight="600" text-anchor="end">Tokenectomy Razor (Rust)</text>
+    <rect x="220" y="38" width="6" height="24" rx="3" fill="url(#emeraldGrad)" />
+    <text x="234" y="55" fill="#34d399" font-size="13" font-weight="700" font-family="monospace">0.18 ms (236x faster)</text>
+
+    <!-- Bar 2: Node.js -->
+    <text x="205" y="88" fill="#c9d1d9" font-size="13" text-anchor="end">Node.js regex pipeline</text>
+    <rect x="220" y="71" width="312" height="24" rx="4" fill="#f59e0b" opacity="0.8" />
+    <text x="540" y="88" fill="#cbd5e1" font-size="12" font-family="monospace">28.40 ms</text>
+
+    <!-- Bar 3: Python -->
+    <text x="205" y="121" fill="#c9d1d9" font-size="13" text-anchor="end">Python re module</text>
+    <rect x="220" y="104" width="468" height="24" rx="4" fill="#ef4444" opacity="0.8" />
+    <text x="696" y="121" fill="#cbd5e1" font-size="12" font-family="monospace">42.60 ms</text>
+  </g>
+
+  <!-- Footer audit -->
+  <text x="40" y="460" fill="#6e7681" font-size="11" font-family="monospace">Reproduce: cargo test --release --test stress_benchmark -- --nocapture</text>
+</svg>
