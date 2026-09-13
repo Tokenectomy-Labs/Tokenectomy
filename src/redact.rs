@@ -1,5 +1,4 @@
 use regex::Regex;
-use std::borrow::Cow;
 use std::sync::LazyLock;
 
 struct RedactRule {
@@ -117,10 +116,24 @@ pub fn redact_secrets_with_custom(
     input: &str,
     custom_rules: &[crate::config::CustomRedactRuleConfig],
 ) -> String {
+    redact_secrets_with_stats_and_custom(input, custom_rules).0
+}
+
+pub fn redact_secrets_with_stats(input: &str) -> (String, usize) {
+    redact_secrets_with_stats_and_custom(input, &[])
+}
+
+pub fn redact_secrets_with_stats_and_custom(
+    input: &str,
+    custom_rules: &[crate::config::CustomRedactRuleConfig],
+) -> (String, usize) {
     let mut redacted = input.to_string();
+    let mut count = 0;
     for rule in REDACT_RULES.iter() {
-        if let Cow::Owned(new_str) = rule.regex.replace_all(&redacted, rule.replacement) {
-            redacted = new_str;
+        let matches = rule.regex.find_iter(&redacted).count();
+        if matches > 0 {
+            count += matches;
+            redacted = rule.regex.replace_all(&redacted, rule.replacement).into_owned();
         }
     }
     for custom in custom_rules {
@@ -129,12 +142,14 @@ pub fn redact_secrets_with_custom(
                 .replacement
                 .as_deref()
                 .unwrap_or("[CUSTOM_SECRET_REDACTED]");
-            if let Cow::Owned(new_str) = re.replace_all(&redacted, repl) {
-                redacted = new_str;
+            let matches = re.find_iter(&redacted).count();
+            if matches > 0 {
+                count += matches;
+                redacted = re.replace_all(&redacted, repl).into_owned();
             }
         }
     }
-    redacted
+    (redacted, count)
 }
 
 #[cfg(test)]

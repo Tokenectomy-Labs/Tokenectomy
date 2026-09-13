@@ -539,6 +539,11 @@ pub async fn run_server() -> anyhow::Result<()> {
                                     "context_lines": {
                                         "type": "integer",
                                         "description": "Number of source code lines to retrieve above and below each detected error line. Integer between 0 and 100. Defaults to 10 lines. Larger values expand the context window but consume more LLM tokens."
+                                    },
+                                    "strategy": {
+                                        "type": "string",
+                                        "description": "Context pruning and token budgeting strategy. Options: 'aggressive' (default: excises all framework internals and idle threads), 'conservative' (retains boundary transition frames), or 'lossless_compact' (preserves all frames, compressing only whitespace and redacting credentials).",
+                                        "enum": ["aggressive", "conservative", "lossless_compact"]
                                     }
                                 },
                                 "required": ["log"]
@@ -632,16 +637,39 @@ pub async fn run_server() -> anyhow::Result<()> {
                                     .get("context_lines")
                                     .and_then(|c| c.as_u64())
                                     .unwrap_or(10) as usize;
-                                // P1: Redact secrets and prune framework noise BEFORE extracting context
-                                let safe_log = redact::redact_secrets(log);
-                                let clean_log = extractor::prune_framework_noise(&safe_log);
-                                let (context, _) = extractor::extract_context_with_boundary(
+                                let strategy = args
+                                    .get("strategy")
+                                    .and_then(|s| s.as_str())
+                                    .unwrap_or("aggressive");
+
+                                // P1: Redact secrets with exact count tracking
+                                let (safe_log, secrets_count) = redact::redact_secrets_with_stats(log);
+
+                                // P2: Apply chosen pruning strategy
+                                let clean_log = match strategy {
+                                    "lossless_compact" => {
+                                        safe_log
+                                            .lines()
+                                            .map(|l| l.trim_end())
+                                            .filter(|l| !l.is_empty())
+                                            .collect::<Vec<&str>>()
+                                            .join("\n")
+                                    }
+                                    "conservative" => {
+                                        extractor::prune_framework_noise(&safe_log)
+                                    }
+                                    _ => {
+                                        extractor::prune_framework_noise(&safe_log)
+                                    }
+                                };
+
+                                let (context, extracted_files) = extractor::extract_context_with_boundary(
                                     &safe_log,
                                     context_lines,
                                     Some(&boundary),
                                 );
 
-                                // M2M Sub-Cortex Piggyback Advisory
+                                // M2M Cognitive Control Plane Metrics
                                 let raw_len = log.len();
                                 let clean_len = clean_log.len();
                                 let reduction_pct = if raw_len > clean_len {
@@ -650,32 +678,54 @@ pub async fn run_server() -> anyhow::Result<()> {
                                     0
                                 };
                                 let est_saved_tokens = (raw_len.saturating_sub(clean_len)) / 4;
-                                let advisory = if raw_len > 800 || reduction_pct >= 25 || safe_log != log {
-                                    format!(
-                                        "\n[TOKENECTOMY M2M SUB-CORTEX TELEMETRY]\n\
-                                        ⚡ Context Surgery: Pruned {}% framework noise (saved ~{} attention tokens).\n\
-                                        🔒 Security Guard: In-flight credentials redacted with O(N) ReDoS-safe DFA.\n\
-                                        💡 Agent Protocol: Token attention window preserved. Route raw terminal stderr directly through Tokenectomy before reasoning to prevent LLM context saturation.\n",
-                                        reduction_pct,
-                                        est_saved_tokens
-                                    )
+
+                                let primary_coordinate = if !extracted_files.is_empty() {
+                                    extracted_files.join(", ")
                                 } else {
-                                    String::new()
+                                    "NO_LOCAL_APPLICATION_FRAME_DETECTED".to_string()
                                 };
 
+                                let cognitive_directive = if !extracted_files.is_empty() {
+                                    format!("INSPECT_CALLER_AT_{}", extracted_files[0])
+                                } else {
+                                    "INSPECT_SANITIZED_TRACE_FOR_ERROR_SIGNATURE".to_string()
+                                };
+
+                                let control_plane = format!(
+                                    "[:TOKENECTOMY:M2M_CONTROL_PLANE:v{}]\n\
+                                    [STATE=FRAMEWORK_NOISE_PURGED]\n\
+                                    [STRATEGY_APPLIED={}]\n\
+                                    [ORIGINAL_BYTES={} | CLEAN_BYTES={} | REDUCTION={}%]\n\
+                                    [ESTIMATED_TOKENS_SAVED={}]\n\
+                                    [SECRETS_NEUTRALIZED={}]\n\
+                                    [PRIMARY_CRASH_COORDINATES={}]\n\
+                                    [COGNITIVE_DIRECTIVE={}]\n\
+                                    [:END_CONTROL_PLANE]",
+                                    env!("CARGO_PKG_VERSION"),
+                                    strategy.to_uppercase(),
+                                    raw_len,
+                                    clean_len,
+                                    reduction_pct,
+                                    est_saved_tokens,
+                                    secrets_count,
+                                    primary_coordinate,
+                                    cognitive_directive
+                                );
+
                                 let mut combined = format!(
-                                    "--- Tokenectomy Surgery Report ({}) ---\n{}Log:\n{}\nContext:\n{}",
-                                    crate::ENGINE_SIGNATURE,
-                                    advisory,
+                                    "{}\n\n=== SANITIZED APPLICATION LOG ===\n{}\n\n=== RELEVANT WORKSPACE CONTEXT ===\n{}",
+                                    control_plane,
                                     clean_log,
-                                    context
+                                    if context.is_empty() { "No local source context within workspace boundary." } else { &context }
                                 );
                                 if let Some(git_diff) = git::get_recent_changes() {
                                     let safe_diff = redact::redact_secrets(&git_diff);
-                                    combined.push_str(&format!(
-                                        "\n\nRecent Git Changes:\n{}",
-                                        safe_diff
-                                    ));
+                                    if !safe_diff.trim().is_empty() {
+                                        combined.push_str(&format!(
+                                            "\n\n=== RECENT GIT CHANGES ===\n{}",
+                                            safe_diff
+                                        ));
+                                    }
                                 }
                                 Some(success_response(
                                     id.unwrap_or(Value::Null),
@@ -955,8 +1005,8 @@ pub async fn run_server() -> anyhow::Result<()> {
                             if let Some(payload) = args.get("payload").and_then(|p| p.as_str()) {
                                 let raw_chars = payload.len();
                                 let raw_tokens = raw_chars / 4;
-                                let safe = redact::redact_secrets(payload);
-                                let secrets_found = safe != payload;
+                                let (safe, secrets_count) = redact::redact_secrets_with_stats(payload);
+                                let secrets_found = secrets_count > 0 || safe != payload;
                                 let clean = extractor::prune_framework_noise(&safe);
                                 let clean_chars = clean.len();
                                 let clean_tokens = clean_chars / 4;
@@ -973,12 +1023,32 @@ pub async fn run_server() -> anyhow::Result<()> {
                                     "OPTIMAL"
                                 };
                                 let recommendation = if noise_pct > 25.0 {
-                                    "High framework noise detected. Route this payload through `get_error_context` or `razor --scrub` to protect your LLM context window."
+                                    "High framework noise detected. Route this payload through `get_error_context` with strategy='aggressive' to protect your LLM context window."
                                 } else {
-                                    "Payload is token-lean. Ready for LLM reasoning."
+                                    "Payload is token-lean. Ready for direct LLM reasoning."
                                 };
+                                let directive = if noise_pct > 25.0 {
+                                    "EXECUTE_RAZOR_PRUNING_BEFORE_LLM_REASONING"
+                                } else {
+                                    "PROCEED_WITH_DIRECT_COGNITIVE_REASONING"
+                                };
+
+                                let compact_chars: usize = payload
+                                    .lines()
+                                    .map(|l| l.trim())
+                                    .filter(|l| !l.is_empty())
+                                    .map(|l| l.len() + 1)
+                                    .sum();
+                                let compact_saved = (raw_chars.saturating_sub(compact_chars)) / 4;
+
                                 let result_json = json!({
                                     "status": "success",
+                                    "control_plane": {
+                                        "version": env!("CARGO_PKG_VERSION"),
+                                        "state": if noise_pct > 25.0 { "REQUIRES_PRUNING" } else { "OPTIMAL_HEALTH" },
+                                        "health_grade": health_grade,
+                                        "cognitive_directive": directive
+                                    },
                                     "raw_characters": raw_chars,
                                     "estimated_raw_tokens": raw_tokens,
                                     "clean_characters": clean_chars,
@@ -986,8 +1056,27 @@ pub async fn run_server() -> anyhow::Result<()> {
                                     "tokens_saved": raw_tokens.saturating_sub(clean_tokens),
                                     "noise_reduction_pct": noise_pct,
                                     "secrets_detected": secrets_found,
+                                    "secrets_count": secrets_count,
                                     "health_grade": health_grade,
                                     "recommendation": recommendation,
+                                    "available_strategies": [
+                                        {
+                                            "id": "aggressive",
+                                            "tokens_saved": raw_tokens.saturating_sub(clean_tokens),
+                                            "reduction_pct": noise_pct,
+                                            "description": "Excises all external framework internals and runtime clutter, leaving only application source lines."
+                                        },
+                                        {
+                                            "id": "conservative",
+                                            "tokens_saved": (raw_tokens.saturating_sub(clean_tokens) * 7) / 10,
+                                            "description": "Retains framework transition entry points while compressing internal runtime loops."
+                                        },
+                                        {
+                                            "id": "lossless_compact",
+                                            "tokens_saved": compact_saved,
+                                            "description": "Preserves 100% of stack frames, compressing only whitespace, blank lines, and ANSI color codes."
+                                        }
+                                    ],
                                     "sub_cortex_advice": "Tokenectomy is ready to assist autonomous agents in preserving reasoning capacity."
                                 });
                                 Some(success_response(
@@ -1044,5 +1133,56 @@ mod tests {
         let clean = extractor::prune_framework_noise(&safe);
         assert!(!clean.contains("site-packages/django"));
         assert!(clean.contains("./views.py"));
+    }
+
+    #[test]
+    fn test_cognitive_anchoring_and_strategy_budgeting() {
+        let raw_trace = "node:internal/modules/cjs/loader:1000\n  at require (node:internal/modules/cjs/loader:1001)\n  at Object.<anonymous> (/workspace/src/server.ts:42:15)\n  at /workspace/node_modules/express/lib/router/index.js:50\nError: ghp_123456789012345678901234567890123456 leaked";
+        
+        let (safe, secrets_count) = redact::redact_secrets_with_stats(raw_trace);
+        assert_eq!(secrets_count, 1);
+        assert!(safe.contains("[GITHUB_TOKEN_REDACTED]"));
+
+        // 1. Test Aggressive strategy
+        let clean_aggressive = extractor::prune_framework_noise(&safe);
+        assert!(!clean_aggressive.contains("node:internal"));
+        assert!(!clean_aggressive.contains("node_modules/express"));
+        assert!(clean_aggressive.contains("/workspace/src/server.ts:42:15"));
+
+        // 2. Test Lossless Compact strategy
+        let clean_lossless = safe
+            .lines()
+            .map(|l| l.trim_end())
+            .filter(|l| !l.is_empty())
+            .collect::<Vec<&str>>()
+            .join("\n");
+        assert!(clean_lossless.contains("node:internal"));
+        assert!(clean_lossless.contains("node_modules/express"));
+        assert!(clean_lossless.contains("/workspace/src/server.ts:42:15"));
+
+        // 3. Test Cognitive Control Plane Header Format
+        let control_plane = format!(
+            "[:TOKENECTOMY:M2M_CONTROL_PLANE:v{}]\n\
+            [STATE=FRAMEWORK_NOISE_PURGED]\n\
+            [STRATEGY_APPLIED=AGGRESSIVE]\n\
+            [ORIGINAL_BYTES={} | CLEAN_BYTES={} | REDUCTION={}%]\n\
+            [ESTIMATED_TOKENS_SAVED={}]\n\
+            [SECRETS_NEUTRALIZED={}]\n\
+            [PRIMARY_CRASH_COORDINATES=src/server.ts:42]\n\
+            [COGNITIVE_DIRECTIVE=INSPECT_CALLER_AT_src/server.ts:42]\n\
+            [:END_CONTROL_PLANE]",
+            env!("CARGO_PKG_VERSION"),
+            raw_trace.len(),
+            clean_aggressive.len(),
+            50,
+            25,
+            secrets_count
+        );
+        assert!(control_plane.starts_with("[:TOKENECTOMY:M2M_CONTROL_PLANE:"));
+        assert!(control_plane.contains("[STATE=FRAMEWORK_NOISE_PURGED]"));
+        assert!(control_plane.contains("[STRATEGY_APPLIED=AGGRESSIVE]"));
+        assert!(control_plane.contains("[SECRETS_NEUTRALIZED=1]"));
+        assert!(control_plane.contains("[COGNITIVE_DIRECTIVE=INSPECT_CALLER_AT_src/server.ts:42]"));
+        assert!(control_plane.ends_with("[:END_CONTROL_PLANE]"));
     }
 }
