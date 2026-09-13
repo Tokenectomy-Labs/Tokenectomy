@@ -66,3 +66,4 @@ agy mcp add tokenectomy-razor -- npx -y tokenectomy-razor --mcp
 | `analyze_code` | Static AST code analysis detecting leaks, unclosed handles, and vulnerabilities |
 | `apply_code_patch` | Atomic file modifications with syntax verification and rollback |
 | `search_stack_overflow` | Queries Stack Exchange API for relevant error signatures |
+| `audit_context_health` | Proactive context health audit for token bloat, framework noise, and credentials |

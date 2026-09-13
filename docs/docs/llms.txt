@@ -17,7 +17,7 @@ Tokenectomy Razor is a zero-allocation, machine-to-machine (M2M) Model Context P
 ## MCP Tools Exposed
 
 1. `get_error_context`: Prunes framework stack traces from Python, Node/TS, Go, Rust, Java, C++, Ruby, PHP, and C#; auto-redacts credentials.
-2. `apply_code_patch`: AST-validated dry-run patching with automatic rollback on syntax error.
-3. `search_stack_overflow`: Sanitized web search extracting targeted programming error solutions.
-4. `inspect_docker`: Container log extraction with framework noise removal.
-5. `probe_database`: Health-check and query diagnostics without credential leakage.
+2. `analyze_code`: Performs static AST code analysis to detect resource leaks, unclosed handles, and security vulnerabilities with LSP coordinates.
+3. `apply_code_patch`: AST-validated dry-run patching with automatic rollback on syntax error.
+4. `search_stack_overflow`: Sanitized web search extracting targeted programming error solutions.
+5. `audit_context_health`: Proactively audits error logs, prompt payloads, or code snippets for token bloat, framework noise, and credential leaks.

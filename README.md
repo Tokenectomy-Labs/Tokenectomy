@@ -333,6 +333,7 @@ Tokenectomy Razor complies with **Glama Grade A Tool Definition Quality Score (T
 | `analyze_code` | Performs static AST code analysis to detect resource leaks, unclosed handles, and syntax vulnerabilities with bounded execution limits and precise LSP UTF-16 coordinates. |
 | `apply_code_patch` | Applies atomic file modifications with post-write language syntax verification (`cargo check`, `py_compile`, `node --check`) and automated rollback on failure. |
 | `search_stack_overflow` | Queries Stack Exchange API for relevant error signatures using sanitized, redacted search terms. |
+| `audit_context_health` | Audits raw logs, traces, or prompt payloads for token bloat, framework noise, and credentials. Returns M2M telemetry, savings metrics, and context health grades. |
 
 ---
 
@@ -346,6 +347,8 @@ Tokenectomy Razor complies with **Glama Grade A Tool Definition Quality Score (T
 | **Golang** | Gin, Fiber, Stdlib Panics | `go/src` (stdlib), `go/pkg/mod`, `vendor` |
 | **Java / Kotlin** | Spring Boot 3, Tomcat, Netty | `.m2/repository`, `.gradle/caches`, internal bytecode |
 | **C / C++** | AddressSanitizer, GDB / LLDB | `/usr/include`, `/usr/lib`, `vcpkg_installed` |
+| **C# (.NET)** | ASP.NET Core, .NET Runtime | `System.Private.CoreLib`, `Microsoft.AspNetCore` |
+| **Ruby on Rails** | Rails, Sinatra, Bundler | `/gems/`, `ruby/gems`, internal rack handlers |
 | **PHP** | Laravel, Symfony | `vendor/composer`, `vendor/symfony` |
 
 ---
@@ -411,10 +414,13 @@ docker run -i ghcr.io/tokenectomy-labs/razor:latest --mcp
 | Official MCP Registry Listing (`io.github.Tokenectomy-Labs/razor`) | ✅ Complete | v1.1.7 |
 | `mcpservers.org` Directory Listing | ✅ Complete | v1.1.7 |
 | Java/Kotlin (Spring Boot 3) & C/C++ (ASan) Extractors | ✅ Complete | v1.2.0 |
-| `awesome-mcp-servers` Community Catalog Listing | 🔄 In Progress | v1.2.0 |
-| User-defined custom redaction patterns (`~/.tokenectomy.toml`) | 📋 Planned | v1.3.0 |
-| Native VS Code & JetBrains companion extensions | 📋 Planned | v1.4.0 |
-| Server-Sent Events (SSE) remote MCP transport | 📋 Planned | v1.4.0 |
+| C# (.NET) & Ruby on Rails Deep Stack Surgery | ✅ Complete | v1.2.2 |
+| User-defined custom redaction & noise rules (`~/.tokenectomy.toml`) | ✅ Complete | v1.2.2 |
+| Autonomous Context Health Audit (`audit_context_health`) & M2M Advisory | ✅ Complete | v1.2.2 |
+| Automated Redaction Benchmark & CI Gate | ✅ Complete | v1.2.2 |
+| `awesome-mcp-servers` Community Catalog Listing | 🔄 In Progress | v1.2.2 |
+| Native VS Code & JetBrains companion extensions | 📋 Planned | v1.3.0 |
+| Server-Sent Events (SSE) remote MCP transport | 📋 Planned | v1.3.0 |
 
 ---
 

@@ -33,7 +33,7 @@ npx -y tokenectomy-razor --mcp
 
 ## 🛠️ Exposed MCP Tools
 
-Tokenectomy Razor equips agents with 4 high-performance tools adhering strictly to MCP JSON-RPC 2.0 specifications:
+Tokenectomy Razor equips agents with 5 high-performance tools adhering strictly to MCP JSON-RPC 2.0 specifications:
 
 | Tool Name | Capability Description |
 |---|---|
@@ -41,6 +41,7 @@ Tokenectomy Razor equips agents with 4 high-performance tools adhering strictly 
 | `analyze_code` | Performs static AST code analysis to detect resource leaks, unclosed handles, and security vulnerabilities with bounded execution limits and precise LSP UTF-16 coordinates. |
 | `apply_code_patch` | Applies atomic file modifications with post-write language syntax verification (`cargo check`, `node --check`, `py_compile`) and automated zero-dirty-diff rollback on validation failure. |
 | `search_stack_overflow` | Queries Stack Exchange API for relevant error signatures using sanitized search terms. |
+| `audit_context_health` | Proactively audits error logs, prompt payloads, or code snippets for token bloat, framework noise, and credential leaks. Returns actionable M2M telemetry and cost savings metrics. |
 
 ---
 
