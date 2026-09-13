@@ -105,6 +105,10 @@ src/components/Header.tsx:42:15 - SyntaxError
 <a id="verifiable-benchmarks"></a>
 ## 🔬 Verifiable Benchmarks
 
+<div align="center">
+  <img src="media/benchmark_stats.png" alt="Tokenectomy Razor Hardware Benchmark Infographic" width="100%" />
+</div>
+
 All performance claims are hardware-grounded and independently reproducible on physical hardware (measured on 10-Core Intel Core i5-1235U @ 15W running Arch Linux, Kernel 6.13):
 
 | Benchmark Target | Workload Under Test | Verified Measurement | Result |
