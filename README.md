@@ -102,6 +102,7 @@ src/components/Header.tsx:42:15 - SyntaxError
 
 ---
 
+<a id="verifiable-benchmarks"></a>
 ## 🔬 Verifiable Benchmarks
 
 All performance claims are hardware-grounded and independently reproducible on physical hardware (measured on 10-Core Intel Core i5-1235U @ 15W running Arch Linux, Kernel 6.13):
@@ -122,6 +123,7 @@ cargo test --release --test stress_benchmark -- --nocapture
 
 ---
 
+<a id="quick-start"></a>
 ## 🚀 Quick Start
 
 ### 1. Model Context Protocol (MCP) Setup
@@ -289,6 +291,7 @@ docker run -i ghcr.io/tokenectomy-labs/razor:latest --mcp
 
 ---
 
+<a id="edition-comparison"></a>
 ## ⚖️ Edition Comparison
 
 | Capability | Razor (Community OSS) | Sentinel (Commercial Tier) |
