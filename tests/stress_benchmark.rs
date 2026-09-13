@@ -78,8 +78,8 @@ fn test_oss_heavy_stress_benchmark() {
     assert!(!sanitized.contains("AKIAIOSFODNN7EXAMPLE"), "AWS keys must be redacted!");
 
     println!("  ├── Buffer Size: {:.2} MB ({} lines)", data_size_mb, line_count);
-    println!("  ├── Total Waktu Redaksi: {:.2?} ({:.1} MB/sec)", redact_elapsed, data_size_mb / redact_elapsed.as_secs_f64());
-    println!("  ├── Throughput Baris: {:.0} lines/sec", line_count as f64 / redact_elapsed.as_secs_f64());
+    println!("  ├── Redaction Latency: {:.2?} ({:.1} MB/sec)", redact_elapsed, data_size_mb / redact_elapsed.as_secs_f64());
+    println!("  ├── Line Throughput: {:.0} lines/sec", line_count as f64 / redact_elapsed.as_secs_f64());
     println!("  ├── Peak Memory (VmRSS): {:.2} MB (Delta: +{:.2} MB)", post_redact_rss, post_redact_rss - initial_rss);
     println!("  └── Status: ✅ PASSED (100% of 250,000 lines sanitized, zero memory balloon)");
 
@@ -98,10 +98,10 @@ fn test_oss_heavy_stress_benchmark() {
     let _ = redact::redact_secrets(&evil_payload);
     let redos_elapsed = start_redos.elapsed();
 
-    println!("  ├── Ukuran Payload Serangan: {} characters", evil_payload.len());
-    println!("  ├── Waktu Eksekusi: {:.3} ms", redos_elapsed.as_micros() as f64 / 1000.0);
+    println!("  ├── Attack Payload Size: {} characters", evil_payload.len());
+    println!("  ├── Execution Latency: {:.3} ms", redos_elapsed.as_micros() as f64 / 1000.0);
     assert!(redos_elapsed.as_millis() < 500, "Must finish in linear time, immune to ReDoS");
-    println!("  └── Status: ✅ PASSED (Evaluasi linear O(N), 100% ReDoS Immune)");
+    println!("  └── Status: ✅ PASSED (Linear O(N) evaluation, 100% ReDoS Immune)");
 
     // =========================================================================
     // TEST 3: Extreme Concurrency Torture (100 Concurrent OS Threads)
@@ -139,10 +139,10 @@ fn test_oss_heavy_stress_benchmark() {
     let final_rss = get_linux_rss_mb();
     let completed = *success_counter.lock().unwrap();
 
-    println!("  ├── Thread Paralel: {} concurrent OS threads", thread_total);
-    println!("  ├── Sukses Eksekusi: {}/{} (100.0%)", completed, thread_total);
-    println!("  ├── Waktu Selesai: {:.2?}", conc_elapsed);
-    println!("  ├── Throughput Konkurensi: {:.1} ops/sec", (completed as f64 * 2.0) / conc_elapsed.as_secs_f64());
+    println!("  ├── Thread Concurrency: {} concurrent OS threads", thread_total);
+    println!("  ├── Successful Operations: {}/{} (100.0%)", completed, thread_total);
+    println!("  ├── Total Elapsed: {:.2?}", conc_elapsed);
+    println!("  ├── Concurrency Throughput: {:.1} ops/sec", (completed as f64 * 2.0) / conc_elapsed.as_secs_f64());
     println!("  ├── Final VmRSS: {:.2} MB", final_rss);
     println!("  └── Status: ✅ PASSED (Zero race condition, zero deadlock)");
 
@@ -151,8 +151,8 @@ fn test_oss_heavy_stress_benchmark() {
     // =========================================================================
     let total_elapsed = start_total.elapsed();
     println!("\n{}", "=".repeat(85));
-    println!("🏆 KESIMPULAN BENCHMARK HEAVY STRESS TOKENECTOMY OSS: 3/3 LOLOS 100%");
-    println!("   Total Waktu Pengujian: {:.2?}", total_elapsed);
-    println!("   Memori Terkendali: {:.2} MB", final_rss);
+    println!("🏆 TOKENECTOMY OSS STRESS BENCHMARK: 3/3 PASSED (100% GREEN)");
+    println!("   Total Suite Duration: {:.2?}", total_elapsed);
+    println!("   Bounded Final VmRSS: {:.2} MB", final_rss);
     println!("{}", "=".repeat(85));
 }

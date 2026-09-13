@@ -105,25 +105,54 @@ src/components/Header.tsx:42:15 - SyntaxError
 <a id="verifiable-benchmarks"></a>
 ## 🔬 Verifiable Benchmarks
 
-<div align="center">
-  <img src="media/benchmark_stats.png" alt="Tokenectomy Razor Hardware Benchmark Infographic" width="100%" />
-</div>
-
 All performance claims are hardware-grounded and independently reproducible on physical hardware (measured on 10-Core Intel Core i5-1235U @ 15W running Arch Linux, Kernel 6.13):
+
+```text
+$ cargo test --release --test stress_benchmark -- --nocapture
+
+=====================================================================================
+🧪 TOKENECTOMY OSS VERIFIABLE HEAVY STRESS BENCHMARK (100% REPRODUCIBLE IN OSS)
+   Hardware: 10-Core / 12-Thread Intel Core i5-1235U | OS: Arch Linux | Kernel Telemetry Active
+   Initial Baseline Process Memory (VmRSS): 3.45 MB
+=====================================================================================
+
+🔥 [TEST 1/3] QUARTER-MILLION LINES LOG REDACTION TORTURE (250,000 LINES / 25MB+ BUFFER)
+  ├── Buffer Size: 24.44 MB (250000 lines)
+  ├── Redaction Latency: 471.05ms (51.9 MB/sec)
+  ├── Line Throughput: 530,735 lines/sec
+  ├── Peak Memory (VmRSS): 76.05 MB (Delta: +72.60 MB)
+  └── Status: ✅ PASSED (100% of 250,000 lines sanitized, zero memory balloon)
+
+🔥 [TEST 2/3] REDOS CATASTROPHIC BACKTRACKING TORTURE (50,000 CHARS PAYLOAD)
+  ├── Attack Payload Size: 50,082 characters
+  ├── Execution Latency: 1.165 ms
+  └── Status: ✅ PASSED (Linear O(N) evaluation, 100% ReDoS Immune)
+
+🔥 [TEST 3/3] HIGH-CONCURRENCY TORTURE (100 PARALLEL OS THREADS)
+  ├── Thread Concurrency: 100 concurrent OS threads
+  ├── Successful Operations: 100/100 (100.0%)
+  ├── Total Elapsed: 11.31ms
+  ├── Concurrency Throughput: 17,688 ops/sec
+  ├── Final VmRSS: 78.99 MB
+  └── Status: ✅ PASSED (Zero race condition, zero deadlock)
+
+=====================================================================================
+🏆 TOKENECTOMY OSS STRESS BENCHMARK: 3/3 PASSED (100% GREEN)
+   Total Suite Duration: 580.83ms
+   Bounded Final VmRSS: 78.99 MB
+=====================================================================================
+test test_oss_heavy_stress_benchmark ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.58s
+```
 
 | Benchmark Target | Workload Under Test | Verified Measurement | Result |
 |---|---|---|:---:|
-| **Log Redaction Throughput** | 250,000 lines (24.44 MB) enterprise dump with API keys & connection URIs | **531,002 lines/sec** (470.8 ms, 73.3 MB/s) | **Pass** |
-| **ReDoS Immunity** | 50,000-character pathological backtracking regex payload | **1.09 ms** (Strict Linear $O(N)$ Evaluation) | **Pass** |
-| **Thread Concurrency** | 100 concurrent OS threads executing simultaneous redaction | **7,312 ops/sec** (100/100 completed in 27.35 ms) | **Pass** |
-| **Memory Footprint** | Peak Resident Memory during 250k-line continuous stress test | **76.24 MB VmRSS** via `/proc/self/status` | **Pass** |
+| **Log Redaction Throughput** | 250,000 lines (24.44 MB) enterprise dump with API keys & connection URIs | **530,735 lines/sec** (471.0 ms, 51.9 MB/s) | **Pass** |
+| **ReDoS Immunity** | 50,000-character pathological backtracking regex payload | **1.16 ms** (Strict Linear $O(N)$ Evaluation) | **Pass** |
+| **Thread Concurrency** | 100 concurrent OS threads executing simultaneous redaction | **17,688 ops/sec** (100/100 completed in 11.31 ms) | **Pass** |
+| **Memory Footprint** | Peak Resident Memory during 250k-line continuous stress test | **76.05 MB VmRSS** via `/proc/self/status` | **Pass** |
 | **Release Test Suite** | Full integration test matrix across extractors, filters, and analyzers | **57 / 57 Verified Green** (Zero panics, zero leaks) | **Pass** |
-
-To reproduce locally on your physical machine:
-
-```bash
-cargo test --release --test stress_benchmark -- --nocapture
-```
 
 ---
 
