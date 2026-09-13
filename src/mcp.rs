@@ -669,7 +669,7 @@ pub async fn run_server() -> anyhow::Result<()> {
                                     Some(&boundary),
                                 );
 
-                                // M2M Cognitive Control Plane Metrics
+                                // Deterministic M2M Control Plane Envelope: provides structured control signals directing agents toward primary crash coordinates and root-cause patching.
                                 let raw_len = log.len();
                                 let clean_len = clean_log.len();
                                 let reduction_pct = if raw_len > clean_len {

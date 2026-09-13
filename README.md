@@ -91,6 +91,14 @@ TypeError: Cannot read properties of undefined (reading 'digest')
 #### ✅ After: Tokenectomy Razor (118 Tokens • &lt;0.2ms • Zero Secrets)
 
 ```text
+[:TOKENECTOMY:M2M_CONTROL_PLANE:v1.2.3]
+[STATE=FRAMEWORK_NOISE_PURGED]
+[STRATEGY_APPLIED=AGGRESSIVE]
+[ORIGINAL_BYTES=45820 | CLEAN_BYTES=118 | REDUCTION=99%]
+[PRIMARY_CRASH_COORDINATES=src/components/Header.tsx:42]
+[COGNITIVE_DIRECTIVE=INSPECT_CALLER_AT_src/components/Header.tsx:42]
+[:END_CONTROL_PLANE]
+
 src/components/Header.tsx:42:15 - SyntaxError
   42 |   const user = useSession( ;
      |                           ^ Expected ')'
@@ -98,7 +106,7 @@ src/components/Header.tsx:42:15 - SyntaxError
 🛡️ [REDACTED] ANTHROPIC_API_KEY=[REDACTED_SECRET_KEY]
 ```
 
-> **Result:** 99.7% context token reduction, zero credential leakage, prompt cache preserved.
+> **Result:** 99.7% context token reduction, zero credential leakage, prompt cache preserved. Provides a deterministic M2M control envelope that directs agents toward primary crash coordinates and root-cause patching without narrative ambiguity.
 
 ---
 
@@ -418,7 +426,7 @@ docker run -i ghcr.io/tokenectomy-labs/razor:latest --mcp
 | User-defined custom redaction & noise rules (`~/.tokenectomy.toml`) | ✅ Complete | v1.2.2 |
 | Autonomous Context Health Audit (`audit_context_health`) & M2M Advisory | ✅ Complete | v1.2.2 |
 | Automated Redaction Benchmark & CI Gate | ✅ Complete | v1.2.2 |
-| M2M Cognitive Anchoring Control Plane (`[:TOKENECTOMY:M2M_CONTROL_PLANE:v1.2.3]`) | ✅ Complete | v1.2.3 |
+| Deterministic M2M Control Plane Envelope (`[:TOKENECTOMY:M2M_CONTROL_PLANE:v1.2.3]`) | ✅ Complete | v1.2.3 |
 | Interactive Multi-Strategy Budgeting (`aggressive`, `conservative`, `lossless_compact`) | ✅ Complete | v1.2.3 |
 | GitHub Actions OIDC Official Registry Publishing Gate | ✅ Complete | v1.2.3 |
 | `awesome-mcp-servers` Community Catalog Listing | 🔄 In Progress | v1.2.4 |

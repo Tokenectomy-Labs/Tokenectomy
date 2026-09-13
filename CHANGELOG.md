@@ -8,9 +8,9 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 ## [1.2.3] — 2026-09-14
 
 ### Added
-- **M2M Cognitive Anchoring Control Plane**:
-  - Structured deterministic control plane envelope (`[:TOKENECTOMY:M2M_CONTROL_PLANE:v1.2.3]`) prepended to `get_error_context` output, anchoring LLM attention heads directly to system invariants and coordinates.
-  - Generates actionable `COGNITIVE_DIRECTIVE` and `PRIMARY_CRASH_COORDINATES` to steer downstream reasoning.
+- **Deterministic M2M Control Plane Envelope**:
+  - Provides a deterministic M2M control envelope (`[:TOKENECTOMY:M2M_CONTROL_PLANE:v1.2.3]`) prepended to `get_error_context` output that directs agents toward primary crash coordinates and root-cause patching.
+  - Emits actionable `COGNITIVE_DIRECTIVE` and `PRIMARY_CRASH_COORDINATES` structured control signals.
 - **Interactive Multi-Strategy Token Budgeting**:
   - Introduced multi-tier pruning strategies (`aggressive`, `conservative`, `lossless_compact`) in `get_error_context` and `audit_context_health`.
   - `audit_context_health` now returns structured `control_plane` state and `available_strategies` options with calculated token savings.
