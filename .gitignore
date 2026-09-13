@@ -23,6 +23,10 @@ env/
 .env
 .env.local
 .env.*.local
+*.token
+*.key
+*.pem
+token.json
 
 # OS & Editor artifacts
 .DS_Store
