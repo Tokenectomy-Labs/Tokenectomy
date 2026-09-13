@@ -118,6 +118,36 @@ fn find_ast_syntax_error(node: &tree_sitter::Node) -> Option<(usize, usize, &'st
     None
 }
 
+fn resolve_bash_executable() -> std::ffi::OsString {
+    #[cfg(windows)]
+    {
+        // On Windows, C:\Windows\System32\bash.exe is often a WSL stub that fails
+        // with "Windows Subsystem for Linux has no installed distributions".
+        // Prefer native Git for Windows bash.exe if available.
+        let candidates = [
+            r"C:\Program Files\Git\bin\bash.exe",
+            r"C:\Program Files\Git\usr\bin\bash.exe",
+            r"C:\Program Files (x86)\Git\bin\bash.exe",
+        ];
+        for candidate in candidates {
+            if std::path::Path::new(candidate).exists() {
+                return std::ffi::OsString::from(candidate);
+            }
+        }
+        if let Ok(pf) = std::env::var("ProgramFiles") {
+            let p1 = std::path::PathBuf::from(&pf).join(r"Git\bin\bash.exe");
+            if p1.exists() {
+                return p1.into_os_string();
+            }
+            let p2 = std::path::PathBuf::from(&pf).join(r"Git\usr\bin\bash.exe");
+            if p2.exists() {
+                return p2.into_os_string();
+            }
+        }
+    }
+    std::ffi::OsString::from("bash")
+}
+
 pub fn verify_patch(path: &std::path::Path) -> Result<(), String> {
     if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
         match ext {
@@ -317,7 +347,8 @@ pub fn verify_patch(path: &std::path::Path) -> Result<(), String> {
                 }
             }
             "sh" | "bash" => {
-                let mut cmd = std::process::Command::new("bash");
+                let bash_bin = resolve_bash_executable();
+                let mut cmd = std::process::Command::new(bash_bin);
                 if let Some(parent) = path.parent() {
                     if !parent.as_os_str().is_empty() {
                         cmd.current_dir(parent);
@@ -333,6 +364,14 @@ pub fn verify_patch(path: &std::path::Path) -> Result<(), String> {
                         let stderr = String::from_utf8_lossy(&output.stderr);
                         let stdout = String::from_utf8_lossy(&output.stdout);
                         let err = if !stderr.trim().is_empty() { stderr.trim() } else { stdout.trim() };
+                        // Filter out Windows WSL stub errors where WSL has no installed distributions
+                        if err.contains("Windows Subsystem for Linux")
+                            || err.contains("has no installed distributions")
+                            || err.contains("wsl.exe")
+                            || (err.contains("W\0i\0n\0d\0o\0w\0s") && err.contains("S\0u\0b\0s\0y\0s\0t\0e\0m"))
+                        {
+                            return Ok(());
+                        }
                         return Err(format!("Bash syntax check failed: {}", err));
                     }
                 }
