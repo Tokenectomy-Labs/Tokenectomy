@@ -7,13 +7,15 @@ description: High-performance MCP server for AI coding agents. Purge 90%+ framew
 
 **High-Performance Log Surgery & Secret Redaction Engine for AI Coding Agents**
 
-[![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/tokenectomy-labs/tokenectomy)
-[![Official MCP Registry](https://img.shields.io/badge/Official%20MCP%20Registry-io.github.Tokenectomy--Labs%2Frazor-brightgreen)](https://registry.modelcontextprotocol.io)
-[![Glama.ai](https://img.shields.io/badge/Glama.ai-Tokenectomy--Razor-purple)](https://glama.ai/mcp/servers/Tokenectomy-Labs/Tokenectomy)
-[![Crates.io](https://img.shields.io/crates/v/tokenectomy.svg?logo=rust)](https://crates.io/crates/tokenectomy)
-[![npm](https://img.shields.io/npm/v/tokenectomy-razor.svg?logo=npm)](https://www.npmjs.com/package/tokenectomy-razor)
-[![CI](https://github.com/Tokenectomy-Labs/Tokenectomy/actions/workflows/ci.yml/badge.svg)](https://github.com/Tokenectomy-Labs/Tokenectomy/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Tokenectomy-Labs/Tokenectomy/blob/main/LICENSE)
+<div class="badge-row">
+  <a href="https://mcpservers.org/servers/tokenectomy-labs/tokenectomy"><img src="https://mcpservers.org/badge.svg" alt="Listed on mcpservers.org" height="20" width="160" /></a>
+  <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/Official%20MCP%20Registry-io.github.Tokenectomy--Labs%2Frazor-brightgreen" alt="Official MCP Registry" height="20" width="170" /></a>
+  <a href="https://glama.ai/mcp/servers/Tokenectomy-Labs/Tokenectomy"><img src="https://img.shields.io/badge/Glama.ai-Tokenectomy--Razor-purple" alt="Glama.ai" height="20" width="155" /></a>
+  <a href="https://crates.io/crates/tokenectomy"><img src="https://img.shields.io/crates/v/tokenectomy.svg?logo=rust" alt="Crates.io" height="20" width="95" /></a>
+  <a href="https://www.npmjs.com/package/tokenectomy-razor"><img src="https://img.shields.io/npm/v/tokenectomy-razor.svg?logo=npm" alt="npm" height="20" width="100" /></a>
+  <a href="https://github.com/Tokenectomy-Labs/Tokenectomy/actions/workflows/ci.yml"><img src="https://github.com/Tokenectomy-Labs/Tokenectomy/actions/workflows/ci.yml/badge.svg" alt="CI" height="20" width="80" /></a>
+  <a href="https://github.com/Tokenectomy-Labs/Tokenectomy/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" height="20" width="90" /></a>
+</div>
 
 Tokenectomy Razor is an autonomous, machine-to-machine (M2M) **Model Context Protocol (MCP)** server and stream processing engine written in safe Rust. It operates as a high-throughput background sub-cortex for AI coding assistants like **Claude Desktop**, **Cursor**, **Cline**, **Roo Code**, **Windsurf**, and **Google Antigravity**.
 

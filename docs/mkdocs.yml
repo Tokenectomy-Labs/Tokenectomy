@@ -7,16 +7,17 @@ edit_uri: edit/main/docs/docs/
 
 theme:
   name: material
+  font: false
   palette:
     - scheme: slate
-      primary: deep purple
-      accent: amber
+      primary: indigo
+      accent: indigo
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
     - scheme: default
-      primary: deep purple
-      accent: amber
+      primary: indigo
+      accent: indigo
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
@@ -30,6 +31,9 @@ theme:
   icon:
     repo: fontawesome/brands/github
   custom_dir: overrides
+
+extra_css:
+  - stylesheets/extra.css
 
 plugins:
   - search

@@ -9,7 +9,7 @@
   <meta name="description" content="High-performance MCP server for AI coding agents. Purge 90%+ framework noise, redact secrets with O(N) ReDoS immunity. Written in safe Rust.">
   <meta name="keywords" content="tokenectomy, mcp server, ai agent, log surgery, secret redaction, rust, model context protocol, claude, cursor, cline, antigravity, llm, ai coding">
   <meta name="author" content="daffa2555">
-  <meta name="robots" content="index, follow">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
   <link rel="canonical" href="https://tokenectomy-labs.github.io/Tokenectomy/{{ page.url }}">
 
   <!-- Open Graph / Facebook -->
@@ -27,24 +27,46 @@
   <meta name="twitter:description" content="High-performance log surgery & secret redaction MCP server for AI coding agents. Rust-powered, ReDoS-immune, sub-millisecond latency.">
   <meta name="twitter:image" content="https://raw.githubusercontent.com/Tokenectomy-Labs/Tokenectomy/main/demo.gif">
 
-  <!-- JSON-LD Structured Data -->
+  <!-- JSON-LD Structured Data (Schema.org Graph for Google SEO & AI Agent Crawlers) -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "SoftwareSourceCode",
-    "name": "Tokenectomy Razor",
-    "description": "High-performance log surgery & secret redaction MCP server for AI coding agents",
-    "url": "https://github.com/Tokenectomy-Labs/Tokenectomy",
-    "codeRepository": "https://github.com/Tokenectomy-Labs/Tokenectomy",
-    "programmingLanguage": "Rust",
-    "license": "https://opensource.org/licenses/MIT",
-    "author": {
-      "@type": "Person",
-      "name": "daffa2555",
-      "url": "https://github.com/daffa2555"
-    },
-    "operatingSystem": "Cross-platform",
-    "applicationCategory": "DeveloperApplication"
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://tokenectomy-labs.github.io/Tokenectomy/#website",
+        "url": "https://tokenectomy-labs.github.io/Tokenectomy/",
+        "name": "Tokenectomy Razor Documentation",
+        "description": "High-performance log surgery & secret redaction MCP server for AI coding agents",
+        "publisher": {
+          "@type": "Organization",
+          "name": "Tokenectomy Labs",
+          "url": "https://github.com/Tokenectomy-Labs"
+        }
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://tokenectomy-labs.github.io/Tokenectomy/#software",
+        "name": "Tokenectomy Razor",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Linux, macOS, Windows",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "description": "High-performance log surgery & secret redaction MCP server for AI coding agents. Rust-powered, ReDoS-immune, sub-millisecond latency.",
+        "url": "https://tokenectomy-labs.github.io/Tokenectomy/",
+        "codeRepository": "https://github.com/Tokenectomy-Labs/Tokenectomy",
+        "programmingLanguage": "Rust",
+        "license": "https://opensource.org/licenses/MIT",
+        "author": {
+          "@type": "Person",
+          "name": "daffa2555",
+          "url": "https://github.com/daffa2555"
+        }
+      }
+    ]
   }
   </script>
 {% endblock %}
