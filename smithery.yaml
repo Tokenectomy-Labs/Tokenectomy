@@ -1,11 +1,9 @@
 version: 1
-dockerfile: Dockerfile
 startCommand:
   type: stdio
   config:
-    command: cargo
+    command: npx
     args:
-      - run
-      - --release
-      - --
+      - -y
+      - tokenectomy-razor
       - --mcp
