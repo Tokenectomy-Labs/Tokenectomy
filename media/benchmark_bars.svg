@@ -25,22 +25,22 @@
     <!-- 1. Tokenectomy (Rust) -->
     <text x="205" y="23" fill="#f0f6fc" font-size="14" font-weight="700" text-anchor="end">Tokenectomy (Rust)</text>
     <rect x="220" y="5" width="440" height="28" rx="4" fill="url(#barCyan)" />
-    <text x="672" y="24" fill="#38bdf8" font-size="13" font-weight="700" font-family="monospace">530,735 lines/s (0.18ms)</text>
+    <text x="672" y="24" fill="#38bdf8" font-size="13" font-weight="700" font-family="monospace">530,735 lines/s (471.0 ms)</text>
 
     <!-- 2. Go stdlib -->
     <text x="205" y="61" fill="#c9d1d9" font-size="13" text-anchor="end">Go stdlib sanitizer</text>
     <rect x="220" y="43" width="158" height="28" rx="4" fill="#30363d" />
-    <text x="388" y="62" fill="#8b949e" font-size="12" font-family="monospace">190,400 lines/s (1.3ms)</text>
+    <text x="388" y="62" fill="#8b949e" font-size="12" font-family="monospace">190,400 lines/s (1.31 s)</text>
 
     <!-- 3. Node.js -->
     <text x="205" y="99" fill="#c9d1d9" font-size="13" text-anchor="end">Node.js regex pipeline</text>
     <rect x="220" y="81" width="43" height="28" rx="4" fill="#30363d" />
-    <text x="273" y="100" fill="#8b949e" font-size="12" font-family="monospace">52,100 lines/s (28.4ms)</text>
+    <text x="273" y="100" fill="#8b949e" font-size="12" font-family="monospace">52,100 lines/s (4.80 s)</text>
 
     <!-- 4. Python -->
     <text x="205" y="137" fill="#c9d1d9" font-size="13" text-anchor="end">Python re scrubber</text>
     <rect x="220" y="119" width="20" height="28" rx="4" fill="#30363d" />
-    <text x="250" y="138" fill="#8b949e" font-size="12" font-family="monospace">24,500 lines/s (42.6ms)</text>
+    <text x="250" y="138" fill="#8b949e" font-size="12" font-family="monospace">24,500 lines/s (10.20 s)</text>
   </g>
 
   <!-- Footer -->
