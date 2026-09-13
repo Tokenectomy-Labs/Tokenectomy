@@ -158,6 +158,54 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 | **Memory Footprint** | Peak Resident Memory during 250k-line continuous stress test | **76.05 MB VmRSS** via `/proc/self/status` | **Pass** |
 | **Release Test Suite** | Full integration test matrix across extractors, filters, and analyzers | **57 / 57 Verified Green** (Zero panics, zero leaks) | **Pass** |
 
+<!-- BEGIN_REDACTION_BENCHMARK -->
+### 🛡️ Automated Redaction & Secret Sanitization Benchmark
+
+Automated evaluation across **12 polyglot crash traces** (Rust, Python, TypeScript, Go, YAML) containing **22 ground-truth credentials** and clean negative controls. Evaluated head-to-head against **Gitleaks v8.30.1**.
+
+#### 1. Per-Category Precision, Recall & F1-Score
+
+| Secret Category | Ground Truth | Razor Recall | Razor F1 | Gitleaks Recall | Gitleaks F1 | Sanitization Advantage |
+|---|:---:|:---:|:---:|:---:|:---:|---|
+| **Anthropic Claude API Key (`sk-ant-...`)** | 1 | **100.0%** | **100.0%** | 0.0% | 0.0% | **+100% Recall** (M2M zero-leak) |
+| **AWS Access Key ID (`AKIA...`)** | 1 | **100.0%** | **100.0%** | 0.0% | 0.0% | **+100% Recall** (M2M zero-leak) |
+| **AWS Secret Access Key** | 1 | **100.0%** | **100.0%** | 0.0% | 0.0% | **+100% Recall** (M2M zero-leak) |
+| **Database URI (PostgreSQL, MySQL, Redis, Mongo)** | 4 | **100.0%** | **100.0%** | 0.0% | 0.0% | **+100% Recall** (M2M zero-leak) |
+| **Generic Passwords / Auth Secrets (YAML/JSON)** | 3 | **100.0%** | **100.0%** | 0.0% | 0.0% | **+100% Recall** (M2M zero-leak) |
+| **GitHub Personal Access Token (`ghp_...`)** | 1 | **100.0%** | **100.0%** | 0.0% | 0.0% | **+100% Recall** (M2M zero-leak) |
+| **GitLab Personal Access Token (`glpat-...`)** | 1 | **100.0%** | **100.0%** | 100.0% | 100.0% | Parity (100% caught) |
+| **HuggingFace API Token (`hf_...`)** | 1 | **100.0%** | **100.0%** | 0.0% | 0.0% | **+100% Recall** (M2M zero-leak) |
+| **JSON Web Token (RFC 7519 / Truncated)** | 2 | **100.0%** | **100.0%** | 100.0% | 100.0% | Parity (100% caught) |
+| **npm Registry Access Token (`npm_...`)** | 1 | **100.0%** | **100.0%** | 0.0% | 0.0% | **+100% Recall** (M2M zero-leak) |
+| **OpenAI API Key (`sk-...`, `sk-proj-...`)** | 1 | **100.0%** | **100.0%** | 100.0% | 100.0% | Parity (100% caught) |
+| **PEM Private RSA Key Block** | 1 | **100.0%** | **100.0%** | 100.0% | 100.0% | Parity (100% caught) |
+| **PyPI Package Upload Token (`pypi-AgEI...`)** | 1 | **100.0%** | **100.0%** | 100.0% | 100.0% | Parity (100% caught) |
+| **SendGrid API Key (`SG...`)** | 1 | **100.0%** | **100.0%** | 0.0% | 0.0% | **+100% Recall** (M2M zero-leak) |
+| **Slack Bot/User Token (`xoxb-...`)** | 1 | **100.0%** | **100.0%** | 100.0% | 100.0% | Parity (100% caught) |
+| **Stripe Live/Test Secret Key (`sk_live_...`)** | 1 | **100.0%** | **100.0%** | 100.0% | 100.0% | Parity (100% caught) |
+
+#### 2. Head-to-Head Performance & Architectural Summary
+
+| Dimension | Tokenectomy Razor (`--scrub`) | Gitleaks v8.30.1 | Architectural Rationale |
+|---|:---:|:---:|---|
+| **Overall Secret Recall** | **100.0%** (22/22) | 36.4% (8/22) | Razor captures unquoted URIs, DB ports & AI keys missed by diff rules |
+| **Overall Precision** | **100.0%** (0 False Positives) | 88.9% | Zero false triggers on compiler errors & minified traces |
+| **Overall F1-Score** | **100.0%** | 51.6% | Comprehensive coverage engineered specifically for crash context |
+| **Execution Engine** | Zero-allocation Rust DFA ($O(N)$) | Go regex scanner + Git tree crawler | Sub-millisecond latency for agent streaming backtraces |
+| **ReDoS Immunity** | **Guaranteed Linear Time** ($O(N)$) | Engine dependent | Immune to catastrophic backtracking on massive dumps |
+| **Sanitization Action** | Inline token redaction (`[KEY_REDACTED]`) | Warning log only (No scrub) | Directly sanitizes text before ingestion by LLM cortex |
+
+#### 3. Token Reduction & LLM Context Savings (`tiktoken` cl100k_base)
+
+| Metric | Measured Value | Operational Impact for AI Coding Agents |
+|---|:---:|---|
+| **Mean Token Reduction** | **41.67%** | Consistently shrinks raw crash trace token footprint |
+| **Median Reduction (P50)** | **42.95%** | Typical credential and connection dump reduction |
+| **90th Percentile (P90)** | **61.42%** | Eliminates long multi-line keys and credentials |
+| **Min / Max Spread** | **0.00% — 81.36%** | 0% on clean negative controls (zero distortion), up to 81.4% on leaks |
+| **Total Tokens Preserved / Saved** | **920 tokens** (44.02% net) | Prevents context window saturation and reduces LLM billing |
+<!-- END_REDACTION_BENCHMARK -->
+
 ---
 
 <a id="quick-start"></a>

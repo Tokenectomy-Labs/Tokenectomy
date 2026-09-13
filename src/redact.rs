@@ -96,14 +96,14 @@ static REDACT_RULES: LazyLock<Vec<RedactRule>> = LazyLock::new(|| {
             replacement: "Authorization: Bearer [REDACTED]",
         },
         // 8. Generic Key/Token patterns (fallback for other credentials)
-        // 8a. Quoted values: preserves JSON/YAML keys, colons, and quotes
+        // 8a. Quoted values: preserves JSON/YAML keys, colons, and quotes; skips values already redacted with bracket tags
         RedactRule {
-            regex: Regex::new(r#"(?i)(["']?(?:api_key|token|password|secret|auth|bearer)[a-z0-9_]*["']?\s*[:=]\s*)(["'])(?:[^"'\r\n]{4,})(["'])"#).unwrap(),
+            regex: Regex::new(r#"(?i)(["']?(?:api_key|token|password|secret|auth|bearer)[a-z0-9_]*["']?\s*[:=]\s*)(["'])(?:[^"'\[\r\n][^"'\r\n]{3,})(["'])"#).unwrap(),
             replacement: "${1}${2}[REDACTED]${3}",
         },
-        // 8b. Unquoted words: preserves keys and colons/equals
+        // 8b. Unquoted words: preserves keys and colons/equals; skips values already redacted with bracket tags
         RedactRule {
-            regex: Regex::new(r#"(?i)(["']?(?:api_key|token|password|secret|auth|bearer)[a-z0-9_]*["']?\s*[:=]\s*)([a-zA-Z0-9_\-\.]{10,})"#).unwrap(),
+            regex: Regex::new(r#"(?i)(["']?(?:api_key|token|password|secret|auth|bearer)[a-z0-9_]*["']?\s*[:=]\s*)([^"'\[\r\n\s][a-zA-Z0-9_\-\.]{9,})"#).unwrap(),
             replacement: "${1}[REDACTED]",
         },
     ]

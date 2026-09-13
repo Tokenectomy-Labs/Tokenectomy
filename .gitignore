@@ -6,4 +6,7 @@ test_bug.py
 server.py
 mcp_call.json
 *.mp4
+benches/redaction_suite/bin/
+benches/redaction_suite/.venv/
+benches/redaction_suite/corpus/
 
