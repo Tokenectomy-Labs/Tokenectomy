@@ -979,7 +979,8 @@ fn test_verify_patch_c_cpp_bash_syntax() {
     // 1. C language syntax check
     let valid_c = temp_dir.join("valid.c");
     std::fs::write(&valid_c, "int calculate(int a, int b) { return a + b; }\n").expect("write valid c");
-    assert!(tokenectomy::mcp::verify_patch(&valid_c).is_ok(), "Valid C must pass verify_patch");
+    let c_valid = tokenectomy::mcp::verify_patch(&valid_c);
+    assert!(c_valid.is_ok(), "Valid C must pass verify_patch: {:?}", c_valid.err());
 
     let broken_c = temp_dir.join("broken.c");
     std::fs::write(&broken_c, "int broken() { @@invalid_token@@; }\n").expect("write broken c");
@@ -990,7 +991,8 @@ fn test_verify_patch_c_cpp_bash_syntax() {
     // 2. C++ language syntax check
     let valid_cpp = temp_dir.join("valid.cpp");
     std::fs::write(&valid_cpp, "class Calculator { public: int add(int a, int b) { return a + b; } };\n").expect("write valid cpp");
-    assert!(tokenectomy::mcp::verify_patch(&valid_cpp).is_ok(), "Valid C++ must pass verify_patch");
+    let cpp_valid = tokenectomy::mcp::verify_patch(&valid_cpp);
+    assert!(cpp_valid.is_ok(), "Valid C++ must pass verify_patch: {:?}", cpp_valid.err());
 
     let broken_cpp = temp_dir.join("broken.cpp");
     std::fs::write(&broken_cpp, "class Broken { public: void test() { @@@; } };\n").expect("write broken cpp");
@@ -1001,7 +1003,8 @@ fn test_verify_patch_c_cpp_bash_syntax() {
     // 3. Bash language syntax check
     let valid_sh = temp_dir.join("valid.sh");
     std::fs::write(&valid_sh, "#!/bin/bash\nif [ \"$1\" = \"test\" ]; then\n  echo \"OK\"\nfi\n").expect("write valid sh");
-    assert!(tokenectomy::mcp::verify_patch(&valid_sh).is_ok(), "Valid Bash must pass verify_patch");
+    let sh_valid = tokenectomy::mcp::verify_patch(&valid_sh);
+    assert!(sh_valid.is_ok(), "Valid Bash must pass verify_patch: {:?}", sh_valid.err());
 
     let broken_sh = temp_dir.join("broken.sh");
     std::fs::write(&broken_sh, "#!/bin/bash\nif [ 1 -eq 1 ]; then echo \"missing fi\"\n").expect("write broken sh");

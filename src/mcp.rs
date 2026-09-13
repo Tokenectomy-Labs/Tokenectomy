@@ -255,7 +255,16 @@ pub fn verify_patch(path: &std::path::Path) -> Result<(), String> {
             }
             "php" => {
                 let mut cmd = std::process::Command::new("php");
-                cmd.args(["-l", path.to_str().unwrap_or("")]);
+                if let Some(parent) = path.parent() {
+                    if !parent.as_os_str().is_empty() {
+                        cmd.current_dir(parent);
+                    }
+                }
+                let file_arg = path
+                    .file_name()
+                    .and_then(|f| f.to_str())
+                    .unwrap_or_else(|| path.to_str().unwrap_or(""));
+                cmd.args(["-l", file_arg]);
                 if let Ok(output) = run_command_with_timeout(cmd, COMPILER_CHECK_TIMEOUT) {
                     if !output.status.success() {
                         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -267,10 +276,16 @@ pub fn verify_patch(path: &std::path::Path) -> Result<(), String> {
             }
             "c" | "h" => {
                 let mut cmd = std::process::Command::new("gcc");
-                cmd.args(["-fsyntax-only", path.to_str().unwrap_or("")]);
                 if let Some(parent) = path.parent() {
-                    cmd.current_dir(parent);
+                    if !parent.as_os_str().is_empty() {
+                        cmd.current_dir(parent);
+                    }
                 }
+                let file_arg = path
+                    .file_name()
+                    .and_then(|f| f.to_str())
+                    .unwrap_or_else(|| path.to_str().unwrap_or(""));
+                cmd.args(["-fsyntax-only", file_arg]);
                 if let Ok(output) = run_command_with_timeout(cmd, COMPILER_CHECK_TIMEOUT) {
                     if !output.status.success() {
                         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -282,10 +297,16 @@ pub fn verify_patch(path: &std::path::Path) -> Result<(), String> {
             }
             "cpp" | "cc" | "cxx" | "hpp" => {
                 let mut cmd = std::process::Command::new("g++");
-                cmd.args(["-fsyntax-only", path.to_str().unwrap_or("")]);
                 if let Some(parent) = path.parent() {
-                    cmd.current_dir(parent);
+                    if !parent.as_os_str().is_empty() {
+                        cmd.current_dir(parent);
+                    }
                 }
+                let file_arg = path
+                    .file_name()
+                    .and_then(|f| f.to_str())
+                    .unwrap_or_else(|| path.to_str().unwrap_or(""));
+                cmd.args(["-fsyntax-only", file_arg]);
                 if let Ok(output) = run_command_with_timeout(cmd, COMPILER_CHECK_TIMEOUT) {
                     if !output.status.success() {
                         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -297,7 +318,16 @@ pub fn verify_patch(path: &std::path::Path) -> Result<(), String> {
             }
             "sh" | "bash" => {
                 let mut cmd = std::process::Command::new("bash");
-                cmd.args(["-n", path.to_str().unwrap_or("")]);
+                if let Some(parent) = path.parent() {
+                    if !parent.as_os_str().is_empty() {
+                        cmd.current_dir(parent);
+                    }
+                }
+                let file_arg = path
+                    .file_name()
+                    .and_then(|f| f.to_str())
+                    .unwrap_or_else(|| path.to_str().unwrap_or(""));
+                cmd.args(["-n", file_arg]);
                 if let Ok(output) = run_command_with_timeout(cmd, COMPILER_CHECK_TIMEOUT) {
                     if !output.status.success() {
                         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -309,7 +339,16 @@ pub fn verify_patch(path: &std::path::Path) -> Result<(), String> {
             }
             "rb" => {
                 let mut cmd = std::process::Command::new("ruby");
-                cmd.args(["-c", path.to_str().unwrap_or("")]);
+                if let Some(parent) = path.parent() {
+                    if !parent.as_os_str().is_empty() {
+                        cmd.current_dir(parent);
+                    }
+                }
+                let file_arg = path
+                    .file_name()
+                    .and_then(|f| f.to_str())
+                    .unwrap_or_else(|| path.to_str().unwrap_or(""));
+                cmd.args(["-c", file_arg]);
                 if let Ok(output) = run_command_with_timeout(cmd, COMPILER_CHECK_TIMEOUT) {
                     if !output.status.success() {
                         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -325,7 +364,16 @@ pub fn verify_patch(path: &std::path::Path) -> Result<(), String> {
                 let temp_out = std::env::temp_dir().join(format!("javac_check_{}_{}", std::process::id(), counter));
                 let _ = std::fs::create_dir_all(&temp_out);
                 let mut cmd = std::process::Command::new("javac");
-                cmd.args(["-proc:none", "-d", temp_out.to_str().unwrap_or("."), path.to_str().unwrap_or("")]);
+                if let Some(parent) = path.parent() {
+                    if !parent.as_os_str().is_empty() {
+                        cmd.current_dir(parent);
+                    }
+                }
+                let file_arg = path
+                    .file_name()
+                    .and_then(|f| f.to_str())
+                    .unwrap_or_else(|| path.to_str().unwrap_or(""));
+                cmd.args(["-proc:none", "-d", temp_out.to_str().unwrap_or("."), file_arg]);
                 let res = run_command_with_timeout(cmd, COMPILER_CHECK_TIMEOUT);
                 let _ = std::fs::remove_dir_all(&temp_out);
                 if let Ok(output) = res {
