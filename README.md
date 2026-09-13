@@ -119,6 +119,8 @@ src/components/Header.tsx:42:15 - SyntaxError
 
 All performance claims are hardware-grounded and independently reproducible on physical hardware (measured on 10-Core Intel Core i5-1235U @ 15W running Arch Linux, Kernel 6.13):
 
+> **Hardware Dependency Notice:** Performance is hardware-dependent; reported throughput represents measured results on the specified test hardware (10-Core Intel Core i5-1235U @ 15W TDP). Throughput scales with higher TDP desktop/server CPUs and faster memory buses. Developers are encouraged to independently audit performance using the reproduction command below.
+
 ```text
 $ cargo test --release --test stress_benchmark -- --nocapture
 
@@ -138,7 +140,7 @@ $ cargo test --release --test stress_benchmark -- --nocapture
 🔥 [TEST 2/3] REDOS CATASTROPHIC BACKTRACKING TORTURE (50,000 CHARS PAYLOAD)
   ├── Attack Payload Size: 50,082 characters
   ├── Execution Latency: 1.165 ms
-  └── Status: ✅ PASSED (Linear O(N) evaluation, 100% ReDoS Immune)
+  └── Status: ✅ PASSED (Linear O(N) evaluation, ReDoS-resistant on tested payloads)
 
 🔥 [TEST 3/3] HIGH-CONCURRENCY TORTURE (100 PARALLEL OS THREADS)
   ├── Thread Concurrency: 100 concurrent OS threads
@@ -161,7 +163,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 | Benchmark Target | Workload Under Test | Verified Measurement | Result |
 |---|---|---|:---:|
 | **Log Redaction Throughput** | 250,000 lines (24.44 MB) enterprise dump with API keys & connection URIs | **530,735 lines/sec** (471.0 ms, 51.9 MB/s) | **Pass** |
-| **ReDoS Immunity** | 50,000-character pathological backtracking regex payload | **1.16 ms** (Strict Linear $O(N)$ Evaluation) | **Pass** |
+| **ReDoS Resilience** | 50,000-character pathological backtracking regex payload | **1.16 ms** (Deterministic Linear $O(N)$ DFA Evaluation) | **Pass** |
 | **Thread Concurrency** | 100 concurrent OS threads executing simultaneous redaction | **17,688 ops/sec** (100/100 completed in 11.31 ms) | **Pass** |
 | **Memory Footprint** | Peak Resident Memory during 250k-line continuous stress test | **76.05 MB VmRSS** via `/proc/self/status` | **Pass** |
 | **Release Test Suite** | Full integration test matrix across extractors, filters, and analyzers | **57 / 57 Verified Green** (Zero panics, zero leaks) | **Pass** |
@@ -200,7 +202,7 @@ Automated evaluation across **12 polyglot crash traces** (Rust, Python, TypeScri
 | **Overall Precision** | **100.0%** (0 False Positives) | 88.9% | Zero false triggers on compiler errors & minified traces |
 | **Overall F1-Score** | **100.0%** | 51.6% | Comprehensive coverage engineered specifically for crash context |
 | **Execution Engine** | Zero-allocation Rust DFA ($O(N)$) | Go regex scanner + Git tree crawler | Sub-millisecond latency for agent streaming backtraces |
-| **ReDoS Immunity** | **Guaranteed Linear Time** ($O(N)$) | Engine dependent | Immune to catastrophic backtracking on massive dumps |
+| **ReDoS Resilience** | **Deterministic Linear Time** ($O(N)$) | Engine dependent | Non-backtracking DFA regex prevents catastrophic backtracking on tested dumps |
 | **Sanitization Action** | Inline token redaction (`[KEY_REDACTED]`) | Warning log only (No scrub) | Directly sanitizes text before ingestion by LLM cortex |
 
 #### 3. Token Reduction & LLM Context Savings (`tiktoken` cl100k_base)
@@ -438,7 +440,7 @@ docker run -i ghcr.io/tokenectomy-labs/razor:latest --mcp
 ## 🔒 Security & Invariants
 
 - **Zero-Knowledge Architecture:** All parsing, filtering, and secret redaction execute on physical local hardware. No logs are ever transmitted to third-party telemetry servers.
-- **Strict Linear $O(N)$ ReDoS Immunity:** All pattern matchers utilize finite automaton evaluation with linear time guarantees, repelling catastrophic backtracking attacks.
+- **Deterministic Linear-Time Pattern Matching:** All pattern matchers utilize finite automaton evaluation (Rust non-backtracking DFA regex engine and Aho-Corasick) providing deterministic $O(N)$ linear time guarantees on tested adversarial inputs.
 - **Path Traversal Boundary Isolation:** File operations are strictly locked within the active workspace root (`CWD`). Path traversals (`../`) and unauthorized symlinks are blocked.
 - **Safe Rust Implementation:** Core execution paths enforce safe Rust memory guarantees with bounded stream readers (`.take()`) preventing resource exhaustion.
 
