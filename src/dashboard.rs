@@ -327,7 +327,7 @@ const DASHBOARD_HTML: &str = r#"<!DOCTYPE html>
         <span class="brand-icon">🗡️</span>
         <div>
           <span class="brand-title">Tokenectomy Razor</span>
-          <span class="brand-badge" id="version-badge">v1.2.1</span>
+          <span class="brand-badge" id="version-badge">v1.2.2</span>
         </div>
       </div>
       <div class="status-pill">
@@ -478,7 +478,7 @@ client = OpenAI(
         document.getElementById('sub-tokens').textContent = (data.estimated_raw_tokens || 0).toLocaleString() + ' raw tokens intercepted';
         document.getElementById('val-reduction').textContent = (data.reduction_percentage || 0).toFixed(1) + '%';
         document.getElementById('val-secrets').textContent = (data.secrets_redacted || 0).toLocaleString();
-        document.getElementById('version-badge').textContent = 'v' + (data.version || '1.2.1');
+        document.getElementById('version-badge').textContent = 'v' + (data.version || '1.2.2');
 
         // Update Progress bar
         const raw = data.estimated_raw_tokens || 0;

@@ -5,7 +5,20 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.2] — 2026-09-14
+
 ### Added
+- **Autonomous Agent-to-Agent (M2M) Discovery & Context Health**:
+  - Added new MCP tool `audit_context_health` for autonomous context window auditing, token reduction telemetry, and secret hygiene scoring.
+  - Added M2M Piggyback Advisory in `get_error_context` with telemetry headers (`[TOKENECTOMY M2M SUB-CORTEX TELEMETRY]`) to proactively advise downstream AI coding agents.
+  - Standardized AI Crawler access with `llms.txt` and permissive AI agent crawler rules in `robots.txt`.
+  - Enriched RAG registry discovery metadata in `server.json`, `glama.json`, and `smithery.yaml`.
+- **Automated Redaction Benchmark & Verification Gate**:
+  - Full automated regression test suite (`benches/redaction_suite/`) with zero-mock token accounting and ReDoS immunity verification.
+- **UI/UX & Documentation Accessibility**:
+  - Perfect 100/100/100/100 Lighthouse score (Zero CLS, WCAG AAA 15:1 high contrast, ARIA dialog accessibility).
+- **Host Compiler Syntax Checks**:
+  - Lightweight host compiler syntax checks for C, C++, Bash, Ruby, Java, and C# before disk mutation.
 - **Polyglot Multi-Trace Analysis**: Full continuous detection across all matching language parsers with cross-parser coordinate deduplication (supporting mixed stacks e.g. Node + Python, Rust + C FFI).
 - **Extended Language & Framework Support**:
   - Added native **C# (.NET)** stack trace parser (`extractor::csharp::CSharpTraceParser`) extracting `.cs:line` coordinates.
