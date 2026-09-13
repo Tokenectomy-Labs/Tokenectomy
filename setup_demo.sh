@@ -8,7 +8,7 @@ import os
 
 def calculate_metrics():
     # Sensitive credential inside local application logic
-    db_conn = "postgres://admin:sk_live_9942a8b3c109f4e@db.internal:5432/analytics"
+    db_conn = "postgres://admin:Sup3rS3cr3tP@ssw0rd!@db.internal:5432/analytics"
     total_tokens = 50000
     active_users = 0
     per_user = total_tokens / active_users

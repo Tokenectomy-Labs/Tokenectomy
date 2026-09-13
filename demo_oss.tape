@@ -13,7 +13,7 @@ Set TypingSpeed 45ms
 
 # Prepare environment invisibly
 Hide
-Type "cd /home/nans/Tokenonmix/Tokenectomy-OSS && export PATH=/home/nans/Tokenonmix/Tokenectomy-OSS/target/release:$PATH && ./setup_demo.sh && clear"
+Type "export PATH=./target/release:$PATH && ./setup_demo.sh && clear"
 Enter
 Sleep 600ms
 Show
