@@ -8,10 +8,10 @@
 ## ✅ Supported Versions
 
 | Version | Security Updates | Status |
-|---------|-----------------|--------|
-| v1.1.3+ | ✅ Active | **Current Release** |
-| v1.1.0 – v1.1.2 | ✅ Critical Only | Supported |
-| < v1.1.0 | ⚠️ End of Life | Upgrade recommended |
+|---|---|---|
+| v1.3.0 | ✅ Active | **Current Release** |
+| v1.2.0 – v1.2.3 | ✅ Supported | Maintenance |
+| < v1.2.0 | ⚠️ End of Life | Upgrade recommended |
 
 ---
 

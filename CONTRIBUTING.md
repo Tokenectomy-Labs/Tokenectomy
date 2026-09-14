@@ -174,14 +174,18 @@ cargo audit
   - ✅ Precompiled multi-architecture release binaries (Linux x86_64/arm64/musl, macOS, Windows)
   - ✅ Official Anthropic MCP Registry publication (`io.github.Tokenectomy-Labs/razor`)
   - ✅ `mcpservers.org` directory listing and badge integration
-- **Phase 3: Deep Polyglot Expansion & Integrations (Current — v1.2.0)**
-  - 🔄 Java / Kotlin (Spring Boot 3, Gradle) framework stack trace extractors
-  - 🔄 C / C++ AddressSanitizer (ASan) & GDB/LLDB backtrace sanitization
-  - 🔄 Go goroutine dump compression & panic trace heuristics
+- **Phase 3: Deep Polyglot Expansion & Integrations (Completed — v1.2.0 - v1.2.3)**
+  - ✅ Java / Kotlin (Spring Boot 3, Gradle) framework stack trace extractors
+  - ✅ C / C++ AddressSanitizer (ASan) & GDB/LLDB backtrace sanitization
+  - ✅ Go goroutine dump compression & panic trace heuristics
+  - ✅ User-defined custom redaction rules via `~/.tokenectomy.toml`
+  - ✅ Multi-strategy budgeting (`aggressive`, `conservative`, `lossless_compact`)
   - 🔄 `awesome-mcp-servers` community catalog PR
-- **Phase 4: Ecosystem Extensibility (Planned — v1.3.0+)**
-  - 📋 User-defined custom redaction rules via `~/.tokenectomy.toml`
-  - 📋 Local token savings & cost reduction metrics dashboard
+- **Phase 4: Declarative Advisory Control Plane & Ecosystem Security (Completed — v1.3.0)**
+  - ✅ Declarative Advisory M2M Control Plane (`[:TOKENECTOMY:M2M_CONTROL_PLANE:v1.3.0]`)
+  - ✅ Anti-Prompt-Injection Architecture (`[ADVISORY_ONLY=true]`, `SUGGESTED_NEXT_FRAME`)
+  - ✅ Downstream Forks & Clones Limitation of Liability Policy (`DISCLAIMER.md`)
+- **Phase 5: Future Ecosystem Extensibility (Planned — v1.4.0+)**
   - 📋 Native IDE companion extensions (VS Code, JetBrains)
   - 📋 Server-Sent Events (SSE) remote MCP transport
 

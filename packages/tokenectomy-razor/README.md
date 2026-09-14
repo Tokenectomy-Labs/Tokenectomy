@@ -133,8 +133,9 @@ npm test 2>&1 | razor --scrub > sanitized.log
 - ✅ **v1.1.5:** Static AST code analysis engine (`analyze_code`) & Glama.ai TDQS Grade A compliance.
 - ✅ **v1.1.6:** Precompiled standalone native binaries (Linux, macOS Apple Silicon/Intel, Windows).
 - ✅ **v1.1.7:** Canonical Anthropic MCP Registry validation (`io.github.Tokenectomy-Labs/razor`) & `mcpservers.org` directory listing.
-- 🔄 **v1.2.0 (In Progress):** Java/Kotlin (Spring Boot 3) & C/C++ backtrace surgery, `awesome-mcp-servers` directory PR.
-- 📋 **v1.3.0 (Planned):** User-defined custom redaction rules (`~/.tokenectomy.toml`) & local agent token savings metrics.
+- ✅ **v1.2.0 - v1.2.3:** Java/Kotlin (Spring Boot 3), C/C++ backtrace, C# (.NET) & Ruby on Rails, custom rules (`~/.tokenectomy.toml`), interactive budgeting strategies.
+- ✅ **v1.3.0:** Declarative Advisory M2M Control Plane (`[:TOKENECTOMY:M2M_CONTROL_PLANE:v1.3.0]`), Anti-Prompt-Injection Architecture, Downstream Liability Disclaimer.
+- 📋 **v1.4.0 (Planned):** Native IDE companion extensions (VS Code, JetBrains) & Server-Sent Events (SSE) remote MCP transport.
 
 ---
 
