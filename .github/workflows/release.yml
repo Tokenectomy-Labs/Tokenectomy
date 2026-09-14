@@ -35,6 +35,7 @@ jobs:
     name: Build on ${{ matrix.os }} (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
@@ -72,9 +73,28 @@ jobs:
           cp target/${{ matrix.target }}/release/tokenectomy${{ matrix.bin_ext }} dist/tokenectomy-${{ matrix.platform_suffix }}
           cp target/${{ matrix.target }}/release/razor${{ matrix.bin_ext }} dist/razor-${{ matrix.platform_suffix }}
 
-      - name: Upload Release Assets
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.platform_suffix }}
+          path: dist/*
+          retention-days: 1
+
+  release-github:
+    name: Publish GitHub Release
+    needs: [build]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download all release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: release-*
+          merge-multiple: true
+      - name: Upload All Release Assets
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         with:
           tag_name: ${{ github.event.inputs.release_tag || github.ref_name }}
           files: dist/*
@@ -83,7 +103,7 @@ jobs:
 
   publish-npm:
     name: Publish npm Package
-    needs: [build]
+    needs: [release-github]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.publish_npm != false)
     steps:
@@ -116,7 +136,7 @@ jobs:
 
   publish-cargo:
     name: Publish Crates.io Package
-    needs: [build]
+    needs: [release-github]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.publish_cargo != false)
     steps:
@@ -130,7 +150,7 @@ jobs:
 
   publish-mcp-registry:
     name: Publish to Official MCP Registry
-    needs: [build]
+    needs: [release-github]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.publish_mcp_registry != false)
     steps:
