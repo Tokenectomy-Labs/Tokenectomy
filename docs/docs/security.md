@@ -16,3 +16,7 @@ description: Security invariants, vulnerability disclosure, and audit informatio
 ## Vulnerability Disclosure
 
 Please refer to the full [SECURITY.md](https://github.com/Tokenectomy-Labs/Tokenectomy/blob/main/SECURITY.md) for vulnerability disclosure procedures.
+
+## Downstream Forks & Acceptable Use
+
+Tokenectomy Razor is licensed under MIT exclusively for lawful and defensive purposes. Maintainers disclaim all liability for unlawful or malicious use by downstream forks, clones, or private deployments. See [DISCLAIMER.md](https://github.com/Tokenectomy-Labs/Tokenectomy/blob/main/DISCLAIMER.md).
