@@ -449,6 +449,12 @@ For vulnerability disclosures, please review our [Security Policy](SECURITY.md).
 
 ---
 
+## ⚖️ Legal & Downstream Fork Disclaimer
+
+Tokenectomy Razor is provided strictly for lawful developer productivity, observability, log surgery, and defensive credential redaction. Any downstream forks, clones, redistributions, or private deployments operate completely independently of the original authors. Tokenectomy Labs and its maintainers assume zero liability for unlawful, malicious, or unauthorized actions committed by third parties using this codebase or derivatives thereof. All downstream operators bear 100% individual responsibility for compliance with local and international cybersecurity laws. See [DISCLAIMER.md](DISCLAIMER.md) for full legal terms.
+
+---
+
 ## 🤝 Community & Resources
 
 - 🌐 **[Official Website](https://tokenectomy-web.vercel.app)**
@@ -457,6 +463,7 @@ For vulnerability disclosures, please review our [Security Policy](SECURITY.md).
 - 📋 **[Changelog](CHANGELOG.md)**
 - 🤝 **[Contributing Guidelines](CONTRIBUTING.md)**
 - 🔒 **[Security Policy](SECURITY.md)**
+- ⚖️ **[Disclaimer & Liability](DISCLAIMER.md)**
 
 ---
 

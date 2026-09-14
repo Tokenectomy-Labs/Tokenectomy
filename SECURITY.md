@@ -63,6 +63,11 @@ Tokenectomy Razor is architected with uncompromising security-first principles f
 - **Explicit Advisory Disclaimer**: Every emitted control envelope explicitly specifies `[ADVISORY_ONLY=true]`.
 - **Non-Imperative Field Vocabulary**: Directives are framed without imperative verbs (`[SUGGESTED_NEXT_FRAME=<file:line>]` rather than imperative action commands like `INSPECT_CALLER_AT_`), ensuring static security scanners, enterprise tool-safety audits, and client-side prompt-injection classifiers do not flag M2M telemetry as adversarial execution directives.
 
+### 9. **Downstream Forks, Clones & Acceptable Use Disclaimer** ⚖️
+- **Independent Third-Party Custody**: Tokenectomy Razor is open-source software provided under the MIT License exclusively for defensive observability, crash log sanitization, token budgeting, and developer productivity.
+- **Zero Liability for Downstream Abuse**: Any third-party fork, clone, private deployment, modified binary, or derivative work operates completely outside the custody, telemetry, and control of Tokenectomy Labs and its maintainers. Under no circumstances shall the original author (@daffa2555), Tokenectomy Labs, or contributors be held liable or legally responsible for any illegal, unlawful, malicious, abusive, or unauthorized acts committed by downstream users or fork operators.
+- **Sole Operator Liability**: Downstream users, fork maintainers, and individual operators assume 100% personal, commercial, and legal accountability for their usage and compliance with all applicable cybercrime, privacy, and intellectual property laws. See [DISCLAIMER.md](DISCLAIMER.md) for complete details.
+
 ---
 
 ## 📋 Security Audit History
