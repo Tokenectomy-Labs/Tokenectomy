@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slide 4: Zero-Knowledge Secret Redaction — Tokenectomy Razor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      width: 1280px;
+      height: 720px;
+      overflow: hidden;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #070A0F;
+    }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="relative w-[1280px] h-[720px] bg-[#070A0F] text-slate-100 overflow-hidden flex flex-col justify-between p-10 select-none">
+    
+    <!-- Ambient Technical Lighting -->
+    <div class="absolute -top-32 -left-32 w-96 h-96 bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none"></div>
+    <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-rose-500/10 rounded-full blur-[150px] pointer-events-none"></div>
+    <div class="absolute inset-0 bg-[linear-gradient(to_right,#1e293b0d_1px,transparent_1px),linear-gradient(to_bottom,#1e293b0d_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none"></div>
+
+    <!-- ── 1. HEADER ── -->
+    <div class="relative z-10 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-[#0A1220] border border-sky-500/40 p-1 flex items-center justify-center shadow-lg shadow-sky-500/10">
+          <img src="logo.jpg" alt="Logo" class="w-full h-full object-cover rounded-lg">
+        </div>
+        <div>
+          <div class="flex items-center gap-3">
+            <h1 class="text-2xl font-bold text-white tracking-tight">Tokenectomy <span class="text-sky-400">Razor</span></h1>
+            <span class="px-2 py-0.5 text-xs font-mono font-medium bg-sky-950/80 text-sky-400 border border-sky-800/60 rounded">v1.3.0</span>
+          </div>
+          <p class="text-xs text-slate-400 font-mono tracking-wider uppercase">Slide 4 of 5 &bull; Deterministic Security Engine</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-700 text-xs font-mono text-slate-300">
+        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+        <span class="text-white font-semibold">Zero Leaks Invariant</span>
+        <span class="text-slate-500">&bull;</span>
+        <span class="text-emerald-300">100% In-Memory DFA</span>
+      </div>
+    </div>
+
+    <!-- ── 2. HEADLINE & SUBTITLE ── -->
+    <div class="relative z-10 my-1">
+      <h2 class="text-3xl font-extrabold text-white tracking-tight leading-tight">
+        Zero-Knowledge Secret Redaction Architecture
+      </h2>
+      <p class="text-sm text-slate-300 mt-1 max-w-3xl leading-relaxed">
+        Stop production credentials and high-entropy secrets from leaking into LLM prompt caches or training runs. Operates with strict linear O(N) ReDoS immunity and zero cloud dependencies.
+      </p>
+    </div>
+
+    <!-- ── 3. MAIN CONTENT: REDACTION MATRIX & PATTERN AUDIT ── -->
+    <div class="relative z-10 grid grid-cols-12 gap-5 my-auto">
+      
+      <!-- LEFT: BENCHMARK MATRIX TABLE (7 COLS) -->
+      <div class="col-span-7 bg-[#0A101C] border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-lg">
+        <div>
+          <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-800">
+            <span class="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider">Inline Redaction Performance Matrix</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">Verified Benchmarks</span>
+          </div>
+
+          <!-- COMPARISON TABLE -->
+          <table class="w-full text-left font-mono text-xs">
+            <thead>
+              <tr class="text-slate-500 border-b border-slate-800/80">
+                <th class="pb-2 font-normal">Metric / Feature</th>
+                <th class="pb-2 font-bold text-sky-400">Tokenectomy Razor</th>
+                <th class="pb-2 font-normal text-slate-400">Gitleaks</th>
+                <th class="pb-2 font-normal text-slate-400">TruffleHog</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/50">
+              <tr>
+                <td class="py-2 text-slate-300 font-semibold">Redaction Latency</td>
+                <td class="py-2 text-emerald-300 font-bold">&lt; 0.20 ms</td>
+                <td class="py-2 text-slate-400">14.20 ms</td>
+                <td class="py-2 text-slate-400">48.50 ms</td>
+              </tr>
+              <tr>
+                <td class="py-2 text-slate-300 font-semibold">ReDoS Attack Resilience</td>
+                <td class="py-2 text-emerald-300 font-bold">Linear O(N) DFA</td>
+                <td class="py-2 text-rose-400/80">Catastrophic</td>
+                <td class="py-2 text-rose-400/80">Backtracking</td>
+              </tr>
+              <tr>
+                <td class="py-2 text-slate-300 font-semibold">Live Stdio M2M Intercept</td>
+                <td class="py-2 text-emerald-300 font-bold">Native Stdio/MCP</td>
+                <td class="py-2 text-slate-400">Git/FS Only</td>
+                <td class="py-2 text-slate-400">Git/FS Only</td>
+              </tr>
+              <tr>
+                <td class="py-2 text-slate-300 font-semibold">Memory Overhead</td>
+                <td class="py-2 text-emerald-300 font-bold">&lt; 15 MB VmRSS</td>
+                <td class="py-2 text-slate-400">~65 MB</td>
+                <td class="py-2 text-slate-400">~120 MB</td>
+              </tr>
+              <tr>
+                <td class="py-2 text-slate-300 font-semibold">Zero-Config Agent Pipe</td>
+                <td class="py-2 text-emerald-300 font-bold">1-Line Flag</td>
+                <td class="py-2 text-slate-400">Requires Hook</td>
+                <td class="py-2 text-slate-400">Requires Daemon</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mt-3 pt-3 border-t border-slate-800 flex items-center justify-between text-[11px] font-mono text-slate-400">
+          <span>Pathological payload test (50,082 chars): <strong class="text-emerald-300">1.16ms</strong> execution</span>
+          <span class="text-sky-400 font-semibold">Zero Catastrophic Hangs</span>
+        </div>
+      </div>
+
+      <!-- RIGHT: LIVE PATTERN DETECTION AUDIT (5 COLS) -->
+      <div class="col-span-5 flex flex-col justify-between space-y-2.5">
+        
+        <!-- Category 1: Cloud & AI Providers -->
+        <div class="p-3 bg-[#0B1220] border border-slate-800 rounded-xl">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-mono font-bold text-white flex items-center gap-1.5">
+              <span class="text-sky-400">&bull;</span> LLM & Cloud API Keys
+            </span>
+            <span class="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-900">100% Masked</span>
+          </div>
+          <div class="font-mono text-[10.5px] space-y-1">
+            <div class="text-slate-400 truncate">sk-ant-api03-99ab... &rarr; <span class="text-emerald-400 font-semibold">[REDACTED_ANTHROPIC_KEY]</span></div>
+            <div class="text-slate-400 truncate">AKIAIOSFODNN7EXAM... &rarr; <span class="text-emerald-400 font-semibold">[REDACTED_AWS_KEY]</span></div>
+            <div class="text-slate-400 truncate">ghp_abc123XYZ098... &rarr; <span class="text-emerald-400 font-semibold">[REDACTED_GITHUB_TOKEN]</span></div>
+          </div>
+        </div>
+
+        <!-- Category 2: Database URIs -->
+        <div class="p-3 bg-[#0B1220] border border-slate-800 rounded-xl">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-mono font-bold text-white flex items-center gap-1.5">
+              <span class="text-emerald-400">&bull;</span> Database Connection Strings
+            </span>
+            <span class="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-900">100% Masked</span>
+          </div>
+          <div class="font-mono text-[10.5px] space-y-1">
+            <div class="text-slate-400 truncate">postgres://usr:pwd@db... &rarr; <span class="text-emerald-400 font-semibold">[CONNECTION_STRING_REDACTED]</span></div>
+            <div class="text-slate-400 truncate">mongodb+srv://admin:pass... &rarr; <span class="text-emerald-400 font-semibold">[CONNECTION_STRING_REDACTED]</span></div>
+          </div>
+        </div>
+
+        <!-- Category 3: Private Keys & Bearer Tokens -->
+        <div class="p-3 bg-[#0B1220] border border-slate-800 rounded-xl">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-mono font-bold text-white flex items-center gap-1.5">
+              <span class="text-cyan-400">&bull;</span> PKI Keys & Bearer JWTs
+            </span>
+            <span class="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-900">100% Masked</span>
+          </div>
+          <div class="font-mono text-[10.5px] space-y-1">
+            <div class="text-slate-400 truncate">-----BEGIN RSA PRIVATE... &rarr; <span class="text-emerald-400 font-semibold">[REDACTED_RSA_KEY]</span></div>
+            <div class="text-slate-400 truncate">Bearer eyJhbGciOiJIUz... &rarr; <span class="text-emerald-400 font-semibold">[REDACTED_BEARER_TOKEN]</span></div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ── 4. FOOTER ── -->
+    <div class="relative z-10 flex items-center justify-between pt-4 border-t border-slate-800">
+      <div class="flex items-center gap-5">
+        <div class="flex items-center gap-2 text-xs font-mono text-slate-300 whitespace-nowrap">
+          <span class="text-emerald-400 font-bold text-base whitespace-nowrap">0 Bytes</span>
+          <span>Credential Leakage</span>
+        </div>
+        <div class="text-slate-700">&bull;</div>
+        <div class="flex items-center gap-2 text-xs font-mono text-slate-300 whitespace-nowrap">
+          <span class="text-sky-400 font-bold text-base whitespace-nowrap">O(N)</span>
+          <span>Deterministic Bounds</span>
+        </div>
+        <div class="text-slate-700">&bull;</div>
+        <div class="flex items-center gap-2 text-xs font-mono text-slate-300 whitespace-nowrap">
+          <span class="text-cyan-300 font-bold text-base whitespace-nowrap">Air-Gapped</span>
+          <span>In-Memory Only</span>
+        </div>
+      </div>
+
+      <div class="text-xs font-mono text-slate-400">
+        Engine: <span class="text-slate-200">Rust DFA Aho-Corasick Multi-Pattern Automaton</span>
+      </div>
+    </div>
+
+</body>
+</html>

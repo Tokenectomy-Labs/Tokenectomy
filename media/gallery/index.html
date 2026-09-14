@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Hunt Gallery Showcase — Tokenectomy Razor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #030712; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="min-h-screen bg-[#030712] text-slate-100 flex flex-col items-center justify-between p-4 selection:bg-sky-500 selection:text-white">
+
+  <!-- ── TOP BAR ── -->
+  <header class="w-full max-w-7xl flex flex-wrap items-center justify-between gap-4 py-3 px-5 rounded-2xl bg-[#070A0F] border border-slate-800 shadow-xl mb-3">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg bg-[#0A1220] border border-sky-500/40 p-1 flex items-center justify-center">
+        <img src="logo.jpg" alt="Logo" class="w-full h-full object-cover rounded">
+      </div>
+      <div>
+        <h1 class="text-base font-bold text-white flex items-center gap-2">
+          Product Hunt Gallery Showcase
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-950 text-sky-400 border border-sky-800">1280 &times; 720 px (16:9)</span>
+        </h1>
+        <p class="text-xs text-slate-400 font-mono">Tokenectomy Razor &bull; Zero-AI-Slop Verified Assets</p>
+      </div>
+    </div>
+
+    <!-- TABS / SLIDE SELECTOR -->
+    <nav class="flex items-center gap-1.5 p-1 rounded-xl bg-slate-900/80 border border-slate-800 text-xs font-mono">
+      <button onclick="switchSlide(1)" id="tab-1" class="tab-btn px-3 py-1.5 rounded-lg font-semibold transition-all bg-sky-500 text-white shadow">
+        01 Hero
+      </button>
+      <button onclick="switchSlide(2)" id="tab-2" class="tab-btn px-3 py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">
+        02 Benchmarks
+      </button>
+      <button onclick="switchSlide(3)" id="tab-3" class="tab-btn px-3 py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">
+        03 M2M Protocol
+      </button>
+      <button onclick="switchSlide(4)" id="tab-4" class="tab-btn px-3 py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">
+        04 Secret Engine
+      </button>
+      <button onclick="switchSlide(5)" id="tab-5" class="tab-btn px-3 py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">
+        05 Universal Agent
+      </button>
+    </nav>
+
+    <!-- ACTIONS -->
+    <div class="flex items-center gap-2">
+      <button onclick="prevSlide()" class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-mono text-slate-200 transition-colors flex items-center gap-1">
+        <span>&larr;</span> Prev
+      </button>
+      <button onclick="nextSlide()" class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-mono text-slate-200 transition-colors flex items-center gap-1">
+        Next <span>&rarr;</span>
+      </button>
+      <a id="download-btn" href="slide1_hero.png" download="tokenectomy_slide1_hero.png" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-mono text-white font-semibold transition-colors flex items-center gap-1 shadow">
+        <span>⬇</span> Download 1280x720 PNG
+      </a>
+      <a id="direct-link" href="slide1_hero.html" target="_blank" class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-xs font-mono text-white font-semibold transition-colors flex items-center gap-1 shadow">
+        Open HTML ↗
+      </a>
+    </div>
+  </header>
+
+  <!-- ── PREVIEW VIEWPORT CONTAINER ── -->
+  <main class="w-full flex-1 flex items-center justify-center overflow-hidden my-1">
+    <div id="scale-wrapper" class="relative overflow-hidden rounded-2xl shadow-2xl border border-slate-800 bg-[#070A0F]">
+      <iframe 
+        id="slide-frame" 
+        src="slide1_hero.html" 
+        class="border-0 overflow-hidden select-none"
+        style="width: 1280px; height: 720px;"
+        title="Slide Preview"
+      ></iframe>
+    </div>
+  </main>
+
+  <!-- ── BOTTOM STATUS BAR ── -->
+  <footer class="w-full max-w-7xl flex flex-wrap items-center justify-between gap-4 py-2.5 px-5 rounded-xl bg-[#070A0F] border border-slate-800 text-xs font-mono text-slate-400 mt-2">
+    <div class="flex items-center gap-4">
+      <span id="slide-counter" class="text-white font-semibold">Slide 1 of 5 — 01 Hero: Problem &amp; Solution</span>
+      <span class="text-slate-600">&bull;</span>
+      <span>Keyboard Shortcuts: <kbd class="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-300">&larr;</kbd> <kbd class="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-300">&rarr;</kbd> or <kbd class="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-300">1-5</kbd></span>
+    </div>
+
+    <div class="flex items-center gap-4 text-[11px]">
+      <span class="text-emerald-400 font-semibold">&bull; Product Hunt Ready</span>
+      <span class="text-slate-600">&bull;</span>
+      <span class="text-slate-300">Aspect Ratio: 16:9</span>
+      <span class="text-slate-600">&bull;</span>
+      <span class="text-sky-400">Resolution: 1280 x 720 px</span>
+    </div>
+  </footer>
+
+  <!-- ── CONTROLLER SCRIPT ── -->
+  <script>
+    const slides = [
+      { id: 1, name: "01 Hero: Problem & Solution", html: "slide1_hero.html", png: "slide1_hero.png" },
+      { id: 2, name: "02 Hardware Benchmarks", html: "slide2_benchmarks.html", png: "slide2_benchmarks.png" },
+      { id: 3, name: "03 Autonomous M2M Protocol", html: "slide3_control_plane.html", png: "slide3_control_plane.png" },
+      { id: 4, name: "04 Deterministic Secret Redaction", html: "slide4_security.html", png: "slide4_security.png" },
+      { id: 5, name: "05 Universal Agent Ecosystem", html: "slide5_ecosystem.html", png: "slide5_ecosystem.png" }
+    ];
+
+    let currentSlide = 1;
+
+    function autoScale() {
+      const wrapper = document.getElementById('scale-wrapper');
+      const maxW = Math.min(window.innerWidth - 32, 1280);
+      const maxH = Math.min(window.innerHeight - 150, 720);
+      const scale = Math.min(maxW / 1280, maxH / 720);
+      
+      wrapper.style.width = `${1280 * scale}px`;
+      wrapper.style.height = `${720 * scale}px`;
+      
+      const frame = document.getElementById('slide-frame');
+      frame.style.transform = `scale(${scale})`;
+      frame.style.transformOrigin = 'top left';
+    }
+
+    function switchSlide(index) {
+      if (index < 1 || index > 5) return;
+      currentSlide = index;
+      const target = slides[index - 1];
+
+      // Update iframe source
+      document.getElementById('slide-frame').src = target.html;
+      document.getElementById('direct-link').href = target.html;
+      
+      // Update download button
+      const dlBtn = document.getElementById('download-btn');
+      dlBtn.href = target.png;
+      dlBtn.download = `tokenectomy_${target.png}`;
+
+      // Update counter
+      document.getElementById('slide-counter').textContent = `Slide ${index} of 5 — ${target.name}`;
+
+      // Update tabs
+      for (let i = 1; i <= 5; i++) {
+        const tab = document.getElementById(`tab-${i}`);
+        if (i === index) {
+          tab.className = "tab-btn px-3 py-1.5 rounded-lg font-semibold transition-all bg-sky-500 text-white shadow";
+        } else {
+          tab.className = "tab-btn px-3 py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200";
+        }
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 1) switchSlide(currentSlide - 1);
+      else switchSlide(5);
+    }
+
+    function nextSlide() {
+      if (currentSlide < 5) switchSlide(currentSlide + 1);
+      else switchSlide(1);
+    }
+
+    // Keyboard navigation
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') prevSlide();
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') nextSlide();
+      if (e.key >= '1' && e.key <= '5') switchSlide(parseInt(e.key));
+    });
+
+    window.addEventListener('resize', autoScale);
+    window.addEventListener('DOMContentLoaded', autoScale);
+    autoScale();
+  </script>
+</body>
+</html>

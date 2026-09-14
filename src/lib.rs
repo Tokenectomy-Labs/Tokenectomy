@@ -24,6 +24,7 @@
 pub mod analyzer;
 pub mod app;
 pub use crate::app::run_cli;
+pub use crate::mcp::ControlPlaneEnvelope;
 
 /// Immutable Author identity baked into .rodata segment
 pub const AUTHOR_NAME: &str = "Daffa (@daffa2555)";

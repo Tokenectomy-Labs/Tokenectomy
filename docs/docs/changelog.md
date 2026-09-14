@@ -5,7 +5,14 @@ description: Release history and notable changes for Tokenectomy Razor.
 
 # Changelog
 
-All notable changes to Tokenectomy Razor are documented here.
+## [1.3.0] — 2026-09-15
+
+### Changed
+- **Declarative Advisory Control Plane Reframe (Anti-Prompt-Injection Architecture)**:
+  - Reframed M2M control plane envelope to advisory-style naming (`SUGGESTED_NEXT_FRAME` replacing `COGNITIVE_DIRECTIVE`).
+  - Added explicit `[ADVISORY_ONLY=true]` disclaimer line.
+  - Stripped verb prefixes from targets (`<file:line>` instead of `INSPECT_CALLER_AT_<file:line>`).
+  - Added `ControlPlaneEnvelope::parse()` with backward-compatible fallback parsing.
 
 ## [1.1.7] — 2026-09-12
 

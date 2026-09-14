@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slide 1: Core Value Proposition — Tokenectomy Razor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      width: 1280px;
+      height: 720px;
+      overflow: hidden;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #070A0F;
+    }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="relative w-[1280px] h-[720px] bg-[#070A0F] text-slate-100 overflow-hidden flex flex-col justify-between p-10 select-none">
+    
+    <!-- Ambient Technical Grid & Lighting -->
+    <div class="absolute -top-32 -left-32 w-96 h-96 bg-sky-500/10 rounded-full blur-[120px] pointer-events-none"></div>
+    <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none"></div>
+    <div class="absolute inset-0 bg-[linear-gradient(to_right,#1e293b0d_1px,transparent_1px),linear-gradient(to_bottom,#1e293b0d_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none"></div>
+
+    <!-- ── 1. HEADER ── -->
+    <div class="relative z-10 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-[#0A1220] border border-sky-500/40 p-1 flex items-center justify-center shadow-lg shadow-sky-500/10">
+          <img src="logo.jpg" alt="Logo" class="w-full h-full object-cover rounded-lg">
+        </div>
+        <div>
+          <div class="flex items-center gap-3">
+            <h1 class="text-2xl font-bold text-white tracking-tight">Tokenectomy <span class="text-sky-400">Razor</span></h1>
+            <span class="px-2 py-0.5 text-xs font-mono font-medium bg-sky-950/80 text-sky-400 border border-sky-800/60 rounded">v1.3.0</span>
+          </div>
+          <p class="text-xs text-slate-400 font-mono tracking-wider uppercase">Slide 1 of 5 &bull; The Problem & Solution</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-700 text-xs font-mono text-slate-300">
+        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+        <span class="text-white font-semibold">Anthropic MCP Registry</span>
+        <span class="text-slate-500">&bull;</span>
+        <span class="text-sky-400">io.github.Tokenectomy-Labs/razor</span>
+      </div>
+    </div>
+
+    <!-- ── 2. HERO HEADLINE & CALLOUT ── -->
+    <div class="relative z-10 my-2">
+      <h2 class="text-4xl font-extrabold text-white tracking-tight leading-tight">
+        Sub-Millisecond Log Surgery for AI Coding Agents
+      </h2>
+      <p class="text-base text-slate-300 mt-2 max-w-3xl leading-relaxed">
+        Terminal execution dumps tens of thousands of tokens of framework noise and leaks sensitive credentials into the LLM context window. Tokenectomy intercepts and scrubs error streams in &lt;0.2ms.
+      </p>
+    </div>
+
+    <!-- ── 3. SIDE-BY-SIDE TERMINAL CARDS ── -->
+    <div class="relative z-10 grid grid-cols-2 gap-6 my-auto">
+      
+      <!-- LEFT: RAW CRASH DUMP -->
+      <div class="bg-[#0A0E17] border border-rose-900/50 rounded-xl overflow-hidden shadow-xl flex flex-col">
+        <div class="flex items-center justify-between px-4 py-2 bg-rose-950/30 border-b border-rose-900/40">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+            <span class="text-xs font-mono font-bold text-rose-300">Raw Terminal Stderr (Before)</span>
+          </div>
+          <span class="px-2 py-0.5 text-[10px] font-mono font-bold bg-rose-950 text-rose-300 border border-rose-800 rounded">
+            45,820 TOKENS (HALT)
+          </span>
+        </div>
+        <div class="p-3.5 font-mono text-[11px] leading-relaxed text-slate-400 space-y-1">
+          <div class="text-rose-400 font-semibold">TypeError: Cannot read properties of undefined (reading 'digest')</div>
+          <div class="text-slate-500 pl-2">at Object.&lt;anon&gt; (/node_modules/next/dist/server/dev.js:142:31)</div>
+          <div class="text-slate-500 pl-2">at __webpack_require__ (/node_modules/next/dist/compiled/bundle.js:198)</div>
+          <div class="py-1 px-2.5 bg-rose-950/40 text-rose-300 border border-dashed border-rose-900 rounded text-[10px]">
+            &times; 480 internal dependency frames flooding agent context window...
+          </div>
+          <div class="text-slate-300 pl-2">at AuthController.login (/app/src/controllers/auth.ts:42:19)</div>
+          <div class="text-amber-400/90 pl-2 bg-amber-950/20 rounded py-0.5">
+            🚨 Leak: postgresql://admin:<span class="text-rose-400 font-bold underline">super_secret_pw</span>@db.internal:5432
+          </div>
+          <div class="text-amber-400/90 pl-2 bg-amber-950/20 rounded py-0.5">
+            🚨 Leak: <span class="text-rose-400 font-bold underline">sk-ant-api03-abcdef1234567890abcdef</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: SANITIZED M2M OUTPUT -->
+      <div class="bg-[#0A111E] border border-sky-500/50 rounded-xl overflow-hidden shadow-xl flex flex-col">
+        <div class="flex items-center justify-between px-4 py-2 bg-sky-950/40 border-b border-sky-800/60">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+            <span class="text-xs font-mono font-bold text-sky-300">Sanitized M2M Sub-Cortex (After)</span>
+          </div>
+          <span class="px-2 py-0.5 text-[10px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-700 rounded">
+            118 TOKENS (&lt;0.2ms)
+          </span>
+        </div>
+        <div class="p-3.5 font-mono text-[11px] leading-relaxed text-slate-300 space-y-0.5">
+          <div class="text-sky-400 font-bold">[:TOKENECTOMY:M2M_CONTROL_PLANE:v1.3.0]</div>
+          <div class="text-emerald-400 font-mono text-[10px]">[ADVISORY_ONLY=true]</div>
+          <div class="text-slate-400">[STATE=FRAMEWORK_NOISE_PURGED | STRATEGY=AGGRESSIVE]</div>
+          <div class="text-emerald-400 font-semibold">[ORIGINAL_BYTES=45820 | CLEAN_BYTES=118 | REDUCTION=99.7%]</div>
+          <div class="text-cyan-300 font-bold">[PRIMARY_CRASH_COORDINATES=src/controllers/auth.ts:42]</div>
+          <div class="text-sky-300">[SUGGESTED_NEXT_FRAME=src/controllers/auth.ts:42]</div>
+          <div class="text-sky-400 font-bold">[:END_CONTROL_PLANE]</div>
+          
+          <div class="mt-2 pt-2 border-t border-slate-800 text-[10.5px]">
+            <span class="text-white font-semibold">src/controllers/auth.ts:42:15 - SyntaxError</span><br>
+            <span class="text-slate-400">42 |  const user = await prisma.user.findUnique({ where: { email } });</span><br>
+            <span class="text-emerald-400 font-semibold">🛡️ [CONNECTION_STRING_REDACTED]</span> &bull; <span class="text-emerald-400 font-semibold">🛡️ [REDACTED_API_KEY]</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── 4. FOOTER METRICS ── -->
+    <div class="relative z-10 flex items-center justify-between pt-4 border-t border-slate-800">
+      <div class="flex items-center gap-6">
+        <div class="flex items-center gap-2 text-xs font-mono text-slate-300">
+          <span class="text-emerald-400 font-bold text-base">&gt;95%</span>
+          <span>Context Noise Pruned</span>
+        </div>
+        <div class="text-slate-700">&bull;</div>
+        <div class="flex items-center gap-2 text-xs font-mono text-slate-300">
+          <span class="text-sky-400 font-bold text-base">&lt;0.2ms</span>
+          <span>Native Rust Latency</span>
+        </div>
+        <div class="text-slate-700">&bull;</div>
+        <div class="flex items-center gap-2 text-xs font-mono text-slate-300">
+          <span class="text-cyan-300 font-bold text-base">O(N)</span>
+          <span>Linear ReDoS Safe</span>
+        </div>
+      </div>
+
+      <div class="text-xs font-mono text-slate-400">
+        Run anywhere: <span class="text-sky-300 font-semibold">npx -y tokenectomy-razor --mcp</span>
+      </div>
+    </div>
+
+</body>
+</html>

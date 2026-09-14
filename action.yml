@@ -22,7 +22,7 @@ inputs:
   version:
     description: 'Release version of the Tokenectomy Razor binary'
     required: false
-    default: 'v1.2.3'
+    default: 'v1.3.0'
 
 outputs:
   sanitized-file:

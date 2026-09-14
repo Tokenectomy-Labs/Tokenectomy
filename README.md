@@ -91,12 +91,13 @@ TypeError: Cannot read properties of undefined (reading 'digest')
 #### ✅ After: Tokenectomy Razor (118 Tokens • &lt;0.2ms • Zero Secrets)
 
 ```text
-[:TOKENECTOMY:M2M_CONTROL_PLANE:v1.2.3]
+[:TOKENECTOMY:M2M_CONTROL_PLANE:v1.3.0]
+[ADVISORY_ONLY=true]
 [STATE=FRAMEWORK_NOISE_PURGED]
 [STRATEGY_APPLIED=AGGRESSIVE]
 [ORIGINAL_BYTES=45820 | CLEAN_BYTES=118 | REDUCTION=99%]
 [PRIMARY_CRASH_COORDINATES=src/components/Header.tsx:42]
-[COGNITIVE_DIRECTIVE=INSPECT_CALLER_AT_src/components/Header.tsx:42]
+[SUGGESTED_NEXT_FRAME=src/components/Header.tsx:42]
 [:END_CONTROL_PLANE]
 
 src/components/Header.tsx:42:15 - SyntaxError
@@ -428,7 +429,7 @@ docker run -i ghcr.io/tokenectomy-labs/razor:latest --mcp
 | User-defined custom redaction & noise rules (`~/.tokenectomy.toml`) | ✅ Complete | v1.2.2 |
 | Autonomous Context Health Audit (`audit_context_health`) & M2M Advisory | ✅ Complete | v1.2.2 |
 | Automated Redaction Benchmark & CI Gate | ✅ Complete | v1.2.2 |
-| Deterministic M2M Control Plane Envelope (`[:TOKENECTOMY:M2M_CONTROL_PLANE:v1.2.3]`) | ✅ Complete | v1.2.3 |
+| Declarative Advisory M2M Control Plane (`[:TOKENECTOMY:M2M_CONTROL_PLANE:v1.3.0]`) | ✅ Complete | v1.3.0 |
 | Interactive Multi-Strategy Budgeting (`aggressive`, `conservative`, `lossless_compact`) | ✅ Complete | v1.2.3 |
 | GitHub Actions OIDC Official Registry Publishing Gate | ✅ Complete | v1.2.3 |
 | `awesome-mcp-servers` Community Catalog Listing | 🔄 In Progress | v1.2.4 |
