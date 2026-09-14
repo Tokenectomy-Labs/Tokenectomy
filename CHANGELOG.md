@@ -5,6 +5,17 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-09-15
+
+### Changed
+- **Declarative Advisory Control Plane Reframe (Anti-Prompt-Injection Architecture)**:
+  - Reframed all M2M control plane fields from imperative/command-style naming to declarative advisory-style naming to prevent false-positive prompt injection flags by enterprise scanners, security audits, and client-side classifiers.
+  - Renamed `COGNITIVE_DIRECTIVE` to `SUGGESTED_NEXT_FRAME`.
+  - Stripped imperative action verbs from coordinate targets (e.g., `INSPECT_CALLER_AT_<loc>` is now cleanly `<loc>`).
+  - Added explicit `[ADVISORY_ONLY=true]` disclaimer line to every emitted M2M control envelope.
+  - In `audit_context_health`, reframed action directives to declarative status (`PRUNING_RECOMMENDED`, `DIRECT_INGESTION_OPTIMAL`), with `cognitive_directive` maintained as a deprecated alias for backward compatibility.
+  - Introduced `ControlPlaneEnvelope::parse()` with backward-compatible fallback parsing for legacy `COGNITIVE_DIRECTIVE` consumers.
+
 ## [1.2.3] — 2026-09-14
 
 ### Added

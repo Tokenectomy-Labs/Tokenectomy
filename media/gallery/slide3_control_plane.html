@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slide 3: Autonomous M2M Control Plane — Tokenectomy Razor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      width: 1280px;
+      height: 720px;
+      overflow: hidden;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #070A0F;
+    }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="relative w-[1280px] h-[720px] bg-[#070A0F] text-slate-100 overflow-hidden flex flex-col justify-between p-10 select-none">
+    
+    <!-- Ambient Technical Lighting -->
+    <div class="absolute -top-32 -left-32 w-96 h-96 bg-cyan-500/10 rounded-full blur-[130px] pointer-events-none"></div>
+    <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-sky-500/10 rounded-full blur-[140px] pointer-events-none"></div>
+    <div class="absolute inset-0 bg-[linear-gradient(to_right,#1e293b0d_1px,transparent_1px),linear-gradient(to_bottom,#1e293b0d_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none"></div>
+
+    <!-- ── 1. HEADER ── -->
+    <div class="relative z-10 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-[#0A1220] border border-sky-500/40 p-1 flex items-center justify-center shadow-lg shadow-sky-500/10">
+          <img src="logo.jpg" alt="Logo" class="w-full h-full object-cover rounded-lg">
+        </div>
+        <div>
+          <div class="flex items-center gap-3">
+            <h1 class="text-2xl font-bold text-white tracking-tight">Tokenectomy <span class="text-sky-400">Razor</span></h1>
+            <span class="px-2 py-0.5 text-xs font-mono font-medium bg-sky-950/80 text-sky-400 border border-sky-800/60 rounded">v1.3.0</span>
+          </div>
+          <p class="text-xs text-slate-400 font-mono tracking-wider uppercase">Slide 3 of 5 &bull; Autonomous M2M Control Plane</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-700 text-xs font-mono text-slate-300">
+        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+        <span class="text-white font-semibold">M2M Protocol</span>
+        <span class="text-slate-500">&bull;</span>
+        <span class="text-cyan-300">Adaptive Context Negotiation</span>
+      </div>
+    </div>
+
+    <!-- ── 2. HEADLINE & SUBTITLE ── -->
+    <div class="relative z-10 my-1">
+      <h2 class="text-3xl font-extrabold text-white tracking-tight leading-tight">
+        Multi-Strategy Budgeting & Cognitive Directives
+      </h2>
+      <p class="text-sm text-slate-300 mt-1 max-w-3xl leading-relaxed">
+        Autonomous agents parse structured envelopes instead of raw text. Tokenectomy dynamically adjusts truncation depth and outputs exact code coordinates for instant zero-hallucination fixes.
+      </p>
+    </div>
+
+    <!-- ── 3. MAIN CONTENT: 2-COLUMN ARCHITECTURE ── -->
+    <div class="relative z-10 grid grid-cols-12 gap-5 my-auto">
+      
+      <!-- LEFT: 3 ADAPTIVE BUDGETING MODES (5 COLS) -->
+      <div class="col-span-5 flex flex-col justify-between space-y-3">
+        
+        <!-- Mode 1: Aggressive -->
+        <div class="p-3.5 rounded-xl bg-[#0A111E] border border-sky-500/40 shadow-md relative overflow-hidden">
+          <div class="flex items-center justify-between mb-1.5">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-rose-400"></span>
+              <span class="text-xs font-mono font-bold text-white uppercase tracking-wider">Aggressive Strategy</span>
+            </div>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800">
+              &lt; 20% Budget Left
+            </span>
+          </div>
+          <p class="text-xs text-slate-300 leading-normal">
+            Cuts all dependency frames. Preserves only the immediate caller, primary error message, and redacted line.
+          </p>
+          <div class="mt-2 text-[11px] font-mono text-sky-400 font-semibold flex items-center gap-2">
+            <span>&rarr; Reduction: 98% &ndash; 99.7%</span>
+            <span class="text-slate-500">&bull;</span>
+            <span class="text-slate-400">Target: Critical saves</span>
+          </div>
+        </div>
+
+        <!-- Mode 2: Conservative -->
+        <div class="p-3.5 rounded-xl bg-[#0A111E] border border-slate-800 hover:border-sky-500/30 transition-colors shadow-md">
+          <div class="flex items-center justify-between mb-1.5">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+              <span class="text-xs font-mono font-bold text-white uppercase tracking-wider">Conservative Strategy</span>
+            </div>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800">
+              20% &ndash; 50% Budget
+            </span>
+          </div>
+          <p class="text-xs text-slate-300 leading-normal">
+            Retains top 3 call frames in user workspace. Prunes internal framework recursion while keeping caller breadcrumbs.
+          </p>
+          <div class="mt-2 text-[11px] font-mono text-amber-400 font-semibold flex items-center gap-2">
+            <span>&rarr; Reduction: 85% &ndash; 94%</span>
+            <span class="text-slate-500">&bull;</span>
+            <span class="text-slate-400">Target: Balanced audit</span>
+          </div>
+        </div>
+
+        <!-- Mode 3: Lossless Compact -->
+        <div class="p-3.5 rounded-xl bg-[#0A111E] border border-slate-800 hover:border-sky-500/30 transition-colors shadow-md">
+          <div class="flex items-center justify-between mb-1.5">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span class="text-xs font-mono font-bold text-white uppercase tracking-wider">Lossless Compact</span>
+            </div>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+              &gt; 50% Budget Headroom
+            </span>
+          </div>
+          <p class="text-xs text-slate-300 leading-normal">
+            Zero frame dropping. Strips whitespace, normalizes ANSI escapes, and masks sensitive secrets deterministically.
+          </p>
+          <div class="mt-2 text-[11px] font-mono text-emerald-400 font-semibold flex items-center gap-2">
+            <span>&rarr; Reduction: 50% &ndash; 70%</span>
+            <span class="text-slate-500">&bull;</span>
+            <span class="text-slate-400">Target: Full stack trace</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: PARSED M2M ENVELOPE INSPECTION (7 COLS) -->
+      <div class="col-span-7 bg-[#080D17] border border-sky-500/40 rounded-xl overflow-hidden shadow-xl flex flex-col justify-between">
+        
+        <div class="flex items-center justify-between px-4 py-2.5 bg-[#0D1524] border-b border-slate-800">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+            <span class="text-xs font-mono font-bold text-sky-300">Standardized Agent Sub-Cortex Payload</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-mono text-slate-400">RFC-Compliant</span>
+            <span class="px-2 py-0.5 text-[10px] font-mono font-bold bg-sky-950 text-sky-300 border border-sky-800 rounded">
+              JSON-RPC 2.0
+            </span>
+          </div>
+        </div>
+
+        <div class="p-4 font-mono text-[11.5px] leading-relaxed space-y-1.5 text-slate-300 select-text">
+          <div class="text-sky-400 font-bold tracking-wide">[:TOKENECTOMY:M2M_CONTROL_PLANE:v1.3.0]</div>
+          <div class="text-emerald-400 font-mono text-[10px]">[ADVISORY_ONLY=true]</div>
+          
+          <div class="grid grid-cols-2 gap-2 py-1.5 px-2 bg-slate-900/60 rounded border border-slate-800/80 text-[11px]">
+            <div><span class="text-slate-500">ENGINE_STATE:</span> <span class="text-emerald-300 font-semibold">SANITIZED_CLEAN</span></div>
+            <div><span class="text-slate-500">STRATEGY:</span> <span class="text-amber-300 font-semibold">AGGRESSIVE_PRUNE</span></div>
+            <div><span class="text-slate-500">RAW_PAYLOAD:</span> <span class="text-rose-400">45,820 B</span></div>
+            <div><span class="text-slate-500">DELIVERED:</span> <span class="text-emerald-400 font-bold">118 B (-99.7%)</span></div>
+          </div>
+
+          <div class="pt-1 text-slate-300">
+            <span class="text-sky-400 font-bold">[PRIMARY_CRASH_COORDINATES=</span><span class="text-cyan-300 font-bold underline">src/controllers/auth.ts:42</span><span class="text-sky-400 font-bold">]</span>
+          </div>
+
+          <div class="text-slate-300">
+            <span class="text-sky-400 font-bold">[SUGGESTED_NEXT_FRAME=</span><span class="text-white bg-sky-950 px-1.5 py-0.5 rounded border border-sky-800">src/controllers/auth.ts:42</span><span class="text-sky-400 font-bold">]</span>
+          </div>
+
+          <div class="text-sky-400 font-bold">[:END_CONTROL_PLANE]</div>
+
+          <!-- Structured Payload Body -->
+          <div class="mt-2.5 p-2.5 rounded bg-[#060910] border border-slate-800 text-[11px] leading-normal">
+            <div class="text-rose-400 font-semibold">TypeError: Cannot read properties of undefined (reading 'digest')</div>
+            <div class="text-slate-400 mt-1 pl-2 border-l-2 border-sky-500">
+              at AuthController.login (<span class="text-cyan-300">src/controllers/auth.ts:42:19</span>)<br>
+              <span class="text-emerald-400 font-semibold">🛡️ [REDACTED_API_KEY]</span> &bull; <span class="text-emerald-400 font-semibold">🛡️ [CONNECTION_STRING_REDACTED]</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="px-4 py-2 bg-[#090F1B] border-t border-slate-800 flex items-center justify-between text-[11px] font-mono text-slate-400">
+          <span>Downstream Agent Latency Overhead: <strong class="text-emerald-400">0.00ms</strong></span>
+          <span class="text-sky-300 font-semibold">Direct Memory Transfer</span>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ── 4. FOOTER ── -->
+    <div class="relative z-10 flex items-center justify-between pt-4 border-t border-slate-800">
+      <div class="flex items-center gap-6">
+        <div class="flex items-center gap-2 text-xs font-mono text-slate-300">
+          <span class="text-sky-400 font-bold text-base">3</span>
+          <span>Adaptive Strategies</span>
+        </div>
+        <div class="text-slate-700">&bull;</div>
+        <div class="flex items-center gap-2 text-xs font-mono text-slate-300">
+          <span class="text-emerald-400 font-bold text-base">0%</span>
+          <span>Hallucination Inducing Noise</span>
+        </div>
+        <div class="text-slate-700">&bull;</div>
+        <div class="flex items-center gap-2 text-xs font-mono text-slate-300">
+          <span class="text-cyan-300 font-bold text-base">M2M</span>
+          <span>Structured Cognitive Directives</span>
+        </div>
+      </div>
+
+      <div class="text-xs font-mono text-slate-400">
+        Tool interface: <span class="text-sky-300 font-semibold">audit_context_health &bull; get_error_context</span>
+      </div>
+    </div>
+
+</body>
+</html>

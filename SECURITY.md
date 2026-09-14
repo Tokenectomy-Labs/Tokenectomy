@@ -58,6 +58,11 @@ Tokenectomy Razor is architected with uncompromising security-first principles f
 - **SHA-256 Cache Keying**: Content hashes and response caches use SHA-256 (not vulnerable non-cryptographic hashers).
 - **Secure File Permissions**: Temporary caches enforce strict POSIX permissions (`0700`).
 
+### 8. **Declarative Advisory Control Envelope (Anti-Prompt-Injection Architecture)** ✅
+- **Advisory Declarative Metadata**: Control-plane fields are declarative advisory hints, not imperative instructions, to avoid resembling prompt-injection patterns and to keep the control envelope safe for consumption by third-party agents with independent reasoning.
+- **Explicit Advisory Disclaimer**: Every emitted control envelope explicitly specifies `[ADVISORY_ONLY=true]`.
+- **Non-Imperative Field Vocabulary**: Directives are framed without imperative verbs (`[SUGGESTED_NEXT_FRAME=<file:line>]` rather than imperative action commands like `INSPECT_CALLER_AT_`), ensuring static security scanners, enterprise tool-safety audits, and client-side prompt-injection classifiers do not flag M2M telemetry as adversarial execution directives.
+
 ---
 
 ## 📋 Security Audit History

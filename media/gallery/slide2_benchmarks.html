@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slide 2: Physical Hardware Benchmarks — Tokenectomy Razor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      width: 1280px;
+      height: 720px;
+      overflow: hidden;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #070A0F;
+    }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="relative w-[1280px] h-[720px] bg-[#070A0F] text-slate-100 overflow-hidden flex flex-col justify-between p-10 select-none">
+    
+    <!-- Ambient Technical Lighting -->
+    <div class="absolute -top-32 -right-32 w-96 h-96 bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none"></div>
+    <div class="absolute -bottom-32 -left-32 w-96 h-96 bg-sky-500/10 rounded-full blur-[140px] pointer-events-none"></div>
+    <div class="absolute inset-0 bg-[linear-gradient(to_right,#1e293b0d_1px,transparent_1px),linear-gradient(to_bottom,#1e293b0d_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none"></div>
+
+    <!-- ── 1. HEADER ── -->
+    <div class="relative z-10 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-[#0A1220] border border-sky-500/40 p-1 flex items-center justify-center shadow-lg shadow-sky-500/10">
+          <img src="logo.jpg" alt="Logo" class="w-full h-full object-cover rounded-lg">
+        </div>
+        <div>
+          <div class="flex items-center gap-3">
+            <h1 class="text-2xl font-bold text-white tracking-tight">Tokenectomy <span class="text-sky-400">Razor</span></h1>
+            <span class="px-2 py-0.5 text-xs font-mono font-medium bg-sky-950/80 text-sky-400 border border-sky-800/60 rounded">v1.3.0</span>
+          </div>
+          <p class="text-xs text-slate-400 font-mono tracking-wider uppercase">Slide 2 of 5 &bull; Hardware-Grounded Verification</p>
+        </div>
+      </div>
+
+      <div class="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-700 text-xs font-mono text-slate-300 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+        <span>Independent Physical Reproducibility</span>
+      </div>
+    </div>
+
+    <!-- ── 2. HEADLINE ── -->
+    <div class="relative z-10 my-1">
+      <h2 class="text-3xl font-extrabold text-white tracking-tight leading-tight">
+        Hardware-Grounded Truth: 530,735 Lines/Sec
+      </h2>
+      <p class="text-sm text-slate-300 mt-1 max-w-3xl leading-relaxed">
+        Zero mocks, zero simulated data. Every metric is audited on physical hardware running release tests with Linux kernel memory instrumentation.
+      </p>
+    </div>
+
+    <!-- ── 3. THREE BENCHMARK COLUMNS ── -->
+    <div class="relative z-10 grid grid-cols-3 gap-5 my-auto">
+      
+      <!-- CARD 1: 250K LINES TORTURE -->
+      <div class="bg-[#0A101C] border border-slate-800 hover:border-sky-500/50 rounded-xl p-5 flex flex-col justify-between shadow-lg">
+        <div>
+          <div class="flex items-center justify-between text-xs font-mono text-slate-400 mb-3 pb-2 border-b border-slate-800">
+            <span>TEST 1/3 &bull; MASSIVE DUMP</span>
+            <span class="text-emerald-400 font-bold">100% PASSED</span>
+          </div>
+          <h3 class="text-base font-bold text-white mb-1">Quarter-Million Log Excision</h3>
+          <p class="text-xs text-slate-400 leading-relaxed mb-4">250,000 lines (24.44 MB) dump with connection strings & API keys.</p>
+          
+          <div class="space-y-2 font-mono text-xs">
+            <div class="flex justify-between py-1 px-2.5 rounded bg-slate-900/80 border border-slate-800">
+              <span class="text-slate-400">Throughput</span>
+              <span class="text-sky-300 font-bold">530,735 lines/s</span>
+            </div>
+            <div class="flex justify-between py-1 px-2.5 rounded bg-slate-900/80 border border-slate-800">
+              <span class="text-slate-400">Execution Time</span>
+              <span class="text-emerald-300 font-bold">471.05 ms</span>
+            </div>
+            <div class="flex justify-between py-1 px-2.5 rounded bg-slate-900/80 border border-slate-800">
+              <span class="text-slate-400">Peak Memory</span>
+              <span class="text-slate-200">76.05 MB VmRSS</span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-t border-slate-800/80 text-[11px] font-mono text-slate-400">
+          Zero memory leak &bull; Non-ballooning
+        </div>
+      </div>
+
+      <!-- CARD 2: REDOS CATASTROPHIC BACKTRACKING -->
+      <div class="bg-[#0A101C] border border-slate-800 hover:border-sky-500/50 rounded-xl p-5 flex flex-col justify-between shadow-lg">
+        <div>
+          <div class="flex items-center justify-between text-xs font-mono text-slate-400 mb-3 pb-2 border-b border-slate-800">
+            <span>TEST 2/3 &bull; ADVERSARIAL</span>
+            <span class="text-emerald-400 font-bold">100% PASSED</span>
+          </div>
+          <h3 class="text-base font-bold text-white mb-1">ReDoS Backtracking Torture</h3>
+          <p class="text-xs text-slate-400 leading-relaxed mb-4">50,082-character pathological exploit payload designed to freeze regex.</p>
+          
+          <div class="space-y-2 font-mono text-xs">
+            <div class="flex justify-between py-1 px-2.5 rounded bg-slate-900/80 border border-slate-800">
+              <span class="text-slate-400">Complexity</span>
+              <span class="text-sky-300 font-bold">Strict Linear O(N)</span>
+            </div>
+            <div class="flex justify-between py-1 px-2.5 rounded bg-slate-900/80 border border-slate-800">
+              <span class="text-slate-400">Latency</span>
+              <span class="text-emerald-300 font-bold">1.165 ms</span>
+            </div>
+            <div class="flex justify-between py-1 px-2.5 rounded bg-slate-900/80 border border-slate-800">
+              <span class="text-slate-400">Backtracking State</span>
+              <span class="text-slate-200">Zero Freeze</span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-t border-slate-800/80 text-[11px] font-mono text-slate-400">
+          Rust non-backtracking DFA engine
+        </div>
+      </div>
+
+      <!-- CARD 3: 100 THREADS CONCURRENCY -->
+      <div class="bg-[#0A101C] border border-slate-800 hover:border-sky-500/50 rounded-xl p-5 flex flex-col justify-between shadow-lg">
+        <div>
+          <div class="flex items-center justify-between text-xs font-mono text-slate-400 mb-3 pb-2 border-b border-slate-800">
+            <span>TEST 3/3 &bull; CONCURRENCY</span>
+            <span class="text-emerald-400 font-bold">100% PASSED</span>
+          </div>
+          <h3 class="text-base font-bold text-white mb-1">100 Parallel OS Threads</h3>
+          <p class="text-xs text-slate-400 leading-relaxed mb-4">100 concurrent OS threads executing simultaneous redactions.</p>
+          
+          <div class="space-y-2 font-mono text-xs">
+            <div class="flex justify-between py-1 px-2.5 rounded bg-slate-900/80 border border-slate-800">
+              <span class="text-slate-400">Throughput</span>
+              <span class="text-sky-300 font-bold">17,688 ops/s</span>
+            </div>
+            <div class="flex justify-between py-1 px-2.5 rounded bg-slate-900/80 border border-slate-800">
+              <span class="text-slate-400">Total Duration</span>
+              <span class="text-emerald-300 font-bold">11.31 ms</span>
+            </div>
+            <div class="flex justify-between py-1 px-2.5 rounded bg-slate-900/80 border border-slate-800">
+              <span class="text-slate-400">Deadlocks</span>
+              <span class="text-slate-200">0 Deadlocks / 0 Races</span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-t border-slate-800/80 text-[11px] font-mono text-slate-400">
+          100% thread-safe Arc/Atomic primitives
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── 4. REPRODUCTION COMMAND & HARDWARE NOTICE ── -->
+    <div class="relative z-10 flex items-center justify-between pt-4 border-t border-slate-800">
+      <div class="flex items-center gap-3 bg-slate-900 border border-slate-800 px-3.5 py-1.5 rounded-lg font-mono text-xs text-slate-300">
+        <span class="text-slate-500 font-bold">Audit Command:</span>
+        <span class="text-sky-300">cargo test --release --test stress_benchmark -- --nocapture</span>
+      </div>
+
+      <div class="text-xs font-mono text-slate-400">
+        Benchmarked on: <span class="text-slate-200">Intel Core i5-1235U @ 15W TDP</span> &bull; Arch Linux Kernel 6.13
+      </div>
+    </div>
+
+</body>
+</html>

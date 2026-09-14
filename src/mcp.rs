@@ -685,21 +685,22 @@ pub async fn run_server() -> anyhow::Result<()> {
                                     "NO_LOCAL_APPLICATION_FRAME_DETECTED".to_string()
                                 };
 
-                                let cognitive_directive = if !extracted_files.is_empty() {
-                                    format!("INSPECT_CALLER_AT_{}", extracted_files[0])
+                                let suggested_next_frame = if !extracted_files.is_empty() {
+                                    extracted_files[0].clone()
                                 } else {
-                                    "INSPECT_SANITIZED_TRACE_FOR_ERROR_SIGNATURE".to_string()
+                                    "NO_LOCAL_FRAME_DETECTED".to_string()
                                 };
 
                                 let control_plane = format!(
                                     "[:TOKENECTOMY:M2M_CONTROL_PLANE:v{}]\n\
+                                    [ADVISORY_ONLY=true]\n\
                                     [STATE=FRAMEWORK_NOISE_PURGED]\n\
                                     [STRATEGY_APPLIED={}]\n\
                                     [ORIGINAL_BYTES={} | CLEAN_BYTES={} | REDUCTION={}%]\n\
                                     [ESTIMATED_TOKENS_SAVED={}]\n\
                                     [SECRETS_NEUTRALIZED={}]\n\
                                     [PRIMARY_CRASH_COORDINATES={}]\n\
-                                    [COGNITIVE_DIRECTIVE={}]\n\
+                                    [SUGGESTED_NEXT_FRAME={}]\n\
                                     [:END_CONTROL_PLANE]",
                                     env!("CARGO_PKG_VERSION"),
                                     strategy.to_uppercase(),
@@ -709,7 +710,7 @@ pub async fn run_server() -> anyhow::Result<()> {
                                     est_saved_tokens,
                                     secrets_count,
                                     primary_coordinate,
-                                    cognitive_directive
+                                    suggested_next_frame
                                 );
 
                                 let mut combined = format!(
@@ -1027,10 +1028,10 @@ pub async fn run_server() -> anyhow::Result<()> {
                                 } else {
                                     "Payload is token-lean. Ready for direct LLM reasoning."
                                 };
-                                let directive = if noise_pct > 25.0 {
-                                    "EXECUTE_RAZOR_PRUNING_BEFORE_LLM_REASONING"
+                                let suggested_action = if noise_pct > 25.0 {
+                                    "PRUNING_RECOMMENDED"
                                 } else {
-                                    "PROCEED_WITH_DIRECT_COGNITIVE_REASONING"
+                                    "DIRECT_INGESTION_OPTIMAL"
                                 };
 
                                 let compact_chars: usize = payload
@@ -1044,10 +1045,13 @@ pub async fn run_server() -> anyhow::Result<()> {
                                 let result_json = json!({
                                     "status": "success",
                                     "control_plane": {
+                                        "advisory_only": true,
                                         "version": env!("CARGO_PKG_VERSION"),
                                         "state": if noise_pct > 25.0 { "REQUIRES_PRUNING" } else { "OPTIMAL_HEALTH" },
                                         "health_grade": health_grade,
-                                        "cognitive_directive": directive
+                                        "suggested_action": suggested_action,
+                                        // Deprecated backward-compatible alias for 1 minor version
+                                        "cognitive_directive": suggested_action
                                     },
                                     "raw_characters": raw_chars,
                                     "estimated_raw_tokens": raw_tokens,
@@ -1122,6 +1126,68 @@ pub async fn run_server() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Parsed control plane metadata from a Tokenectomy M2M envelope.
+/// Reframed from imperative commands to declarative, non-binding advisory hints.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct ControlPlaneEnvelope {
+    pub version: String,
+    pub advisory_only: bool,
+    pub state: String,
+    pub strategy_applied: String,
+    pub original_bytes: usize,
+    pub clean_bytes: usize,
+    pub reduction_pct: u32,
+    pub estimated_tokens_saved: usize,
+    pub secrets_neutralized: usize,
+    pub primary_crash_coordinates: String,
+    pub suggested_next_frame: String,
+}
+
+impl ControlPlaneEnvelope {
+    /// Parse control plane metadata from a raw text payload containing a Tokenectomy M2M envelope.
+    ///
+    /// Preserves backward compatibility: if a legacy consumer emits or parses `COGNITIVE_DIRECTIVE`,
+    /// it falls back to parsing `COGNITIVE_DIRECTIVE` when `SUGGESTED_NEXT_FRAME` is absent.
+    pub fn parse(text: &str) -> Option<Self> {
+        let start = text.find("[:TOKENECTOMY:M2M_CONTROL_PLANE:")?;
+        let end_tag = "[:END_CONTROL_PLANE]";
+        let end = text[start..].find(end_tag)?;
+        let block = &text[start..start + end + end_tag.len()];
+
+        let mut envelope = ControlPlaneEnvelope::default();
+
+        for line in block.lines() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("[:TOKENECTOMY:M2M_CONTROL_PLANE:v") && trimmed.ends_with(']') {
+                let v = &trimmed[32..trimmed.len() - 1];
+                envelope.version = v.to_string();
+            } else if trimmed == "[ADVISORY_ONLY=true]" {
+                envelope.advisory_only = true;
+            } else if let Some(stripped) = trimmed.strip_prefix("[STATE=").and_then(|s| s.strip_suffix(']')) {
+                envelope.state = stripped.to_string();
+            } else if let Some(stripped) = trimmed.strip_prefix("[STRATEGY_APPLIED=").and_then(|s| s.strip_suffix(']')) {
+                envelope.strategy_applied = stripped.to_string();
+            } else if let Some(stripped) = trimmed.strip_prefix("[PRIMARY_CRASH_COORDINATES=").and_then(|s| s.strip_suffix(']')) {
+                envelope.primary_crash_coordinates = stripped.to_string();
+            } else if let Some(stripped) = trimmed.strip_prefix("[SUGGESTED_NEXT_FRAME=").and_then(|s| s.strip_suffix(']')) {
+                envelope.suggested_next_frame = stripped.to_string();
+            } else if let Some(stripped) = trimmed.strip_prefix("[COGNITIVE_DIRECTIVE=").and_then(|s| s.strip_suffix(']')) {
+                // Deprecated fallback: maintain backward-compat parsing for one minor version (marked for removal in v1.4.0)
+                if envelope.suggested_next_frame.is_empty() {
+                    let normalized = stripped.strip_prefix("INSPECT_CALLER_AT_").unwrap_or(stripped);
+                    envelope.suggested_next_frame = normalized.to_string();
+                }
+            } else if let Some(stripped) = trimmed.strip_prefix("[SECRETS_NEUTRALIZED=").and_then(|s| s.strip_suffix(']')) {
+                envelope.secrets_neutralized = stripped.parse().unwrap_or(0);
+            } else if let Some(stripped) = trimmed.strip_prefix("[ESTIMATED_TOKENS_SAVED=").and_then(|s| s.strip_suffix(']')) {
+                envelope.estimated_tokens_saved = stripped.parse().unwrap_or(0);
+            }
+        }
+
+        Some(envelope)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1160,16 +1226,17 @@ mod tests {
         assert!(clean_lossless.contains("node_modules/express"));
         assert!(clean_lossless.contains("/workspace/src/server.ts:42:15"));
 
-        // 3. Test Cognitive Control Plane Header Format
+        // 3. Test Advisory Control Plane Header Format
         let control_plane = format!(
             "[:TOKENECTOMY:M2M_CONTROL_PLANE:v{}]\n\
+            [ADVISORY_ONLY=true]\n\
             [STATE=FRAMEWORK_NOISE_PURGED]\n\
             [STRATEGY_APPLIED=AGGRESSIVE]\n\
             [ORIGINAL_BYTES={} | CLEAN_BYTES={} | REDUCTION={}%]\n\
             [ESTIMATED_TOKENS_SAVED={}]\n\
             [SECRETS_NEUTRALIZED={}]\n\
             [PRIMARY_CRASH_COORDINATES=src/server.ts:42]\n\
-            [COGNITIVE_DIRECTIVE=INSPECT_CALLER_AT_src/server.ts:42]\n\
+            [SUGGESTED_NEXT_FRAME=src/server.ts:42]\n\
             [:END_CONTROL_PLANE]",
             env!("CARGO_PKG_VERSION"),
             raw_trace.len(),
@@ -1179,10 +1246,27 @@ mod tests {
             secrets_count
         );
         assert!(control_plane.starts_with("[:TOKENECTOMY:M2M_CONTROL_PLANE:"));
+        assert!(control_plane.contains("[ADVISORY_ONLY=true]"));
         assert!(control_plane.contains("[STATE=FRAMEWORK_NOISE_PURGED]"));
         assert!(control_plane.contains("[STRATEGY_APPLIED=AGGRESSIVE]"));
         assert!(control_plane.contains("[SECRETS_NEUTRALIZED=1]"));
-        assert!(control_plane.contains("[COGNITIVE_DIRECTIVE=INSPECT_CALLER_AT_src/server.ts:42]"));
+        assert!(control_plane.contains("[PRIMARY_CRASH_COORDINATES=src/server.ts:42]"));
+        assert!(control_plane.contains("[SUGGESTED_NEXT_FRAME=src/server.ts:42]"));
         assert!(control_plane.ends_with("[:END_CONTROL_PLANE]"));
+
+        // 4. Test ControlPlaneEnvelope parser & backward compatibility fallback
+        let parsed = ControlPlaneEnvelope::parse(&control_plane).expect("Should parse valid envelope");
+        assert!(parsed.advisory_only);
+        assert_eq!(parsed.suggested_next_frame, "src/server.ts:42");
+        assert_eq!(parsed.primary_crash_coordinates, "src/server.ts:42");
+        assert_eq!(parsed.secrets_neutralized, 1);
+
+        // Test legacy backward-compatibility parser fallback for COGNITIVE_DIRECTIVE
+        let legacy_envelope = "[:TOKENECTOMY:M2M_CONTROL_PLANE:v1.2.3]\n\
+            [STATE=FRAMEWORK_NOISE_PURGED]\n\
+            [COGNITIVE_DIRECTIVE=INSPECT_CALLER_AT_src/legacy.ts:10]\n\
+            [:END_CONTROL_PLANE]";
+        let parsed_legacy = ControlPlaneEnvelope::parse(legacy_envelope).expect("Should parse legacy envelope");
+        assert_eq!(parsed_legacy.suggested_next_frame, "src/legacy.ts:10");
     }
 }
