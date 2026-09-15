@@ -135,6 +135,7 @@ npm test 2>&1 | razor --scrub > sanitized.log
 - ✅ **v1.1.7:** Canonical Anthropic MCP Registry validation (`io.github.Tokenectomy-Labs/razor`) & `mcpservers.org` directory listing.
 - ✅ **v1.2.0 - v1.2.3:** Java/Kotlin (Spring Boot 3), C/C++ backtrace, C# (.NET) & Ruby on Rails, custom rules (`~/.tokenectomy.toml`), interactive budgeting strategies.
 - ✅ **v1.3.0:** Declarative Advisory M2M Control Plane (`[:TOKENECTOMY:M2M_CONTROL_PLANE:v1.3.0]`), Anti-Prompt-Injection Architecture, Downstream Liability Disclaimer.
+- 📋 **v1.3.1 (Planned):** Inline Dropped Frame Identities (`[DROPPED_FRAMES: ...]`) to prevent silent truncation & content-addressable raw log verification hash.
 - 📋 **v1.4.0 (Planned):** Native IDE companion extensions (VS Code, JetBrains) & Server-Sent Events (SSE) remote MCP transport.
 
 ---

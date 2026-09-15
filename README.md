@@ -433,8 +433,10 @@ docker run -i ghcr.io/tokenectomy-labs/razor:latest --mcp
 | Interactive Multi-Strategy Budgeting (`aggressive`, `conservative`, `lossless_compact`) | ✅ Complete | v1.2.3 |
 | GitHub Actions OIDC Official Registry Publishing Gate | ✅ Complete | v1.2.3 |
 | `awesome-mcp-servers` Community Catalog Listing | 🔄 In Progress | v1.2.4 |
-| Native VS Code & JetBrains companion extensions | 📋 Planned | v1.3.0 |
-| Server-Sent Events (SSE) remote MCP transport | 📋 Planned | v1.3.0 |
+| Inline Dropped Frame Identities (`[DROPPED_FRAMES: ...]`) & Anti-Silent Truncation Audit | 📋 Planned | v1.3.1 |
+| Content-Addressable Raw Log Cache & Verification Hash (`--diff-verify`) | 📋 Planned | v1.3.1 |
+| Native VS Code & JetBrains companion extensions | 📋 Planned | v1.4.0 |
+| Server-Sent Events (SSE) remote MCP transport | 📋 Planned | v1.4.0 |
 
 ---
 

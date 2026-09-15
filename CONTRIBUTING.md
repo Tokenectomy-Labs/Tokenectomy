@@ -185,7 +185,10 @@ cargo audit
   - ✅ Declarative Advisory M2M Control Plane (`[:TOKENECTOMY:M2M_CONTROL_PLANE:v1.3.0]`)
   - ✅ Anti-Prompt-Injection Architecture (`[ADVISORY_ONLY=true]`, `SUGGESTED_NEXT_FRAME`)
   - ✅ Downstream Forks & Clones Limitation of Liability Policy (`DISCLAIMER.md`)
-- **Phase 5: Future Ecosystem Extensibility (Planned — v1.4.0+)**
+- **Phase 5: Anti-Silent Truncation & Verification Audit (Planned — v1.3.1)**
+  - 📋 Inline Dropped Frame Identities (`[DROPPED_FRAMES: ...]`) for immediate zero-diff sanity check
+  - 📋 Content-Addressable Raw Log Cache & retrieval verification hash (`--diff-verify`)
+- **Phase 6: Future Ecosystem Extensibility (Planned — v1.4.0+)**
   - 📋 Native IDE companion extensions (VS Code, JetBrains)
   - 📋 Server-Sent Events (SSE) remote MCP transport
 
