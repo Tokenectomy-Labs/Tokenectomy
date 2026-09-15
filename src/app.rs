@@ -30,6 +30,21 @@ pub async fn run_cli() -> anyhow::Result<()> {
         ).await;
     }
 
+    if let Some(ref hash) = args.diff_verify {
+        if let Some(raw_dump) = cache::get_raw_dump(hash) {
+            let (pruned, summary) = extractor::prune_framework_noise_with_stats(&raw_dump, &[]);
+            let safe = redact::redact_secrets(&pruned);
+            println!("=== RAW DUMP AUDIT [{}] ===", hash);
+            println!("Dropped Frames: {}", summary.to_inline_summary());
+            println!("Original Bytes: {} | Clean Bytes: {}", raw_dump.len(), safe.len());
+            println!("\n--- SANITIZED LOG ---\n{}", safe);
+            return Ok(());
+        } else {
+            eprintln!("Error: Raw dump with hash '{}' not found in cache or expired (TTL: 24h).", hash);
+            std::process::exit(1);
+        }
+    }
+
     if args.scrub {
         let mut raw = String::new();
         if let Some(file_path) = &args.file {
@@ -38,7 +53,8 @@ pub async fn run_cli() -> anyhow::Result<()> {
             io::stdin().take(50 * 1024 * 1024).read_to_string(&mut raw)?;
         }
 
-        let pruned = extractor::prune_framework_noise(&raw);
+        let _raw_hash = cache::save_raw_dump(&raw);
+        let (pruned, _summary) = extractor::prune_framework_noise_with_stats(&raw, &[]);
         let safe = redact::redact_secrets(&pruned);
         print!("{}", safe);
         if !safe.ends_with('\n') {

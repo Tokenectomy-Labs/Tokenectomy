@@ -180,14 +180,14 @@ cargo audit
   - ✅ Go goroutine dump compression & panic trace heuristics
   - ✅ User-defined custom redaction rules via `~/.tokenectomy.toml`
   - ✅ Multi-strategy budgeting (`aggressive`, `conservative`, `lossless_compact`)
-  - 🔄 `awesome-mcp-servers` community catalog PR
+  - ✅ `awesome-mcp-servers` community catalog PR
 - **Phase 4: Declarative Advisory Control Plane & Ecosystem Security (Completed — v1.3.0)**
   - ✅ Declarative Advisory M2M Control Plane (`[:TOKENECTOMY:M2M_CONTROL_PLANE:v1.3.0]`)
   - ✅ Anti-Prompt-Injection Architecture (`[ADVISORY_ONLY=true]`, `SUGGESTED_NEXT_FRAME`)
   - ✅ Downstream Forks & Clones Limitation of Liability Policy (`DISCLAIMER.md`)
-- **Phase 5: Anti-Silent Truncation & Verification Audit (Planned — v1.3.1)**
-  - 📋 Inline Dropped Frame Identities (`[DROPPED_FRAMES: ...]`) for immediate zero-diff sanity check
-  - 📋 Content-Addressable Raw Log Cache & retrieval verification hash (`--diff-verify`)
+- **Phase 5: Anti-Silent Truncation & Verification Audit (Completed — v1.3.1)**
+  - ✅ Inline Dropped Frame Identities (`[DROPPED_FRAMES: ...]`) for immediate zero-diff sanity check
+  - ✅ Content-Addressable Raw Log Cache & retrieval verification hash (`--diff-verify`)
 - **Phase 6: Future Ecosystem Extensibility (Planned — v1.4.0+)**
   - 📋 Native IDE companion extensions (VS Code, JetBrains)
   - 📋 Server-Sent Events (SSE) remote MCP transport

@@ -1015,3 +1015,32 @@ fn test_verify_patch_c_cpp_bash_syntax() {
 
     let _ = std::fs::remove_dir_all(&temp_dir);
 }
+
+#[test]
+fn test_anti_silent_truncation_and_raw_retrieval_hash() {
+    let raw_trace = "TypeError: Cannot read properties of undefined (reading 'token')\n\
+        at loadComponents (/app/node_modules/next/dist/server/load-components.js:14:2)\n\
+        at renderToHTML (/app/node_modules/next/dist/server/render.js:50:5)\n\
+        at nextServer (/app/node_modules/next/dist/server/next-server.js:80:12)\n\
+        at processTicksAndRejections (node:internal/process/task_queues:95:5)\n\
+        at runMicrotasks (node:internal/process/task_queues:120:3)\n\
+        at checkoutHandler (/app/pages/api/checkout.ts:42:15)";
+
+    // 1. Content-addressable raw log storage & SHA-256 retrieval hash
+    let retrieval_uri = tokenectomy::cache::save_raw_dump(raw_trace);
+    assert!(retrieval_uri.starts_with("sha256:"));
+    let cached_dump = tokenectomy::cache::get_raw_dump(&retrieval_uri);
+    assert_eq!(cached_dump.as_deref(), Some(raw_trace));
+
+    // 2. Anti-silent truncation: verify dropped frame identities summary
+    let (clean, summary) = tokenectomy::extractor::prune_framework_noise_with_stats(raw_trace, &[]);
+    assert_eq!(summary.total_dropped, 5);
+    assert_eq!(summary.categories.get("node_modules/next"), Some(&3));
+    assert_eq!(summary.categories.get("node:internal"), Some(&2));
+    assert_eq!(summary.to_inline_summary(), "5 frames (node:internal: 2, node_modules/next: 3)");
+
+    // 3. Verify user frame is strictly preserved
+    assert!(clean.contains("checkoutHandler (/app/pages/api/checkout.ts:42:15)"));
+    assert!(!clean.contains("node_modules/next"));
+    assert!(!clean.contains("node:internal"));
+}

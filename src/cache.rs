@@ -108,3 +108,111 @@ fn prune_cache_if_needed(dir: &std::path::Path) {
         }
     }
 }
+
+pub fn get_raw_dumps_dir() -> Option<PathBuf> {
+    if let Some(mut dir) = dirs::cache_dir() {
+        dir.push("tokenectomy");
+        dir.push("raw_dumps");
+        fs::create_dir_all(&dir).ok()?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = fs::set_permissions(&dir, fs::Permissions::from_mode(0o700));
+        }
+        Some(dir)
+    } else {
+        None
+    }
+}
+
+/// Stores the unpruned raw log payload in content-addressable storage indexed by its SHA-256 hash.
+/// Returns the addressable URI identifier in standard `sha256:<digest>` format.
+pub fn save_raw_dump(raw: &str) -> String {
+    let hash = hash_payload(raw);
+    let full_hash = format!("sha256:{}", hash);
+    if let Some(dir) = get_raw_dumps_dir() {
+        let dump_file = dir.join(format!("{}.log", hash));
+        if !dump_file.exists() {
+            let tmp_file = dir.join(format!("{}.tmp.{}", hash, std::process::id()));
+            if fs::write(&tmp_file, raw).is_ok() {
+                let _ = fs::rename(&tmp_file, &dump_file);
+            }
+            prune_raw_dumps_if_needed(&dir);
+        }
+    }
+    full_hash
+}
+
+/// Retrieves the raw dump from content-addressable storage using its SHA-256 digest or `sha256:<digest>` URI.
+pub fn get_raw_dump(hash: &str) -> Option<String> {
+    let clean_hash = hash.trim_start_matches("sha256:").trim();
+    let dir = get_raw_dumps_dir()?;
+    let dump_file = dir.join(format!("{}.log", clean_hash));
+    if dump_file.exists() {
+        if let Ok(metadata) = fs::metadata(&dump_file) {
+            if let Ok(modified) = metadata.modified() {
+                if let Ok(elapsed) = modified.elapsed() {
+                    if elapsed.as_secs() > CACHE_TTL_SECS {
+                        let _ = fs::remove_file(&dump_file);
+                        return None;
+                    }
+                }
+            }
+        }
+        fs::read_to_string(dump_file).ok()
+    } else {
+        None
+    }
+}
+
+fn prune_raw_dumps_if_needed(dir: &std::path::Path) {
+    let entries = match fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+
+    let mut files_with_mtime = Vec::new();
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) == Some("log") {
+            if let Ok(meta) = entry.metadata() {
+                if let Ok(mtime) = meta.modified() {
+                    if let Ok(elapsed) = mtime.elapsed() {
+                        if elapsed.as_secs() > CACHE_TTL_SECS {
+                            let _ = fs::remove_file(&path);
+                            continue;
+                        }
+                    }
+                    files_with_mtime.push((path, mtime));
+                }
+            }
+        }
+    }
+
+    if files_with_mtime.len() > MAX_CACHE_ENTRIES {
+        files_with_mtime.sort_by_key(|(_, mtime)| *mtime);
+        let to_remove = files_with_mtime.len() - MAX_CACHE_ENTRIES;
+        for (path, _) in files_with_mtime.into_iter().take(to_remove) {
+            let _ = fs::remove_file(path);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_save_and_retrieve_raw_dump() {
+        let payload = "Raw crash stack trace with critical user data\nError: line 42";
+        let uri = save_raw_dump(payload);
+        assert!(uri.starts_with("sha256:"));
+
+        let retrieved = get_raw_dump(&uri);
+        assert_eq!(retrieved.as_deref(), Some(payload));
+
+        let retrieved_raw_hash = get_raw_dump(uri.trim_start_matches("sha256:"));
+        assert_eq!(retrieved_raw_hash.as_deref(), Some(payload));
+    }
+}

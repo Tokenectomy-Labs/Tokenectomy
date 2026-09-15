@@ -5,6 +5,20 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.1] — 2026-09-15
+
+### Added
+- **Anti-Silent Truncation Audit & Inline Dropped Frame Identities**:
+  - Implemented `DroppedFramesSummary` and `classify_dropped_frame` to classify dropped stack frames by package origin (e.g. `node_modules/next`, `site-packages/starlette`, `node:internal`, `org.springframework`, `go:idle_goroutines`, `cargo:tokio`).
+  - Added `[DROPPED_FRAMES=...]` inline summary to the M2M Control Plane envelope, allowing human developers and autonomous agents to immediately verify pruned frames in <25 tokens without diff retrieval bloat.
+  - Added `dropped_frames` inline summary and `dropped_frame_identities` package breakdown to `audit_context_health` JSON telemetry.
+- **Content-Addressable Raw Log Storage & Diff Verification**:
+  - Implemented local content-addressable raw dump store in `~/.cache/tokenectomy/raw_dumps/` indexed by SHA-256 hash (`sha256:<digest>`), with 0700 owner permissions and bounded 24h TTL.
+  - Added `[RAW_RETRIEVAL_HASH=sha256:...]` to the M2M Control Plane envelope and `audit_context_health` response.
+  - Added `--diff-verify <HASH>` CLI flag to retrieve, audit, and diff cached raw logs against pruned output.
+- **Glama.ai Tool Definition Quality Score (TDQS) Disambiguation**:
+  - Clarified mutual exclusion and distinct purposes between `get_error_context` (runtime crash diagnosis & local workspace code extraction) and `audit_context_health` (telemetry & context budget evaluation without code extraction).
+
 ## [1.3.0] — 2026-09-15
 
 ### Changed

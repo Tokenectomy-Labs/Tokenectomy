@@ -240,15 +240,228 @@ pub fn is_framework_noise_with_custom(line_or_path: &str, custom_noise: &[String
     false
 }
 
-/// Surgically prunes framework noise, internal runtime stack lines, and idle Go goroutines from a raw log.
-pub fn prune_framework_noise(raw: &str) -> String {
-    prune_framework_noise_with_custom(raw, &[])
+use std::collections::BTreeMap;
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DroppedFramesSummary {
+    pub total_dropped: usize,
+    pub categories: BTreeMap<String, usize>,
 }
 
-/// Surgically prunes framework noise including user-defined custom noise patterns.
-pub fn prune_framework_noise_with_custom(raw: &str, custom_noise: &[String]) -> String {
+impl DroppedFramesSummary {
+    pub fn empty() -> Self {
+        Self {
+            total_dropped: 0,
+            categories: BTreeMap::new(),
+        }
+    }
+
+    /// Formats the dropped frames summary into a compact inline string, e.g.:
+    /// "17 frames (node_modules/next: 14, node:internal: 3)"
+    /// or "0 frames (lossless)"
+    pub fn to_inline_summary(&self) -> String {
+        if self.total_dropped == 0 {
+            return "0 frames (lossless)".to_string();
+        }
+        let mut parts = Vec::new();
+        for (cat, count) in &self.categories {
+            parts.push(format!("{}: {}", cat, count));
+        }
+        format!("{} frames ({})", self.total_dropped, parts.join(", "))
+    }
+}
+
+/// Classifies a framework/runtime noise line into its package or runtime origin identity.
+/// Strictly respects `is_framework_noise_with_custom`: returns None if not noise.
+pub fn classify_dropped_frame(line_or_path: &str, custom_noise: &[String]) -> Option<String> {
+    if !is_framework_noise_with_custom(line_or_path, custom_noise) {
+        return None;
+    }
+
+    let lower = line_or_path.to_lowercase();
+    for pat in custom_noise {
+        if !pat.is_empty() && lower.contains(&pat.to_lowercase()) {
+            return Some(format!("custom:{}", pat));
+        }
+    }
+
+    let trimmed = line_or_path.trim_start();
+    let path_norm = lower.replace('\\', "/");
+
+    // 1. Node modules package extraction (e.g. node_modules/next, node_modules/@prisma/client)
+    if let Some(pos) = path_norm.find("node_modules/") {
+        let after = &path_norm[pos + "node_modules/".len()..];
+        let mut segments = after.split('/');
+        if let Some(first) = segments.next() {
+            if first.starts_with('@') {
+                if let Some(second) = segments.next() {
+                    return Some(format!("node_modules/{}/{}", first, second));
+                }
+            }
+            return Some(format!("node_modules/{}", first));
+        }
+    }
+
+    // 2. Python site-packages / dist-packages
+    for prefix in &["site-packages/", "dist-packages/"] {
+        if let Some(pos) = path_norm.find(prefix) {
+            let after = &path_norm[pos + prefix.len()..];
+            if let Some(first) = after.split('/').next() {
+                let clean_pkg = first.trim_end_matches(".py");
+                return Some(format!("site-packages/{}", clean_pkg));
+            }
+        }
+    }
+
+    // 3. Runtime markers
+    if path_norm.contains("node:internal/") || path_norm.contains("internal/modules") {
+        return Some("node:internal".to_string());
+    }
+    if path_norm.contains("<frozen ") {
+        return Some("python:frozen".to_string());
+    }
+    if path_norm.contains("asyncio/") {
+        return Some("python:asyncio".to_string());
+    }
+    if path_norm.contains("starlette/") {
+        return Some("site-packages/starlette".to_string());
+    }
+    if path_norm.contains("uvicorn/") {
+        return Some("site-packages/uvicorn".to_string());
+    }
+    if path_norm.contains("gunicorn/") {
+        return Some("site-packages/gunicorn".to_string());
+    }
+    if path_norm.contains("lib/python") {
+        return Some("python:stdlib".to_string());
+    }
+    if has_path_component(&path_norm, "venv") || has_path_component(&path_norm, ".venv") {
+        return Some("python:venv".to_string());
+    }
+
+    // 4. Java / Kotlin
+    if trimmed.starts_with("at org.springframework.") {
+        return Some("org.springframework".to_string());
+    }
+    if trimmed.starts_with("at org.apache.") {
+        return Some("org.apache".to_string());
+    }
+    if trimmed.starts_with("at org.hibernate.") {
+        return Some("org.hibernate".to_string());
+    }
+    if trimmed.starts_with("at jakarta.") || trimmed.starts_with("at javax.") {
+        return Some("java:servlet".to_string());
+    }
+    if trimmed.starts_with("at io.netty.") {
+        return Some("io.netty".to_string());
+    }
+    if trimmed.starts_with("at java.base/") {
+        return Some("java.base".to_string());
+    }
+    if trimmed.starts_with("at java.lang.reflect.")
+        || trimmed.starts_with("at jdk.internal.")
+        || trimmed.starts_with("at sun.reflect.")
+    {
+        return Some("java:internal".to_string());
+    }
+    if trimmed.starts_with("at com.zaxxer.hikari.") {
+        return Some("hikari_cp".to_string());
+    }
+    if trimmed.starts_with("... ") && trimmed.ends_with("common frames omitted") {
+        return Some("java:common_omitted".to_string());
+    }
+
+    // 5. .NET
+    if path_norm.contains("system.private.corelib") || trimmed.starts_with("at System.") {
+        return Some("dotnet:corelib".to_string());
+    }
+    if path_norm.contains("microsoft.aspnetcore.")
+        || trimmed.starts_with("at Microsoft.AspNetCore.")
+    {
+        return Some("dotnet:aspnetcore".to_string());
+    }
+
+    // 6. C/C++
+    if path_norm.contains("__sanitizer")
+        || path_norm.contains("libasan")
+        || path_norm.contains("__asan")
+    {
+        return Some("cpp:asan".to_string());
+    }
+    if path_norm.contains("libc") || path_norm.contains("glibc") {
+        return Some("cpp:libc".to_string());
+    }
+    if path_norm.contains("libstdc++") {
+        return Some("cpp:libstdc++".to_string());
+    }
+
+    // 7. Rust
+    if let Some(pos) = path_norm.find(".cargo/registry/src/") {
+        let after = &path_norm[pos + ".cargo/registry/src/".len()..];
+        let parts: Vec<&str> = after.split('/').collect();
+        if parts.len() >= 2 {
+            let crate_dir = parts[1];
+            let crate_name = crate_dir.split('-').next().unwrap_or(crate_dir);
+            return Some(format!("cargo:{}", crate_name));
+        }
+        return Some("cargo:registry".to_string());
+    }
+    if path_norm.contains(".rustup") || path_norm.contains("rustc") {
+        return Some("rust:std".to_string());
+    }
+
+    // 8. Go
+    if path_norm.contains("go/src") {
+        return Some("go:stdlib".to_string());
+    }
+    if let Some(pos) = path_norm.find("pkg/mod/") {
+        let after = &path_norm[pos + "pkg/mod/".len()..];
+        let mut segments = after.split('/');
+        if let (Some(s1), Some(s2)) = (segments.next(), segments.next()) {
+            return Some(format!("go:{}/{}", s1, s2));
+        }
+        return Some("go:pkg_mod".to_string());
+    }
+    if trimmed.starts_with("runtime.") {
+        return Some("go:runtime".to_string());
+    }
+
+    // 9. Ruby
+    if let Some(pos) = path_norm.find("gems/") {
+        let after = &path_norm[pos + "gems/".len()..];
+        if let Some(first) = after.split('/').next() {
+            let gem_name = first.split('-').next().unwrap_or(first);
+            return Some(format!("ruby:{}", gem_name));
+        }
+    }
+
+    // 10. Fallback matching component_ignores
+    let component_ignores = [
+        "node_modules", "site-packages", "dist-packages", "venv", ".venv",
+        "vendor", "gems", "__pycache__", "vcpkg_installed", ".gradle",
+        ".cargo/registry", ".rustup", "pkg/mod", "go/src", ".m2/repository",
+        "usr/include", "usr/lib", "target/debug/build", "lib/python",
+        "internal/modules", "rustc"
+    ];
+    for ignore in component_ignores.iter() {
+        if has_path_component(&path_norm, ignore) {
+            return Some((*ignore).to_string());
+        }
+    }
+
+    Some("framework_noise".to_string())
+}
+
+/// Surgically prunes framework noise with detailed statistics tracking dropped frame counts and identities.
+pub fn prune_framework_noise_with_stats(
+    raw: &str,
+    custom_noise: &[String],
+) -> (String, DroppedFramesSummary) {
     let mut cleaned_lines = Vec::new();
     let mut in_idle_goroutine = false;
+    let mut total_dropped = 0;
+    let mut categories: BTreeMap<String, usize> = BTreeMap::new();
 
     for line in raw.lines() {
         let trimmed = line.trim();
@@ -263,6 +476,8 @@ pub fn prune_framework_noise_with_custom(raw: &str, custom_noise: &[String]) -> 
                 || trimmed.contains("[select (no cases)]")
             {
                 in_idle_goroutine = true;
+                total_dropped += 1;
+                *categories.entry("go:idle_goroutines".to_string()).or_insert(0) += 1;
                 continue;
             } else {
                 in_idle_goroutine = false;
@@ -273,19 +488,40 @@ pub fn prune_framework_noise_with_custom(raw: &str, custom_noise: &[String]) -> 
         if in_idle_goroutine {
             if line.is_empty() {
                 in_idle_goroutine = false;
+            } else {
+                total_dropped += 1;
+                *categories.entry("go:idle_goroutines".to_string()).or_insert(0) += 1;
+                continue;
             }
-            continue;
         }
 
-        // Check if the individual line is framework noise
-        if is_framework_noise_with_custom(line, custom_noise) {
+        // Check and classify if the individual line is framework noise
+        if let Some(category) = classify_dropped_frame(line, custom_noise) {
+            total_dropped += 1;
+            *categories.entry(category).or_insert(0) += 1;
             continue;
         }
 
         cleaned_lines.push(line);
     }
 
-    cleaned_lines.join("\n")
+    (
+        cleaned_lines.join("\n"),
+        DroppedFramesSummary {
+            total_dropped,
+            categories,
+        },
+    )
+}
+
+/// Surgically prunes framework noise, internal runtime stack lines, and idle Go goroutines from a raw log.
+pub fn prune_framework_noise(raw: &str) -> String {
+    prune_framework_noise_with_stats(raw, &[]).0
+}
+
+/// Surgically prunes framework noise including user-defined custom noise patterns.
+pub fn prune_framework_noise_with_custom(raw: &str, custom_noise: &[String]) -> String {
+    prune_framework_noise_with_stats(raw, custom_noise).0
 }
 
 pub fn extract_context(log: &str, context_lines: usize, strict_cwd: bool) -> (String, Vec<String>) {
@@ -367,4 +603,49 @@ pub fn extract_context_with_boundary(
     }
 
     (context_output, extracted_files)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_dropped_frames_classification_and_summary() {
+        assert_eq!(
+            classify_dropped_frame("    at loadComponents (/app/node_modules/next/dist/server/load-components.js:14:2)", &[]),
+            Some("node_modules/next".to_string())
+        );
+        assert_eq!(
+            classify_dropped_frame("    at client (/app/node_modules/@prisma/client/runtime/index.js:5:10)", &[]),
+            Some("node_modules/@prisma/client".to_string())
+        );
+        assert_eq!(
+            classify_dropped_frame("  File \"/app/.venv/lib/python3.11/site-packages/starlette/routing.py\", line 123, in app", &[]),
+            Some("site-packages/starlette".to_string())
+        );
+        assert_eq!(
+            classify_dropped_frame("    at processTicksAndRejections (node:internal/process/task_queues:95:5)", &[]),
+            Some("node:internal".to_string())
+        );
+        assert_eq!(
+            classify_dropped_frame("    at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1062)", &[]),
+            Some("org.springframework".to_string())
+        );
+        assert_eq!(
+            classify_dropped_frame("    at checkoutHandler (/app/pages/api/checkout.ts:42:15)", &[]),
+            None
+        );
+
+        let trace = "Error: Boom\n    at loadComponents (/app/node_modules/next/dist/server/load-components.js:14:2)\n    at render (/app/node_modules/next/dist/server/render.js:50:5)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at checkoutHandler (/app/pages/api/checkout.ts:42:15)";
+        let (clean, summary) = prune_framework_noise_with_stats(trace, &[]);
+        assert_eq!(summary.total_dropped, 3);
+        assert_eq!(summary.categories.get("node_modules/next"), Some(&2));
+        assert_eq!(summary.categories.get("node:internal"), Some(&1));
+        assert_eq!(summary.to_inline_summary(), "3 frames (node:internal: 1, node_modules/next: 2)");
+        assert!(clean.contains("checkoutHandler"));
+        assert!(!clean.contains("node_modules/next"));
+
+        let empty_summary = DroppedFramesSummary::empty();
+        assert_eq!(empty_summary.to_inline_summary(), "0 frames (lossless)");
+    }
 }

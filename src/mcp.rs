@@ -528,7 +528,7 @@ pub async fn run_server() -> anyhow::Result<()> {
                     "tools": [
                         {
                             "name": "get_error_context",
-                            "description": "Extracts focused source code snippets and git diffs from a raw error log or stack trace, stripping framework noise (node_modules, site-packages) and redacting credentials.\n\n• Side Effects: None. Strictly read-only; does not modify workspace files, git state, or environment variables.\n• Auth & Permissions: None required. Reads local filesystem within the current workspace boundary.\n• Rate Limits: None. Runs entirely locally on native machine code.\n• Return Shape: Returns a JSON object with 'sanitized_trace' (string without secrets/noise), 'source_frames' (array of objects with file, line, code_snippet), and 'git_diff' (string or null).\n• Failure Modes: If source files referenced in the trace do not exist locally, omits code snippets for those frames while still returning the sanitized trace. Returns an error JSON on unreadable input.\n• When to use: Call immediately when receiving a runtime exception, test failure, or compiler error to isolate the root cause before planning code fixes.\n• When NOT to use: Do NOT use to search web solutions (use search_stack_overflow), do NOT use to modify files (use apply_code_patch), and do NOT use to statically lint clean code without an error log (use analyze_code).\n• Prerequisites: Workspace directory must be accessible locally; git repository recommended for diff extraction.",
+                            "description": "PRIMARY tool for diagnosing runtime crashes: extracts focused source code snippets and git diffs from a raw error log or stack trace, stripping framework noise (node_modules, site-packages), redacting credentials, tracking inline dropped frame identities, and generating a content-addressable SHA-256 retrieval hash.\n\n• Side Effects: None. Strictly read-only; does not modify workspace files, git state, or environment variables.\n• Auth & Permissions: None required. Reads local filesystem within the current workspace boundary.\n• Rate Limits: None. Runs entirely locally on native machine code.\n• Return Shape: Returns a JSON object with 'content' containing the M2M Control Plane envelope (with dropped frames audit, raw retrieval hash, byte reduction, and primary crash coordinates), followed by the sanitized log, relevant local source snippets, and recent git diff.\n• Failure Modes: If source files referenced in the trace do not exist locally, omits code snippets for those frames while still returning the sanitized trace. Returns an error JSON on unreadable input.\n• When to use: Call immediately when diagnosing a runtime exception, test failure, or compiler crash to extract actionable source code context and isolate root causes before planning code fixes.\n• When NOT to use: Do NOT use for telemetry metrics or token audit only without source code extraction (use audit_context_health instead), do NOT use to search web solutions (use search_stack_overflow), do NOT use to modify files (use apply_code_patch), and do NOT use to statically lint clean code without an error log (use analyze_code).\n• Prerequisites: Workspace directory must be accessible locally; git repository recommended for diff extraction.",
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {
@@ -609,7 +609,7 @@ pub async fn run_server() -> anyhow::Result<()> {
                         },
                         {
                             "name": "audit_context_health",
-                            "description": "Audits a raw error log, code snippet, or prompt payload for token bloat, framework noise, and credential leaks. Returns actionable M2M telemetry and savings recommendations without mutating workspace state.\n\n• Side Effects: None. Read-only in-memory evaluation.\n• Auth & Permissions: None.\n• Rate Limits: None.\n• Return Shape: Returns JSON with 'raw_characters', 'estimated_raw_tokens', 'clean_characters', 'estimated_clean_tokens', 'tokens_saved', 'noise_reduction_pct', 'secrets_detected', 'health_grade' ('OPTIMAL', 'MODERATE_BLOAT', 'CRITICAL_BLOAT'), and 'recommendation'.\n• When to use: Call proactively when dealing with large terminal dumps or before sending long logs to the LLM to verify context efficiency.\n• When NOT to use: Do NOT use to apply file edits (use apply_code_patch) or query stack overflow.",
+                            "description": "TELEMETRY ONLY tool for auditing context efficiency: checks a raw error log, code snippet, or prompt payload for token bloat, framework noise, and credential leaks. Returns actionable M2M telemetry, inline dropped frame identities, and content-addressable SHA-256 retrieval hash without extracting local source code or mutating workspace state.\n\n• Side Effects: None. Read-only in-memory evaluation.\n• Auth & Permissions: None.\n• Rate Limits: None.\n• Return Shape: Returns JSON with 'raw_characters', 'estimated_raw_tokens', 'clean_characters', 'estimated_clean_tokens', 'tokens_saved', 'noise_reduction_pct', 'dropped_frames' (summary string), 'dropped_frame_identities' (breakdown by package), 'raw_retrieval_hash', 'secrets_detected', 'health_grade' ('OPTIMAL', 'MODERATE_BLOAT', 'CRITICAL_BLOAT'), and 'recommendation'.\n• When to use: Call proactively when evaluating context window budgets, auditing token bloat, or verifying credentials in terminal dumps without extracting source code files.\n• When NOT to use: Do NOT use when diagnosing runtime bugs or when you need local workspace source code context and git diffs for a fix (use get_error_context instead), do NOT use to apply file edits (use apply_code_patch), and do NOT use to query stack overflow.",
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {
@@ -642,24 +642,25 @@ pub async fn run_server() -> anyhow::Result<()> {
                                     .and_then(|s| s.as_str())
                                     .unwrap_or("aggressive");
 
+                                // P0: Cache raw unpruned log in content-addressable storage for verification audits
+                                let raw_hash = crate::cache::save_raw_dump(log);
+
                                 // P1: Redact secrets with exact count tracking
                                 let (safe_log, secrets_count) = redact::redact_secrets_with_stats(log);
 
                                 // P2: Apply chosen pruning strategy
-                                let clean_log = match strategy {
+                                let (clean_log, dropped_summary) = match strategy {
                                     "lossless_compact" => {
-                                        safe_log
+                                        let compact = safe_log
                                             .lines()
                                             .map(|l| l.trim_end())
                                             .filter(|l| !l.is_empty())
                                             .collect::<Vec<&str>>()
-                                            .join("\n")
-                                    }
-                                    "conservative" => {
-                                        extractor::prune_framework_noise(&safe_log)
+                                            .join("\n");
+                                        (compact, extractor::DroppedFramesSummary::empty())
                                     }
                                     _ => {
-                                        extractor::prune_framework_noise(&safe_log)
+                                        extractor::prune_framework_noise_with_stats(&safe_log, &[])
                                     }
                                 };
 
@@ -678,6 +679,11 @@ pub async fn run_server() -> anyhow::Result<()> {
                                     0
                                 };
                                 let est_saved_tokens = (raw_len.saturating_sub(clean_len)) / 4;
+
+                                let dropped_frames_display = match strategy {
+                                    "lossless_compact" => "0 frames (lossless_compact)".to_string(),
+                                    _ => dropped_summary.to_inline_summary(),
+                                };
 
                                 let primary_coordinate = if !extracted_files.is_empty() {
                                     extracted_files.join(", ")
@@ -698,6 +704,8 @@ pub async fn run_server() -> anyhow::Result<()> {
                                     [STRATEGY_APPLIED={}]\n\
                                     [ORIGINAL_BYTES={} | CLEAN_BYTES={} | REDUCTION={}%]\n\
                                     [ESTIMATED_TOKENS_SAVED={}]\n\
+                                    [DROPPED_FRAMES={}]\n\
+                                    [RAW_RETRIEVAL_HASH={}]\n\
                                     [SECRETS_NEUTRALIZED={}]\n\
                                     [PRIMARY_CRASH_COORDINATES={}]\n\
                                     [SUGGESTED_NEXT_FRAME={}]\n\
@@ -708,6 +716,8 @@ pub async fn run_server() -> anyhow::Result<()> {
                                     clean_len,
                                     reduction_pct,
                                     est_saved_tokens,
+                                    dropped_frames_display,
+                                    raw_hash,
                                     secrets_count,
                                     primary_coordinate,
                                     suggested_next_frame
@@ -1004,11 +1014,12 @@ pub async fn run_server() -> anyhow::Result<()> {
                         }
                         "audit_context_health" => {
                             if let Some(payload) = args.get("payload").and_then(|p| p.as_str()) {
+                                let raw_hash = crate::cache::save_raw_dump(payload);
                                 let raw_chars = payload.len();
                                 let raw_tokens = raw_chars / 4;
                                 let (safe, secrets_count) = redact::redact_secrets_with_stats(payload);
                                 let secrets_found = secrets_count > 0 || safe != payload;
-                                let clean = extractor::prune_framework_noise(&safe);
+                                let (clean, dropped_summary) = extractor::prune_framework_noise_with_stats(&safe, &[]);
                                 let clean_chars = clean.len();
                                 let clean_tokens = clean_chars / 4;
                                 let noise_pct = if raw_chars > 0 {
@@ -1059,6 +1070,9 @@ pub async fn run_server() -> anyhow::Result<()> {
                                     "estimated_clean_tokens": clean_tokens,
                                     "tokens_saved": raw_tokens.saturating_sub(clean_tokens),
                                     "noise_reduction_pct": noise_pct,
+                                    "dropped_frames": dropped_summary.to_inline_summary(),
+                                    "dropped_frame_identities": dropped_summary.categories,
+                                    "raw_retrieval_hash": raw_hash,
                                     "secrets_detected": secrets_found,
                                     "secrets_count": secrets_count,
                                     "health_grade": health_grade,
@@ -1138,6 +1152,8 @@ pub struct ControlPlaneEnvelope {
     pub clean_bytes: usize,
     pub reduction_pct: u32,
     pub estimated_tokens_saved: usize,
+    pub dropped_frames: String,
+    pub raw_retrieval_hash: String,
     pub secrets_neutralized: usize,
     pub primary_crash_coordinates: String,
     pub suggested_next_frame: String,
@@ -1167,6 +1183,10 @@ impl ControlPlaneEnvelope {
                 envelope.state = stripped.to_string();
             } else if let Some(stripped) = trimmed.strip_prefix("[STRATEGY_APPLIED=").and_then(|s| s.strip_suffix(']')) {
                 envelope.strategy_applied = stripped.to_string();
+            } else if let Some(stripped) = trimmed.strip_prefix("[DROPPED_FRAMES=").and_then(|s| s.strip_suffix(']')) {
+                envelope.dropped_frames = stripped.to_string();
+            } else if let Some(stripped) = trimmed.strip_prefix("[RAW_RETRIEVAL_HASH=").and_then(|s| s.strip_suffix(']')) {
+                envelope.raw_retrieval_hash = stripped.to_string();
             } else if let Some(stripped) = trimmed.strip_prefix("[PRIMARY_CRASH_COORDINATES=").and_then(|s| s.strip_suffix(']')) {
                 envelope.primary_crash_coordinates = stripped.to_string();
             } else if let Some(stripped) = trimmed.strip_prefix("[SUGGESTED_NEXT_FRAME=").and_then(|s| s.strip_suffix(']')) {
@@ -1196,9 +1216,12 @@ mod tests {
     fn test_audit_context_health_logic() {
         let dirty = "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/site-packages/django/core/handlers/base.py\", line 100, in get_response\n  File \"./views.py\", line 25\nZeroDivisionError: division by zero";
         let safe = redact::redact_secrets(dirty);
-        let clean = extractor::prune_framework_noise(&safe);
+        let (clean, summary) = extractor::prune_framework_noise_with_stats(&safe, &[]);
         assert!(!clean.contains("site-packages/django"));
         assert!(clean.contains("./views.py"));
+        assert_eq!(summary.total_dropped, 1);
+        assert_eq!(summary.categories.get("site-packages/django"), Some(&1));
+        assert_eq!(summary.to_inline_summary(), "1 frames (site-packages/django: 1)");
     }
 
     #[test]
@@ -1210,10 +1233,11 @@ mod tests {
         assert!(safe.contains("[GITHUB_TOKEN_REDACTED]"));
 
         // 1. Test Aggressive strategy
-        let clean_aggressive = extractor::prune_framework_noise(&safe);
+        let (clean_aggressive, dropped_summary) = extractor::prune_framework_noise_with_stats(&safe, &[]);
         assert!(!clean_aggressive.contains("node:internal"));
         assert!(!clean_aggressive.contains("node_modules/express"));
         assert!(clean_aggressive.contains("/workspace/src/server.ts:42:15"));
+        assert_eq!(dropped_summary.total_dropped, 3);
 
         // 2. Test Lossless Compact strategy
         let clean_lossless = safe
@@ -1234,6 +1258,8 @@ mod tests {
             [STRATEGY_APPLIED=AGGRESSIVE]\n\
             [ORIGINAL_BYTES={} | CLEAN_BYTES={} | REDUCTION={}%]\n\
             [ESTIMATED_TOKENS_SAVED={}]\n\
+            [DROPPED_FRAMES={}]\n\
+            [RAW_RETRIEVAL_HASH=sha256:1234567890abcdef]\n\
             [SECRETS_NEUTRALIZED={}]\n\
             [PRIMARY_CRASH_COORDINATES=src/server.ts:42]\n\
             [SUGGESTED_NEXT_FRAME=src/server.ts:42]\n\
@@ -1243,12 +1269,15 @@ mod tests {
             clean_aggressive.len(),
             50,
             25,
+            dropped_summary.to_inline_summary(),
             secrets_count
         );
         assert!(control_plane.starts_with("[:TOKENECTOMY:M2M_CONTROL_PLANE:"));
         assert!(control_plane.contains("[ADVISORY_ONLY=true]"));
         assert!(control_plane.contains("[STATE=FRAMEWORK_NOISE_PURGED]"));
         assert!(control_plane.contains("[STRATEGY_APPLIED=AGGRESSIVE]"));
+        assert!(control_plane.contains("[DROPPED_FRAMES="));
+        assert!(control_plane.contains("[RAW_RETRIEVAL_HASH=sha256:1234567890abcdef]"));
         assert!(control_plane.contains("[SECRETS_NEUTRALIZED=1]"));
         assert!(control_plane.contains("[PRIMARY_CRASH_COORDINATES=src/server.ts:42]"));
         assert!(control_plane.contains("[SUGGESTED_NEXT_FRAME=src/server.ts:42]"));
@@ -1260,6 +1289,8 @@ mod tests {
         assert_eq!(parsed.suggested_next_frame, "src/server.ts:42");
         assert_eq!(parsed.primary_crash_coordinates, "src/server.ts:42");
         assert_eq!(parsed.secrets_neutralized, 1);
+        assert_eq!(parsed.dropped_frames, dropped_summary.to_inline_summary());
+        assert_eq!(parsed.raw_retrieval_hash, "sha256:1234567890abcdef");
 
         // Test legacy backward-compatibility parser fallback for COGNITIVE_DIRECTIVE
         let legacy_envelope = "[:TOKENECTOMY:M2M_CONTROL_PLANE:v1.2.3]\n\

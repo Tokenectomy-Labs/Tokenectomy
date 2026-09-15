@@ -61,4 +61,7 @@ pub struct Cli {
 
     #[arg(long, env = "TOKENECTOMY_PROXY_TOKEN", help = "Authentication token for proxy (required when using --allow-remote)")]
     pub proxy_token: Option<String>,
+
+    #[arg(long, help = "Retrieve and verify a raw dump from cache by its SHA-256 hash or inspect dropped frames")]
+    pub diff_verify: Option<String>,
 }
