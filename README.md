@@ -5,7 +5,7 @@
 
   <h1>Tokenectomy Razor</h1>
 
-  <p><b>The autonomous M2M sub-cortex for AI coding agents</b></p>
+  <p><b>Cut 95% of useless framework noise from error logs before feeding them to AI agents.</b></p>
 
   <p>
     <a href="https://tokenectomy-web.vercel.app"><img src="https://img.shields.io/badge/Website-tokenectomy--web.vercel.app-000000?style=flat-square&logo=vercel" alt="Tokenectomy Razor official website" /></a>
@@ -24,14 +24,11 @@
   </p>
 
   <p>
-    Tokenectomy is a zero-allocation, machine-to-machine (M2M) sub-cortex written in safe Rust.<br />
-    It sits between terminal execution and LLM context windows, excising 95%+ framework noise,<br />
-    redacting credentials with <i>O(N)</i> ReDoS safety, and streaming sanitized context in sub-milliseconds.
+    When your backend crashes, runtimes dump hundreds of lines of <code>node_modules</code> and <code>site-packages</code> junk.<br />
+    Tokenectomy runs locally in Rust to cut out the noise, redact leaked API keys, and give Cursor & Claude only the code that caused the crash.<br />
+    <b>Saves up to 99% tokens on Next.js, Node, and Python errors &bull; &lt;0.2ms speed &bull; 100% offline & local</b>
   </p>
 
-  <p>
-    <b>Hardware-Grounded Truth &bull; &lt;0.2ms DFA Excision &bull; Zero Dirty Git Diff</b>
-  </p>
 
   <p>
     <a href="https://tokenectomy-web.vercel.app">Website</a> &bull;
