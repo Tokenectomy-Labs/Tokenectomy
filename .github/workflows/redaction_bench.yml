@@ -43,8 +43,6 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Python Dependencies
-        run: bash ./scripts/ci/install-bench.sh
 
       - name: Install Gitleaks Binary
         run: |
