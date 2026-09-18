@@ -1,6 +1,6 @@
 [package]
 name = "tokenectomy"
-version = "1.3.2"
+version = "1.3.3"
 edition = "2024"
 authors = ["Daffa <daffa2555@users.noreply.github.com>", "Tokenectomy Labs"]
 default-run = "razor"
