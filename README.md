@@ -1,49 +1,42 @@
 <div align="center">
   <a href="https://tokenectomy-web.vercel.app">
-    <img src="media/logo.png" width="140" alt="Tokenectomy Razor Logo" />
+    <img src="media/logo.png" width="130" alt="Tokenectomy Razor Logo" />
   </a>
 
   <h1>Tokenectomy Razor</h1>
 
-  <p><b>Cut 95% of useless framework noise from error logs before feeding them to AI agents.</b></p>
+  <p><b>Stop Claude & Cursor from burning your rate limits and hallucinating on framework crash logs.</b></p>
+  <p><i>A sub-millisecond local MCP server written in safe Rust. Cuts 95%+ of internal stack trace noise and redacts secrets before context hits your AI.</i></p>
 
   <p>
-    <a href="https://tokenectomy-web.vercel.app"><img src="https://img.shields.io/badge/Website-tokenectomy--web.vercel.app-000000?style=flat-square&logo=vercel" alt="Tokenectomy Razor official website" /></a>
-    <a href="https://tokenectomy-labs.github.io/Tokenectomy"><img src="https://img.shields.io/badge/Documentation-GitHub%20Pages-2563eb?style=flat-square&logo=googledocs" alt="Documentation" /></a>
     <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/Official%20MCP%20Registry-io.github.Tokenectomy--Labs%2Frazor-brightgreen?style=flat-square" alt="Official MCP Registry" /></a>
-    <br />
     <a href="https://crates.io/crates/tokenectomy"><img src="https://img.shields.io/crates/v/tokenectomy.svg?style=flat-square&color=ea580c&logo=rust" alt="crates.io" /></a>
     <a href="https://www.npmjs.com/package/tokenectomy-razor"><img src="https://img.shields.io/npm/v/tokenectomy-razor.svg?style=flat-square&color=cb3837&logo=npm" alt="npm" /></a>
-    <a href="SECURITY.md"><img src="https://img.shields.io/badge/Security%20Audit-RustSec%20Audited-2ea44f?style=flat-square&logo=rust" alt="Security Audit" /></a>
-    <a href="https://glama.ai/mcp/servers/Tokenectomy-Labs/Tokenectomy"><img src="https://img.shields.io/badge/Glama.ai-Grade%20A%20TDQS-purple?style=flat-square" alt="Glama.ai" /></a>
-    <br />
     <a href="https://github.com/Tokenectomy-Labs/Tokenectomy/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Tokenectomy-Labs/Tokenectomy/ci.yml?branch=main&style=flat-square&logo=githubactions&label=CI" alt="CI" /></a>
-    <a href="https://github.com/marketplace/actions/tokenectomy-razor"><img src="https://img.shields.io/badge/GitHub%20Marketplace-Action%20v1-blue?style=flat-square&logo=githubactions" alt="GitHub Marketplace" /></a>
-    <a href="https://mcpservers.org/servers/tokenectomy-labs/tokenectomy"><img src="https://img.shields.io/badge/mcpservers.org-Listed-blueviolet?style=flat-square" alt="mcpservers.org" /></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License" /></a>
   </p>
 
   <p>
-    When your backend crashes, runtimes dump hundreds of lines of <code>node_modules</code> and <code>site-packages</code> junk.<br />
-    Tokenectomy runs locally in Rust to cut out the noise, redact leaked API keys, and give Cursor & Claude only the code that caused the crash.<br />
-    <b>Saves up to 99% tokens on Next.js, Node, and Python errors &bull; &lt;0.2ms speed &bull; 100% offline & local</b>
-  </p>
-
-
-  <p>
-    <a href="https://tokenectomy-web.vercel.app">Website</a> &bull;
-    <a href="https://tokenectomy-labs.github.io/Tokenectomy">Documentation</a> &bull;
-    <a href="#quick-start">Quick Start</a> &bull;
-    <a href="#verifiable-benchmarks">Benchmarks</a> &bull;
-    <a href="ARCHITECTURE.md">Architecture</a> &bull;
-    <a href="#edition-comparison">Sentinel Tier</a>
+    <a href="#-10-second-quickstart"><b>Quick Start (10s)</b></a> &bull;
+    <a href="#-the-problem-why-your-ai-hits-rate-limits">The Problem</a> &bull;
+    <a href="#-before--after-comparison">Before & After</a> &bull;
+    <a href="https://tokenectomy-web.vercel.app">Live Interactive Demo</a> &bull;
+    <a href="#verifiable-benchmarks">Benchmarks</a>
   </p>
 </div>
 
 <br />
 
+---
+
+## ⚡ 10-Second Quickstart
+
+Add Tokenectomy to your coding agent with zero configuration. Works immediately via `npx` (no Rust toolchain required):
+
+### 1. Cursor IDE
+Add to `.cursor/mcp.json` in your workspace root (or global `~/.cursor/mcp.json`):
+
 ```json
-// Add to ~/.cursor/mcp.json or claude_desktop_config.json
 {
   "mcpServers": {
     "tokenectomy": {
@@ -54,25 +47,52 @@
 }
 ```
 
+### 2. Claude Desktop
+Add to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "tokenectomy": {
+      "command": "npx",
+      "args": ["-y", "tokenectomy-razor", "--mcp"]
+    }
+  }
+}
+```
+
+### 3. Or Pipe Directly in Your Terminal
+```bash
+npm test 2>&1 | npx tokenectomy-razor
+```
+
 ---
 
-## ⚡ The 30-Second Surgery
+## 🛑 The Problem: Why Your AI Hits Rate Limits & Hallucinates
 
-When an autonomous coding agent runs a failing build or test, the terminal dumps tens of thousands of tokens of internal framework stack frames and potentially leaks production secrets directly into the LLM context window.
+When your app crashes during development (Next.js, Express, FastAPI, Tokio), the runtime dumps **hundreds of lines of third-party plumbing** from `node_modules` or `site-packages`.
+
+When you paste that raw crash dump into Cursor or Claude:
+
+1. **Eats Your 5-Hour Rate Limit**: A single Express/Prisma error can dump **5,000 to 45,000 tokens** of third-party library code you never wrote. A few crash loops easily burn your session limit.
+2. **Triggers AI Hallucinations**: Claude gets lost in framework internals (`node_modules/express/lib/router/layer.js` or `starlette/routing.py`) and tries to edit library files instead of your actual application code.
+3. **Leaks Secrets & Credentials**: Connection strings with raw database passwords, JWT bearer tokens, and cloud keys embedded in error traces get forwarded to external model servers.
 
 ```
 Raw Terminal Crash (45,820 tokens + Leaked Secrets)
      │
-     ▼  <0.2ms Zero-Allocation Rust DFA Excision
-[Redact Secrets Locally] ──► [Filter Framework Frames] ──► [Extract Source Context]
+     ▼  <0.2ms Local Rust DFA Engine
+[Redact Passwords & Keys] ──► [Strip Third-Party Framework Frames] ──► [Isolate Root Cause]
      │
      ▼
-Sanitized Agent Context (118 tokens • Zero Secrets • Sub-millisecond)
+Clean Context (118 tokens • Zero Secrets • Sub-millisecond)
 ```
 
-### Before & After Comparison
+---
 
-#### ❌ Before: Raw Crash Dump (45,820 Tokens Ingested)
+## 🔍 Before & After Comparison
+
+### ❌ Without Tokenectomy: AI Hallucinates & Burns 45,000 Tokens
 
 ```text
 TypeError: Cannot read properties of undefined (reading 'digest')
@@ -82,29 +102,21 @@ TypeError: Cannot read properties of undefined (reading 'digest')
     at processTicksAndRejections (task_queues:95:5)
     Database connection failed: postgresql://admin:super_secret_password@db.prod.internal:5432/primary
     API key leaked: sk-ant-api03-abcdef1234567890abcdef1234567890
-    [... 480 internal dependency frames flooding LLM context ...]
+    [... 480 internal dependency frames flooding your context window ...]
 ```
+> **What Claude does:** Tries to understand `bundle5.js`, suggests modifying your webpack bundle or adjusting Next.js internals, and eats a massive chunk of your context window. Leaks your database credentials to external logs.
 
-#### ✅ After: Tokenectomy Razor (118 Tokens • &lt;0.2ms • Zero Secrets)
+### ✅ With Tokenectomy: Clean Context & Instant Fix
 
 ```text
-[:TOKENECTOMY:M2M_CONTROL_PLANE:v1.3.0]
-[ADVISORY_ONLY=true]
-[STATE=FRAMEWORK_NOISE_PURGED]
-[STRATEGY_APPLIED=AGGRESSIVE]
-[ORIGINAL_BYTES=45820 | CLEAN_BYTES=118 | REDUCTION=99%]
-[PRIMARY_CRASH_COORDINATES=src/components/Header.tsx:42]
-[SUGGESTED_NEXT_FRAME=src/components/Header.tsx:42]
-[:END_CONTROL_PLANE]
-
-src/components/Header.tsx:42:15 - SyntaxError
-  42 |   const user = useSession( ;
-     |                           ^ Expected ')'
+// [Tokenectomy Surgery: 480 framework frames pruned (99.7%)]
+// Source: src/components/Header.tsx:42
+42 |   const user = useSession( ;
+   |                           ^ Expected ')'
 🛡️ [CONNECTION_STRING_REDACTED]
-🛡️ [REDACTED] ANTHROPIC_API_KEY=[REDACTED_SECRET_KEY]
+🛡️ [REDACTED_ANTHROPIC_KEY]
 ```
-
-> **Result:** 99.7% context token reduction, zero credential leakage, prompt cache preserved. Provides a deterministic M2M control envelope that directs agents toward primary crash coordinates and root-cause patching without narrative ambiguity.
+> **What Claude does:** Instantly identifies that line 42 in `Header.tsx` is missing a closing parenthesis `)`. Applies the exact 1-line fix in 2 seconds. Credentials redacted before transmission. 99.7% token reduction.
 
 ---
 
@@ -118,6 +130,9 @@ src/components/Header.tsx:42:15 - SyntaxError
 All performance claims are hardware-grounded and independently reproducible on physical hardware (measured on 10-Core Intel Core i5-1235U @ 15W running Arch Linux, Kernel 6.13):
 
 > **Hardware Dependency Notice:** Performance is hardware-dependent; reported throughput represents measured results on the specified test hardware (10-Core Intel Core i5-1235U @ 15W TDP). Throughput scales with higher TDP desktop/server CPUs and faster memory buses. Developers are encouraged to independently audit performance using the reproduction command below.
+
+<details>
+<summary><b>📋 Click to expand full raw benchmark terminal log ($ cargo test --release)</b></summary>
 
 ```text
 $ cargo test --release --test stress_benchmark -- --nocapture
@@ -157,6 +172,7 @@ test test_oss_heavy_stress_benchmark ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.58s
 ```
+</details>
 
 | Benchmark Target | Workload Under Test | Verified Measurement | Result |
 |---|---|---|:---:|
