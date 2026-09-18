@@ -17,6 +17,9 @@ on:
       - ".github/workflows/redaction_bench.yml"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   redaction-gate:
     name: Secret Redaction & Token Reduction Gate
