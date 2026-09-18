@@ -27,7 +27,7 @@ jobs:
 
       - name: Build Documentation
         run: |
-          docker run --rm -v "${{ github.workspace }}":/docs squidfunk/mkdocs-material:9.6.7@sha256:047452c6641137c9caa3647d050ddb7fa67b59ed48cc67ec3a4995f3d360ab32 build --config-file docs/mkdocs.yml --site-dir site
+          docker run --rm -v "${{ github.workspace }}":/docs squidfunk/mkdocs-material:9.6.7@sha256:047452c6641137c9caa3647d050ddb7fa67b59ed48cc67ec3a4995f3d360ab32 build --config-file docs/mkdocs.yml --site-dir /docs/site
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
