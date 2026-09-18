@@ -25,16 +25,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Setup Python
-        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
-        with:
-          python-version: '3.12'
-
-      - name: Install MkDocs Material
-        run: bash ./scripts/ci/install-docs.sh
-
       - name: Build Documentation
-        run: mkdocs build --config-file docs/mkdocs.yml --site-dir ../site
+        run: |
+          docker run --rm -v "${{ github.workspace }}":/docs squidfunk/mkdocs-material:9.6.7@sha256:047452c6641137c9caa3647d050ddb7fa67b59ed48cc67ec3a4995f3d360ab32 build --config-file docs/mkdocs.yml --site-dir site
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1

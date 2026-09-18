@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 set -euo pipefail
-python3 -m pip install --no-cache-dir tiktoken==0.9.0
+python3 -m pip install --require-hashes -r benches/redaction_suite/requirements.txt
