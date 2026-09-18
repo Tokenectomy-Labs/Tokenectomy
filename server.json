@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.Tokenectomy-Labs/razor",
   "title": "Tokenectomy Razor",
-  "description": "Cut 95% of useless framework noise and token bloat from error logs before feeding them to AI coding agents.",
+  "description": "Cut 95% of framework noise and token bloat from error logs for AI agents.",
   "repository": {
     "url": "https://github.com/Tokenectomy-Labs/Tokenectomy",
     "source": "github"
