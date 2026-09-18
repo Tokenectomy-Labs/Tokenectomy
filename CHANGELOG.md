@@ -5,6 +5,32 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.3] — 2026-09-19
+
+### Added
+- **OpenSSF Best Practices 100% Passing Certification**:
+  - Registered and achieved official OpenSSF Best Practices Passing certification badge ([Project #14704](https://www.bestpractices.dev/projects/14704)).
+  - Added verified OpenSSF Best Practices badge to `README.md`.
+- **CI/CD Supply Chain Hardening & OpenSSF Scorecard**:
+  - Pinned all GitHub Actions workflow steps across all 7 workflows to 40-character immutable commit SHAs.
+  - Hardened container image digests with immutable SHA-256 digests and eliminated unhashed package installations.
+  - Enforced strict least-privilege token permissions across all CI/CD pipelines.
+- **Cryptographic Release Attestation (SLSA Provenance)**:
+  - Enabled automated Sigstore OIDC cryptographic build provenance and artifact attestations (`actions/attest-build-provenance`) for all release binaries.
+- **Supply Chain & Repository Hardening**:
+  - Automated secret scanning and push protection enabled across the repository.
+  - Automated Dependabot vulnerability alerts and security fixes activated.
+
+### Changed
+- **Documentation Build Pipeline**: Containerized MkDocs build output directed to container-native `/docs/site` with zero-mutation artifact uploads.
+- **Dependencies**: Bumped `reqwest` from 0.13.4 to 0.13.5.
+
+## [1.3.2] — 2026-09-16
+
+### Changed
+- **Official MCP Registry Metadata**: Optimized server description to satisfy <= 100 character length constraint.
+- **Documentation**: Reframed README header around rate limit protection, log noise reduction, and preventing AI hallucinations.
+
 ## [1.3.1] — 2026-09-15
 
 ### Added
@@ -158,7 +184,14 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - Path traversal containment locked to workspace root (CWD).
 - Standalone CLI with `--scrub`, `--file`, `--provider`, `--local-only` modes.
 
-[Unreleased]: https://github.com/Tokenectomy-Labs/Tokenectomy/compare/v1.1.7...HEAD
+[Unreleased]: https://github.com/Tokenectomy-Labs/Tokenectomy/compare/v1.3.3...HEAD
+[1.3.3]: https://github.com/Tokenectomy-Labs/Tokenectomy/compare/v1.3.2...v1.3.3
+[1.3.2]: https://github.com/Tokenectomy-Labs/Tokenectomy/compare/v1.3.1...v1.3.2
+[1.3.1]: https://github.com/Tokenectomy-Labs/Tokenectomy/compare/v1.3.0...v1.3.1
+[1.3.0]: https://github.com/Tokenectomy-Labs/Tokenectomy/compare/v1.2.3...v1.3.0
+[1.2.3]: https://github.com/Tokenectomy-Labs/Tokenectomy/compare/v1.2.2...v1.2.3
+[1.2.2]: https://github.com/Tokenectomy-Labs/Tokenectomy/compare/v1.2.0...v1.2.2
+[1.2.0]: https://github.com/Tokenectomy-Labs/Tokenectomy/compare/v1.1.7...v1.2.0
 [1.1.7]: https://github.com/Tokenectomy-Labs/Tokenectomy/compare/v1.1.6...v1.1.7
 [1.1.6]: https://github.com/Tokenectomy-Labs/Tokenectomy/compare/v1.1.5...v1.1.6
 [1.1.5]: https://github.com/Tokenectomy-Labs/Tokenectomy/compare/v1.1.4...v1.1.5
