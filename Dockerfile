@@ -2,7 +2,7 @@
 # Multi-stage Dockerfile with cargo-chef for cached Rust builds
 # ============================================================
 # Stage 1: Chef — install cargo-chef
-FROM rust:1-slim AS chef
+FROM rust:1-slim@sha256:3999a7ff854f315cf5f2b9a58071cb71196fdfc2ccd32fa20eedce8e754fd62a AS chef
 RUN cargo install cargo-chef
 WORKDIR /app
 
@@ -26,7 +26,7 @@ COPY src ./src
 RUN cargo build --release
 
 # Stage 4: Minimal runtime image
-FROM debian:bookworm-slim
+FROM debian:bookworm-slim@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
