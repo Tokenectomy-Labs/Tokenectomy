@@ -357,13 +357,30 @@ const DASHBOARD_HTML: &str = r#"<!DOCTYPE html>
       </div>
 
       <div class="kpi-card">
-      <div class="kpi-card">
         <div class="kpi-label">
           <span>Prompt Cache Hits</span>
           <span>⚡</span>
         </div>
         <div class="kpi-value cyan" id="val-cache-hits">0</div>
         <div class="kpi-subtext" id="sub-cache">0 tokens served from cache</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">
+          <span>429 Limits Mitigated</span>
+          <span>🔄</span>
+        </div>
+        <div class="kpi-value green" id="val-rate-limits">0</div>
+        <div class="kpi-subtext" id="sub-rate-limits">Auto-paused & saved from crash</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">
+          <span>Gateway Latency</span>
+          <span>⏱️</span>
+        </div>
+        <div class="kpi-value cyan" id="val-latency"><1ms</div>
+        <div class="kpi-subtext" id="sub-circuit-breaker">Safety Circuit Breaker: Active</div>
       </div>
 
       <div class="kpi-card">
@@ -494,6 +511,15 @@ client = OpenAI(
         document.getElementById('sub-tokens').textContent = (data.estimated_raw_tokens || 0).toLocaleString() + ' raw tokens intercepted';
         document.getElementById('val-cache-hits').textContent = (data.cache_hits || 0).toLocaleString();
         document.getElementById('sub-cache').textContent = (data.cache_tokens_saved || 0).toLocaleString() + ' zero-cost tokens served';
+        document.getElementById('val-rate-limits').textContent = (data.rate_limits_mitigated || 0).toLocaleString();
+        const latencyMs = data.last_latency_ms || 0;
+        document.getElementById('val-latency').textContent = latencyMs === 0 ? '<1ms' : latencyMs + 'ms';
+        if (data.circuit_breaker_trips && data.circuit_breaker_trips > 0) {
+          document.getElementById('sub-circuit-breaker').textContent = 'Tripped ' + data.circuit_breaker_trips + 'x (Loop Prevented)';
+          document.getElementById('sub-circuit-breaker').style.color = '#f59e0b';
+        } else {
+          document.getElementById('sub-circuit-breaker').textContent = (data.current_hourly_tokens || 0).toLocaleString() + ' tokens / rolling hour';
+        }
         document.getElementById('val-reduction').textContent = (data.reduction_percentage || 0).toFixed(1) + '%';
         document.getElementById('val-secrets').textContent = (data.secrets_redacted || 0).toLocaleString();
         document.getElementById('version-badge').textContent = 'v' + (data.version || '1.3.0');

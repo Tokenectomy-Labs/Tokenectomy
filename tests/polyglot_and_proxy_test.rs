@@ -1253,3 +1253,145 @@ async fn test_proxy_zero_cost_prompt_cache_hit_and_miss_e2e() {
     assert_eq!(metrics_json["cache_hits"], 1);
     assert!(metrics_json["cache_tokens_saved"].as_u64().unwrap() > 0);
 }
+
+#[tokio::test]
+async fn test_proxy_cors_options_preflight() {
+    let client = reqwest::Client::new();
+    let resp = client.request(reqwest::Method::OPTIONS, "http://127.0.0.1:18080/v1/chat/completions")
+        .send()
+        .await
+        .expect("options request");
+    assert_eq!(resp.status(), 204);
+    assert_eq!(
+        resp.headers().get("access-control-allow-origin").and_then(|v| v.to_str().ok()),
+        Some("*")
+    );
+    assert!(resp.headers().get("access-control-allow-methods").is_some());
+}
+
+#[tokio::test]
+async fn test_proxy_safety_circuit_breaker_tripping() {
+    let config = tokenectomy::proxy::ProxyConfig {
+        bind_addr: "127.0.0.1:18070".to_string(),
+        upstream_url: "http://127.0.0.1:18071".to_string(),
+        allow_remote: false,
+        auth_token: None,
+        max_hourly_tokens: Some(50), // Strict limit of 50 tokens
+        max_retries: 3,
+        auto_retry_429: true,
+    };
+
+    tokio::spawn(async move {
+        let _ = tokenectomy::proxy::run_reverse_proxy_with_config(config).await;
+    });
+    tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
+
+    let client = reqwest::Client::new();
+    let payload = serde_json::json!({
+        "model": "gpt-4o",
+        "messages": [
+            {"role": "user", "content": "A".repeat(300)} // 300 chars = 75 tokens > 50 token limit!
+        ]
+    });
+
+    let resp = client.post("http://127.0.0.1:18070/v1/chat/completions")
+        .json(&payload)
+        .send()
+        .await
+        .expect("circuit breaker request");
+
+    // Circuit breaker MUST trip and return 429
+    assert_eq!(resp.status(), 429);
+    assert_eq!(
+        resp.headers().get("x-tokenectomy-circuit-breaker").and_then(|v| v.to_str().ok()),
+        Some("TRIPPED")
+    );
+    let body: serde_json::Value = resp.json().await.expect("json parse");
+    assert_eq!(body["error"]["type"], "circuit_breaker_tripped");
+    assert!(body["error"]["message"].as_str().unwrap().contains("Circuit Breaker TRIPPED"));
+}
+
+#[tokio::test]
+async fn test_proxy_429_rate_limit_auto_retry_mitigation() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    let upstream_call_count = Arc::new(AtomicUsize::new(0));
+    let uc_clone = upstream_call_count.clone();
+
+    // 1. Mock upstream that returns 429 on first call with retry-after: 1, and 200 OK on second call
+    let mock_listener = tokio::net::TcpListener::bind("127.0.0.1:18073").await.expect("bind mock upstream");
+    tokio::spawn(async move {
+        while let Ok((mut stream, _)) = mock_listener.accept().await {
+            let count = uc_clone.fetch_add(1, Ordering::SeqCst);
+            let mut buf = vec![0u8; 4096];
+            let _ = stream.read(&mut buf).await;
+
+            if count == 0 {
+                // First call: Simulate 429 Rate Limit from Anthropic/OpenAI
+                let resp_body = r#"{"error":{"message":"Rate limit exceeded. Please wait.","type":"rate_limit_error","code":429}}"#;
+                let resp_http = format!(
+                    "HTTP/1.1 429 Too Many Requests\r\nContent-Type: application/json\r\nRetry-After: 1\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    resp_body.len(),
+                    resp_body
+                );
+                let _ = stream.write_all(resp_http.as_bytes()).await;
+                let _ = stream.flush().await;
+            } else {
+                // Second call: Returns 200 OK!
+                let ok_body = r#"{"id":"chatcmpl-recovered","choices":[{"message":{"role":"assistant","content":"Recovered successfully"}}]}"#;
+                let ok_http = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    ok_body.len(),
+                    ok_body
+                );
+                let _ = stream.write_all(ok_http.as_bytes()).await;
+                let _ = stream.flush().await;
+            }
+        }
+    });
+
+    let config = tokenectomy::proxy::ProxyConfig {
+        bind_addr: "127.0.0.1:18072".to_string(),
+        upstream_url: "http://127.0.0.1:18073".to_string(),
+        allow_remote: false,
+        auth_token: None,
+        max_hourly_tokens: None,
+        max_retries: 3,
+        auto_retry_429: true,
+    };
+
+    tokio::spawn(async move {
+        let _ = tokenectomy::proxy::run_reverse_proxy_with_config(config).await;
+    });
+    tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
+
+    let client = reqwest::Client::new();
+    let payload = serde_json::json!({
+        "model": "gpt-4o",
+        "messages": [{"role": "user", "content": "Help me fix this bug"}]
+    });
+
+    let resp = client.post("http://127.0.0.1:18072/v1/chat/completions")
+        .json(&payload)
+        .send()
+        .await
+        .expect("send request");
+
+    // The client should receive HTTP 200 OK (the 429 was intercepted, paused, and retried automatically)
+    assert_eq!(resp.status(), 200);
+    assert_eq!(
+        resp.headers().get("x-tokenectomy-rate-limits-mitigated").and_then(|v| v.to_str().ok()),
+        Some("1")
+    );
+    assert_eq!(upstream_call_count.load(Ordering::SeqCst), 2);
+
+    let body: serde_json::Value = resp.json().await.expect("parse recovered json");
+    assert_eq!(body["choices"][0]["message"]["content"], "Recovered successfully");
+
+    // Metrics check
+    let metrics_resp = client.get("http://127.0.0.1:18072/v1/metrics").send().await.expect("metrics");
+    let metrics_json: serde_json::Value = metrics_resp.json().await.expect("json");
+    assert_eq!(metrics_json["rate_limits_mitigated"], 1);
+}

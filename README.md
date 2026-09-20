@@ -306,6 +306,12 @@ Tokenectomy's gateway runs locally on `127.0.0.1:8080` with zero manual configur
 # Default Smart Auto-Routing (routes Anthropic, OpenAI, and Ollama requests dynamically):
 razor --proxy
 
+# Safety Circuit Breaker: Prevent runaway agent loops from burning your hourly budget or 5-hour window:
+razor --proxy --max-hourly-tokens 200000
+
+# Resilient 429 Auto-Retry: Automatically pause and retry when hitting upstream rate limits (default: on):
+razor --proxy --max-retries 5
+
 # Explicit upstream override (e.g. Groq, vLLM, or OpenRouter):
 razor --proxy --upstream-url https://api.groq.com/openai/v1
 
@@ -318,7 +324,7 @@ Tokenectomy exposes live FinOps and token economics data via JSON:
 ```bash
 curl http://127.0.0.1:8080/v1/metrics
 ```
-Returns instant counts for `cache_hits`, `cache_tokens_saved`, `estimated_cost_saved_usd`, `raw_characters`, and `secrets_redacted`.
+Returns instant telemetry for `rate_limits_mitigated`, `circuit_breaker_trips`, `last_latency_ms`, `current_hourly_tokens`, `cache_hits`, `cache_tokens_saved`, and `estimated_cost_saved_usd`.
 
 ---
 
