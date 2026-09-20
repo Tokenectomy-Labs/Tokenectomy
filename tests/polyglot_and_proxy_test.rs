@@ -1256,8 +1256,19 @@ async fn test_proxy_zero_cost_prompt_cache_hit_and_miss_e2e() {
 
 #[tokio::test]
 async fn test_proxy_cors_options_preflight() {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind free port");
+    let port = listener.local_addr().expect("local addr").port();
+    drop(listener);
+
+    let bind_addr = format!("127.0.0.1:{}", port);
+    let bind_addr_clone = bind_addr.clone();
+    tokio::spawn(async move {
+        let _ = tokenectomy::proxy::run_reverse_proxy(&bind_addr_clone, "http://127.0.0.1:11434").await;
+    });
+    tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
+
     let client = reqwest::Client::new();
-    let resp = client.request(reqwest::Method::OPTIONS, "http://127.0.0.1:18080/v1/chat/completions")
+    let resp = client.request(reqwest::Method::OPTIONS, format!("http://{}/v1/chat/completions", bind_addr))
         .send()
         .await
         .expect("options request");
