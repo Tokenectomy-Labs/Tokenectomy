@@ -3,7 +3,7 @@
     <img src="media/logo.png" width="130" alt="Tokenectomy Razor Logo" />
   </a>
 
-  <h1>Tokenectomy ⚡</h1>
+  <h1>Tokenectomy Razor</h1>
 
   <p><b>The High-Performance Privacy & Context-Surgery AI Gateway for Autonomous Coding Agents</b></p>
   <p><i>Sub-millisecond local AI Gateway reverse proxy & companion MCP sub-cortex written in safe Rust. Features zero-cost prompt caching, smart multi-provider auto-routing (Claude, Cursor, Antigravity, Ollama), 41.7%–99.7% polyglot stack trace noise excision, and linear $O(N)$ leak-proof credential redaction.</i></p>
