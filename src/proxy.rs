@@ -1,8 +1,8 @@
 use crate::redact::redact_secrets;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::collections::{HashMap, VecDeque};
+use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -29,6 +29,32 @@ pub struct CachedCompletion {
 
 pub type SharedResponseCache = Arc<RwLock<HashMap<String, CachedCompletion>>>;
 
+/// Configuration options for the Tokenectomy AI Gateway.
+#[derive(Clone, Debug)]
+pub struct ProxyConfig {
+    pub bind_addr: String,
+    pub upstream_url: String,
+    pub allow_remote: bool,
+    pub auth_token: Option<String>,
+    pub max_hourly_tokens: Option<u64>,
+    pub max_retries: usize,
+    pub auto_retry_429: bool,
+}
+
+impl Default for ProxyConfig {
+    fn default() -> Self {
+        Self {
+            bind_addr: "127.0.0.1:8080".to_string(),
+            upstream_url: "auto".to_string(),
+            allow_remote: false,
+            auth_token: None,
+            max_hourly_tokens: None,
+            max_retries: 3,
+            auto_retry_429: true,
+        }
+    }
+}
+
 /// Real-time thread-safe metrics collector for FinOps and token economics monitoring.
 #[derive(Debug)]
 pub struct ProxyMetrics {
@@ -39,6 +65,10 @@ pub struct ProxyMetrics {
     pub total_secrets_redacted: AtomicU64,
     pub total_cache_hits: AtomicU64,
     pub total_cache_tokens_saved: AtomicU64,
+    pub total_rate_limits_mitigated: AtomicU64,
+    pub total_circuit_breaker_trips: AtomicU64,
+    pub last_latency_ms: AtomicU64,
+    pub hourly_token_history: Mutex<VecDeque<(Instant, u64)>>,
 }
 
 impl Default for ProxyMetrics {
@@ -57,6 +87,10 @@ impl ProxyMetrics {
             total_secrets_redacted: AtomicU64::new(0),
             total_cache_hits: AtomicU64::new(0),
             total_cache_tokens_saved: AtomicU64::new(0),
+            total_rate_limits_mitigated: AtomicU64::new(0),
+            total_circuit_breaker_trips: AtomicU64::new(0),
+            last_latency_ms: AtomicU64::new(0),
+            hourly_token_history: Mutex::new(VecDeque::new()),
         }
     }
 
@@ -77,6 +111,45 @@ impl ProxyMetrics {
         self.total_cache_tokens_saved.fetch_add(saved_tokens, Ordering::Relaxed);
     }
 
+    pub fn record_rate_limit_mitigated(&self) {
+        self.total_rate_limits_mitigated.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn record_circuit_breaker_trip(&self) {
+        self.total_circuit_breaker_trips.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn record_latency(&self, ms: u64) {
+        self.last_latency_ms.store(ms, Ordering::Relaxed);
+    }
+
+    pub fn check_and_record_hourly_tokens(&self, new_tokens: u64, max_hourly: Option<u64>) -> bool {
+        let now = Instant::now();
+        let one_hour = Duration::from_secs(3600);
+        if let Ok(mut history) = self.hourly_token_history.lock() {
+            while let Some((ts, _)) = history.front() {
+                if now.duration_since(*ts) > one_hour {
+                    history.pop_front();
+                } else {
+                    break;
+                }
+            }
+
+            let current_hourly: u64 = history.iter().fold(0u64, |acc, (_, t)| acc.saturating_add(*t));
+            if let Some(limit) = max_hourly {
+                if limit > 0 && current_hourly.saturating_add(new_tokens) > limit {
+                    self.record_circuit_breaker_trip();
+                    return false;
+                }
+            }
+
+            history.push_back((now, new_tokens));
+            true
+        } else {
+            true
+        }
+    }
+
     pub fn to_json(&self) -> serde_json::Value {
         let raw_chars = self.total_raw_chars.load(Ordering::Relaxed);
         let sanitized_chars = self.total_sanitized_chars.load(Ordering::Relaxed);
@@ -84,7 +157,25 @@ impl ProxyMetrics {
         let secrets = self.total_secrets_redacted.load(Ordering::Relaxed);
         let cache_hits = self.total_cache_hits.load(Ordering::Relaxed);
         let cache_tokens = self.total_cache_tokens_saved.load(Ordering::Relaxed);
+        let rate_limits = self.total_rate_limits_mitigated.load(Ordering::Relaxed);
+        let cb_trips = self.total_circuit_breaker_trips.load(Ordering::Relaxed);
+        let last_latency = self.last_latency_ms.load(Ordering::Relaxed);
         let uptime = self.start_time.elapsed().as_secs();
+
+        let current_hourly = if let Ok(mut history) = self.hourly_token_history.lock() {
+            let now = Instant::now();
+            let one_hour = Duration::from_secs(3600);
+            while let Some((ts, _)) = history.front() {
+                if now.duration_since(*ts) > one_hour {
+                    history.pop_front();
+                } else {
+                    break;
+                }
+            }
+            history.iter().map(|(_, t)| *t).sum()
+        } else {
+            0
+        };
 
         let raw_tokens = raw_chars / 4;
         let sanitized_tokens = sanitized_chars / 4;
@@ -113,6 +204,10 @@ impl ProxyMetrics {
             "tokens_saved_by_surgery": tokens_saved_by_surgery,
             "cache_hits": cache_hits,
             "cache_tokens_saved": cache_tokens,
+            "rate_limits_mitigated": rate_limits,
+            "circuit_breaker_trips": cb_trips,
+            "last_latency_ms": last_latency,
+            "current_hourly_tokens": current_hourly,
             "reduction_percentage": (saved_pct * 10.0).round() / 10.0,
             "secrets_redacted": secrets,
             "estimated_cost_saved_usd": (cost_saved_usd * 1000.0).round() / 1000.0,
@@ -155,48 +250,64 @@ pub fn sanitize_prompt_payload(payload: &Value) -> (Value, ProxySanitizeStats) {
                     }
                     Value::Array(parts) => {
                         for part in parts {
-                            let part_type = part.get("type").and_then(|t| t.as_str()).unwrap_or("");
-                            // Point 13: Never touch thinking, redacted_thinking, tool_use, or image blocks
-                            if part_type == "thinking"
-                                || part_type == "redacted_thinking"
-                                || part_type == "image"
-                                || part_type == "tool_use"
-                            {
-                                continue;
-                            }
+                            match part {
+                                Value::String(s) => {
+                                    *s = clean_string(s, &mut stats);
+                                }
+                                Value::Object(_) => {
+                                    let part_type = part.get("type").and_then(|t| t.as_str()).unwrap_or("");
+                                    // Point 13: Never touch thinking, redacted_thinking, tool_use, or image blocks
+                                    if part_type == "thinking"
+                                        || part_type == "redacted_thinking"
+                                        || part_type == "image"
+                                        || part_type == "tool_use"
+                                    {
+                                        continue;
+                                    }
 
-                            // If tool_result block, sanitize content while preserving tool_use_id and cache_control
-                            if part_type == "tool_result" {
-                                if let Some(content_val) = part.get_mut("content") {
-                                    match content_val {
-                                        Value::String(s) => {
-                                            *s = clean_string(s, &mut stats);
-                                        }
-                                        Value::Array(nested_parts) => {
-                                            for np in nested_parts {
-                                                let np_type = np.get("type").and_then(|t| t.as_str()).unwrap_or("");
-                                                if np_type == "image" || np_type == "thinking" {
-                                                    continue;
+                                    // If tool_result block, sanitize content while preserving tool_use_id and cache_control
+                                    if part_type == "tool_result" {
+                                        if let Some(content_val) = part.get_mut("content") {
+                                            match content_val {
+                                                Value::String(s) => {
+                                                    *s = clean_string(s, &mut stats);
                                                 }
-                                                if let Some(t) = np.get_mut("text").and_then(|t| t.as_str()) {
-                                                    let cleaned = clean_string(t, &mut stats);
-                                                    np["text"] = Value::String(cleaned);
+                                                Value::Array(nested_parts) => {
+                                                    for np in nested_parts {
+                                                        match np {
+                                                            Value::String(s) => {
+                                                                *s = clean_string(s, &mut stats);
+                                                            }
+                                                            Value::Object(_) => {
+                                                                let np_type = np.get("type").and_then(|t| t.as_str()).unwrap_or("");
+                                                                if np_type == "image" || np_type == "thinking" {
+                                                                    continue;
+                                                                }
+                                                                if let Some(t) = np.get_mut("text").and_then(|t| t.as_str()) {
+                                                                    let cleaned = clean_string(t, &mut stats);
+                                                                    np["text"] = Value::String(cleaned);
+                                                                }
+                                                            }
+                                                            _ => {}
+                                                        }
+                                                    }
                                                 }
+                                                _ => {}
                                             }
                                         }
-                                        _ => {}
+                                        continue;
+                                    }
+
+                                    // Standard user text blocks
+                                    if let Some(text_val) = part.get_mut("text").and_then(|t| t.as_str()) {
+                                        let cleaned = clean_string(text_val, &mut stats);
+                                        part["text"] = Value::String(cleaned);
+                                    } else if let Some(content_val) = part.get_mut("content").and_then(|c| c.as_str()) {
+                                        let cleaned = clean_string(content_val, &mut stats);
+                                        part["content"] = Value::String(cleaned);
                                     }
                                 }
-                                continue;
-                            }
-
-                            // Standard user text blocks
-                            if let Some(text_val) = part.get_mut("text").and_then(|t| t.as_str()) {
-                                let cleaned = clean_string(text_val, &mut stats);
-                                part["text"] = Value::String(cleaned);
-                            } else if let Some(content_val) = part.get_mut("content").and_then(|c| c.as_str()) {
-                                let cleaned = clean_string(content_val, &mut stats);
-                                part["content"] = Value::String(cleaned);
+                                _ => {}
                             }
                         }
                     }
@@ -273,13 +384,29 @@ pub fn constant_time_compare(a: &str, b: &str) -> bool {
 
 /// P16: Validates Host header against loopback addresses or configured bind host (DNS rebinding guard).
 pub fn is_allowed_host(host_header: &str, bind_addr: &str) -> bool {
-    let host_clean = host_header.split(':').next().unwrap_or(host_header).trim();
-    if host_clean == "localhost" || host_clean == "127.0.0.1" || host_clean == "::1" || host_clean == "[::1]" {
+    let host_trimmed = host_header.trim();
+    let host_clean = if host_trimmed.starts_with('[') {
+        if let Some(end_bracket) = host_trimmed.find(']') {
+            &host_trimmed[..=end_bracket]
+        } else {
+            host_trimmed
+        }
+    } else {
+        host_trimmed.split(':').next().unwrap_or(host_trimmed).trim()
+    };
+
+    let host_inner = host_clean.trim_matches(|c| c == '[' || c == ']');
+    if host_clean == "localhost"
+        || host_clean == "127.0.0.1"
+        || host_clean == "::1"
+        || host_clean == "[::1]"
+        || host_inner == "::1"
+    {
         return true;
     }
     if let Some((bind_host, _)) = bind_addr.rsplit_once(':') {
         let b = bind_host.trim_matches(|c| c == '[' || c == ']');
-        if host_clean == b {
+        if host_inner == b {
             return true;
         }
     }
@@ -305,8 +432,16 @@ pub fn decode_chunked_body(mut input: &[u8]) -> Result<Vec<u8>, &'static str> {
             return Ok(decoded);
         }
 
+        // Hardened: Guard against integer overflow and unbounded memory consumption (MAX_BODY_SIZE = 32MB)
+        if chunk_len > MAX_BODY_SIZE || decoded.len().saturating_add(chunk_len) > MAX_BODY_SIZE {
+            return Err("Chunked payload exceeds maximum allowable size");
+        }
+
         let data_start = nl + 2;
-        let data_end = data_start + chunk_len;
+        let data_end = match data_start.checked_add(chunk_len) {
+            Some(end) => end,
+            None => return Err("Chunk size overflow"),
+        };
         if input.len() < data_end + 2 {
             return Err("Incomplete chunk data");
         }
@@ -371,8 +506,16 @@ pub fn resolve_upstream_target(
         }
     } else {
         let base = configured_upstream.trim_end_matches('/');
-        if base.ends_with("/v1") && clean_path.starts_with("/v1/") {
-            format!("{}{}", base, &clean_path[3..])
+        if base.ends_with("/v1") {
+            if clean_path == "/v1" {
+                base.to_string()
+            } else if clean_path.starts_with("/v1/") {
+                format!("{}{}", base, &clean_path[3..])
+            } else if !clean_path.starts_with('/') {
+                format!("{}/{}", base, clean_path)
+            } else {
+                format!("{}{}", base, clean_path)
+            }
         } else if !clean_path.starts_with('/') {
             format!("{}/{}", base, clean_path)
         } else {
@@ -393,43 +536,64 @@ pub async fn run_reverse_proxy_configured(
     allow_remote: bool,
     auth_token: Option<&str>,
 ) -> anyhow::Result<()> {
-    let loopback = is_loopback(bind_addr);
+    let config = ProxyConfig {
+        bind_addr: bind_addr.to_string(),
+        upstream_url: upstream_url.to_string(),
+        allow_remote,
+        auth_token: auth_token.map(|t| t.to_string()),
+        max_hourly_tokens: None,
+        max_retries: 3,
+        auto_retry_429: true,
+    };
+    run_reverse_proxy_with_config(config).await
+}
+
+/// Runs the AI Gateway Reverse Proxy with structured configuration including circuit breakers and rate limit mitigators.
+pub async fn run_reverse_proxy_with_config(config: ProxyConfig) -> anyhow::Result<()> {
+    let loopback = is_loopback(&config.bind_addr);
     if !loopback {
-        if !allow_remote {
+        if !config.allow_remote {
             return Err(anyhow::anyhow!(
                 "Security Violation: Binding to non-loopback address '{}' requires explicit '--allow-remote' flag.",
-                bind_addr
+                config.bind_addr
             ));
         }
-        if auth_token.is_none() || auth_token.map(|t| t.trim().is_empty()).unwrap_or(true) {
+        if config.auth_token.as_ref().map(|t| t.trim().is_empty()).unwrap_or(true) {
             return Err(anyhow::anyhow!(
                 "Security Violation: Remote proxy mode on '{}' requires an authentication token via '--proxy-token' or 'TOKENECTOMY_PROXY_TOKEN'.",
-                bind_addr
+                config.bind_addr
             ));
         }
     }
 
-    let listener = TcpListener::bind(bind_addr).await?;
+    let listener = TcpListener::bind(&config.bind_addr).await?;
     let client = reqwest::Client::builder()
         .tcp_nodelay(true)
         .timeout(UPSTREAM_TIMEOUT)
         .build()?;
     let client = Arc::new(client);
-    let upstream = Arc::new(upstream_url.trim_end_matches('/').to_string());
-    let required_token = auth_token.map(|t| Arc::new(t.trim().to_string()));
+    let upstream = Arc::new(config.upstream_url.trim_end_matches('/').to_string());
+    let required_token = config.auth_token.as_ref().map(|t| Arc::new(t.trim().to_string()));
     let semaphore = Arc::new(tokio::sync::Semaphore::new(MAX_CONCURRENT_CONNECTIONS));
     let analyzer_state = Arc::new(crate::analyzer::AppState::new());
     let metrics = Arc::new(ProxyMetrics::new());
     let prompt_cache: SharedResponseCache = Arc::new(RwLock::new(HashMap::new()));
-    let bind_addr_arc = Arc::new(bind_addr.to_string());
+    let bind_addr_arc = Arc::new(config.bind_addr.clone());
+    let config_arc = Arc::new(config.clone());
 
-    println!("⚡ Tokenectomy AI Gateway Proxy active on http://{}", bind_addr);
-    println!("📊 Real-Time FinOps Dashboard: http://{}/dashboard", bind_addr);
-    println!("📈 Prometheus / JSON Metrics: http://{}/v1/metrics", bind_addr);
+    println!("⚡ Tokenectomy AI Gateway Proxy active on http://{}", config.bind_addr);
+    println!("📊 Real-Time FinOps Dashboard: http://{}/dashboard", config.bind_addr);
+    println!("📈 Prometheus / JSON Metrics: http://{}/v1/metrics", config.bind_addr);
     if upstream.eq_ignore_ascii_case("auto") {
         println!("🔀 Smart Upstream Routing: AUTO (Anthropic -> api.anthropic.com, OpenAI -> api.openai.com, Ollama -> localhost:11434)");
     } else {
         println!("🔗 Forwarding to upstream: {}", upstream);
+    }
+    if let Some(limit) = config.max_hourly_tokens {
+        println!("🛑 Safety Circuit Breaker: ACTIVE (Cap: {} tokens/hour)", limit);
+    }
+    if config.auto_retry_429 {
+        println!("🔄 Resilient 429 Mitigator: ACTIVE (Max retries: {})", config.max_retries);
     }
     if !loopback {
         println!("🔒 Remote mode ACTIVE (Protected with mandatory bearer authentication)");
@@ -456,6 +620,7 @@ pub async fn run_reverse_proxy_configured(
         let metrics_clone = Arc::clone(&metrics);
         let prompt_cache_clone = Arc::clone(&prompt_cache);
         let bind_addr_clone = Arc::clone(&bind_addr_arc);
+        let config_clone = Arc::clone(&config_arc);
 
         tokio::spawn(async move {
             let _permit = permit;
@@ -491,8 +656,7 @@ pub async fn run_reverse_proxy_configured(
                     return;
                 }
 
-                let req_str = String::from_utf8_lossy(&buf[..total_read]);
-                let header_end = match req_str.find("\r\n\r\n") {
+                let header_end = match buf[..total_read].windows(4).position(|w| w == b"\r\n\r\n") {
                     Some(idx) => idx,
                     None => {
                         let resp = "HTTP/1.1 431 Request Header Fields Too Large\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"error\":{\"message\":\"Headers exceed 64KB limit\",\"code\":431}}\r\n";
@@ -501,8 +665,9 @@ pub async fn run_reverse_proxy_configured(
                     }
                 };
 
-                let raw_headers = &req_str[..header_end];
                 let body_start = header_end + 4;
+                let req_str = String::from_utf8_lossy(&buf[..header_end]);
+                let raw_headers = req_str.as_ref();
                 let mut lines = raw_headers.split("\r\n");
                 let req_line = lines.next().unwrap_or("");
                 let parts: Vec<&str> = req_line.split_whitespace().collect();
@@ -519,6 +684,13 @@ pub async fn run_reverse_proxy_configured(
                 } else {
                     raw_path_no_query
                 };
+
+                // Browser & Agent CORS Preflight
+                if method == "OPTIONS" {
+                    let resp = "HTTP/1.1 204 No Content\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS, HEAD\r\nAccess-Control-Allow-Headers: *\r\nAccess-Control-Max-Age: 86400\r\nConnection: close\r\n\r\n";
+                    let _ = socket.write_all(resp.as_bytes()).await;
+                    return;
+                }
 
                 // Health check endpoint
                 if path == "/health" || path == "/v1/health" {
@@ -785,14 +957,45 @@ pub async fn run_reverse_proxy_configured(
                 // Forward to upstream with complete query string preserved and dynamic auto-routing
                 let target_url = resolve_upstream_target(&upstream_clone, full_path, &forward_headers);
 
-                // Check zero-cost prompt cache for non-streaming completion requests
+                // Check safety circuit breaker on hourly token budget
+                let est_inbound_tokens = (final_body.len() as u64) / 4;
+                if !metrics_clone.check_and_record_hourly_tokens(est_inbound_tokens, config_clone.max_hourly_tokens) {
+                    eprintln!(
+                        "🚨 [Circuit Breaker TRIPPED] Hourly token limit exceeded ({} tokens). Blocking request from {} to prevent runaway loop.",
+                        est_inbound_tokens, peer_addr
+                    );
+                    let trip_err = serde_json::json!({
+                        "error": {
+                            "message": "Tokenectomy Circuit Breaker TRIPPED: Hourly token limit reached. Halting request to prevent runaway agent loops and unexpected billing.",
+                            "type": "circuit_breaker_tripped",
+                            "code": 429
+                        }
+                    }).to_string();
+                    let resp = format!(
+                        "HTTP/1.1 429 Too Many Requests\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nX-Tokenectomy-Circuit-Breaker: TRIPPED\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                        trip_err.len(),
+                        trip_err
+                    );
+                    let _ = socket.write_all(resp.as_bytes()).await;
+                    return;
+                }
+
+                // Check zero-cost prompt cache for non-streaming completion requests (respecting Cache-Control: no-cache)
                 let is_stream = if let Ok(json_val) = serde_json::from_slice::<Value>(&final_body) {
                     json_val.get("stream").and_then(|s| s.as_bool()).unwrap_or(false)
                 } else {
                     false
                 };
 
-                let cache_eligible = method == "POST" && !is_stream && (path.ends_with("/chat/completions") || path.ends_with("/messages"));
+                let no_cache = raw_headers.lines().any(|l| {
+                    if let Some((k, v)) = l.split_once(':') {
+                        k.trim().eq_ignore_ascii_case("cache-control") && v.to_ascii_lowercase().contains("no-cache")
+                    } else {
+                        false
+                    }
+                });
+
+                let cache_eligible = method == "POST" && !is_stream && !no_cache && (path.ends_with("/chat/completions") || path.ends_with("/messages"));
                 let cache_key = if cache_eligible {
                     let mut hasher = Sha256::new();
                     hasher.update(target_url.as_bytes());
@@ -813,12 +1016,14 @@ pub async fn run_reverse_proxy_configured(
                     if let Some(entry) = cache_read.get(key) {
                         if entry.timestamp.elapsed() < entry.ttl {
                             metrics_clone.record_cache_hit(entry.estimated_tokens);
+                            metrics_clone.record_latency(0);
                             eprintln!(
                                 "⚡ [Gateway Cache HIT] Saved {} tokens for {}",
                                 entry.estimated_tokens, peer_addr
                             );
 
                             let mut head = format!("HTTP/1.1 {} {}\r\n", entry.status, entry.reason);
+                            head.push_str("Access-Control-Allow-Origin: *\r\n");
                             for (k, v) in &entry.headers {
                                 head.push_str(&format!("{}: {}\r\n", k, v));
                             }
@@ -835,29 +1040,66 @@ pub async fn run_reverse_proxy_configured(
                     }
                 }
 
-                let mut req_builder = match method {
-                    "POST" => client_clone.post(&target_url),
-                    "GET" => client_clone.get(&target_url),
-                    _ => client_clone.request(
-                        reqwest::Method::from_bytes(method.as_bytes()).unwrap_or(reqwest::Method::GET),
-                        &target_url,
-                    ),
+                let req_start = Instant::now();
+                let mut retries = 0;
+                let max_retries = if config_clone.auto_retry_429 { config_clone.max_retries } else { 0 };
+
+                let upstream_send_result = loop {
+                    let mut req_builder = match method {
+                        "POST" => client_clone.post(&target_url),
+                        "GET" => client_clone.get(&target_url),
+                        _ => client_clone.request(
+                            reqwest::Method::from_bytes(method.as_bytes()).unwrap_or(reqwest::Method::GET),
+                            &target_url,
+                        ),
+                    };
+
+                    for (hk, hv) in &forward_headers {
+                        req_builder = req_builder.header(hk, hv);
+                    }
+
+                    if let Some(ref auth) = client_auth {
+                        req_builder = req_builder.header("Authorization", auth);
+                    }
+                    if !final_body.is_empty() {
+                        req_builder = req_builder
+                            .header("Content-Type", "application/json")
+                            .body(final_body.clone());
+                    }
+
+                    match req_builder.send().await {
+                        Ok(resp) => {
+                            let status = resp.status();
+                            if status.as_u16() == 429 && retries < max_retries {
+                                retries += 1;
+                                metrics_clone.record_rate_limit_mitigated();
+
+                                let wait_secs = resp.headers()
+                                    .get("retry-after")
+                                    .and_then(|h| h.to_str().ok())
+                                    .and_then(|s| s.parse::<u64>().ok())
+                                    .unwrap_or_else(|| (2u64.pow(retries as u32)).min(20));
+
+                                eprintln!(
+                                    "⚠️ [Gateway 429 Mitigator] Upstream rate limit hit (429) for {}. Pausing for {}s before retry ({}/{})...",
+                                    peer_addr, wait_secs, retries, max_retries
+                                );
+
+                                tokio::time::sleep(Duration::from_secs(wait_secs.min(30))).await;
+                                continue;
+                            }
+                            break Ok(resp);
+                        }
+                        Err(e) => {
+                            break Err(e);
+                        }
+                    }
                 };
 
-                for (hk, hv) in forward_headers {
-                    req_builder = req_builder.header(hk, hv);
-                }
+                let elapsed_ms = req_start.elapsed().as_millis() as u64;
+                metrics_clone.record_latency(elapsed_ms);
 
-                if let Some(auth) = client_auth {
-                    req_builder = req_builder.header("Authorization", auth);
-                }
-                if !final_body.is_empty() {
-                    req_builder = req_builder
-                        .header("Content-Type", "application/json")
-                        .body(final_body.clone());
-                }
-
-                match req_builder.send().await {
+                match upstream_send_result {
                     Ok(mut upstream_resp) => {
                         let status = upstream_resp.status();
                         let is_event_stream = upstream_resp.headers()
@@ -867,6 +1109,10 @@ pub async fn run_reverse_proxy_configured(
                             .unwrap_or(false);
 
                         let mut head = format!("HTTP/1.1 {} {}\r\n", status.as_u16(), status.canonical_reason().unwrap_or(""));
+                        head.push_str("Access-Control-Allow-Origin: *\r\n");
+                        if retries > 0 {
+                            head.push_str(&format!("X-Tokenectomy-Rate-Limits-Mitigated: {}\r\n", retries));
+                        }
                         let mut captured_headers = Vec::new();
 
                         for (k, v) in upstream_resp.headers() {
