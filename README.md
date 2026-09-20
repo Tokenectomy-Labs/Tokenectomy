@@ -5,8 +5,8 @@
 
   <h1>Tokenectomy Razor</h1>
 
-  <p><b>Stop Claude, Cursor, and AI agents from burning your rate limits on framework internals and leaking production secrets.</b></p>
-  <p><i>A sub-millisecond local AI Gateway & MCP server written in safe Rust. Cuts 41.7% mean noise across polyglot stack traces (up to 99.7% on deep framework dumps) and redacts credentials before context reaches LLMs.</i></p>
+  <p><b>The High-Performance Privacy & Context-Surgery AI Gateway for Autonomous Coding Agents</b></p>
+  <p><i>Sub-millisecond local AI Gateway reverse proxy & companion MCP sub-cortex written in safe Rust. Features zero-cost prompt caching, smart multi-provider auto-routing (Claude, Cursor, Antigravity, Ollama), 41.7%–99.7% polyglot stack trace noise excision, and linear $O(N)$ leak-proof credential redaction.</i></p>
 
   <p>
     <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/Official%20MCP%20Registry-io.github.Tokenectomy--Labs%2Frazor-brightgreen?style=flat-square" alt="Official MCP Registry" /></a>
@@ -18,6 +18,7 @@
 
   <p>
     <a href="#-quick-start"><b>Quick Start (10s)</b></a> &bull;
+    <a href="#-gateway-architecture">Architecture</a> &bull;
     <a href="#-the-problem-why-your-ai-hits-rate-limits">The Problem</a> &bull;
     <a href="#-before--after-comparison">Before & After</a> &bull;
     <a href="https://tokenectomy-web.vercel.app">Live Interactive Demo</a> &bull;
@@ -27,30 +28,74 @@
 
 <br />
 
+<a id="gateway-architecture"></a>
+```
+                                 ┌────────────────────────────────────────────────────────┐
+                                 │                   Autonomous Agents                    │
+                                 │  Claude Code • Cursor • Antigravity • Cline • Windsurf │
+                                 └───────────────────────────┬────────────────────────────┘
+                                                             │
+                                                             ▼ (HTTP / SSE Outbound Prompts)
+   ┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+   │                                 ⚡ TOKENECTOMY AI GATEWAY (127.0.0.1:8080)                                       │
+   │                                                                                                                  │
+   │  ┌─────────────────────────┐   ┌───────────────────────────┐   ┌──────────────────────────────────────────────┐  │
+   │  │   Zero-Cost Prompt      │   │   Zero-Leak Credential    │   │         Polyglot Trace Surgery               │  │
+   │  │         Cache           │   │         Redaction         │   │            (9 Languages)                     │  │
+   │  │  <1ms Hit • 100% Free   │   │  API Keys • JWTs • DB URIs│   │  node_modules • site-packages • .cargo       │  │
+   │  └───────────┬─────────────┘   └─────────────┬─────────────┘   └──────────────────────┬───────────────────────┘  │
+   │              │                               │                                        │                          │
+   │              └───────────────────────────────┼────────────────────────────────────────┘                          │
+   │                                              ▼                                                                   │
+   │                                 Smart Upstream Auto-Router                                                       │
+   │                         (Anthropic • OpenAI • Groq • Ollama Local)                                               │
+   └──────────────────────────────────────────────┬───────────────────────────────────────────────────────────────────┘
+                                                  │
+                 ┌────────────────────────────────┼────────────────────────────────┐
+                 ▼                                ▼                                ▼
+       api.anthropic.com                  api.openai.com                   localhost:11434
+    (Claude 3.5 / 3.7 Sonnet)         (GPT-4o / o1 / o3-mini)              (DeepSeek / Llama)
+```
+
 ---
 
 <a id="quick-start"></a>
 ## ⚡ Quick Start (10s)
 
-Add Tokenectomy to your workflow with zero toolchain setup. Runs immediately via `npx`:
-
-### 1. AI Gateway Reverse Proxy (`--proxy`)
-Run Tokenectomy as a zero-overhead local HTTP reverse proxy on `127.0.0.1:8080`. It intercepts outbound prompt streams, scrubs stack trace noise, redacts credentials, and forwards clean requests upstream:
-
+### 1. Launch the AI Gateway (Zero Toolchain Setup)
 ```bash
-# Forward to Anthropic Claude:
-razor --proxy --proxy-bind 127.0.0.1:8080 --upstream-url https://api.anthropic.com
-export ANTHROPIC_BASE_URL="http://127.0.0.1:8080"
+npx -y tokenectomy-razor --proxy
+```
+> 💡 **Smart Multi-Provider Auto-Routing is ON by default!** Tokenectomy automatically analyzes request paths and headers, forwarding Claude requests (`/v1/messages`) to Anthropic, OpenAI/Cursor requests (`/v1/chat/completions`) to OpenAI, and local requests (`/api/*`) to Ollama with zero port conflicts.
 
-# Forward to OpenAI:
-razor --proxy --proxy-bind 127.0.0.1:8080 --upstream-url https://api.openai.com/v1
-export OPENAI_BASE_URL="http://127.0.0.1:8080/v1"
+### 2. Connect Your Favorite Agent
+Point your coding agent or CLI to the local gateway on `127.0.0.1:8080`:
 
-# Forward to local Ollama:
-razor --proxy --proxy-bind 127.0.0.1:8080 --upstream-url http://127.0.0.1:11434/v1
+| Agent / Environment | Setup Command or Configuration | Auto-Routed Upstream |
+|---|---|---|
+| **Claude Code** | `export ANTHROPIC_BASE_URL="http://127.0.0.1:8080"` | `https://api.anthropic.com` |
+| **Cursor** | Models &gt; OpenAI Base URL: `http://127.0.0.1:8080/v1` | `https://api.openai.com` |
+| **Google Antigravity / Gemini** | `export OPENAI_BASE_URL="http://127.0.0.1:8080/v1"` | `https://api.openai.com` |
+| **Cline / Roo Code** | Provider: OpenAI Compatible &bull; Base URL: `http://127.0.0.1:8080/v1` | `https://api.openai.com` |
+| **Ollama / Local LLMs** | Base URL: `http://127.0.0.1:8080` | `http://localhost:11434` |
+
+### 3. Real-Time FinOps & Security Dashboard
+Open **`http://127.0.0.1:8080/dashboard`** in your browser to observe live token reductions, prompt cache hits, dollar savings, and redacted credentials in real time.
+
+---
+
+### 4. Companion MCP Server Setup (Sub-Cortex)
+For agents calling deep diagnostic tools (`get_error_context`, `analyze_code`, `apply_code_patch`):
+
+#### Claude Code CLI
+```bash
+claude mcp add tokenectomy npx -y tokenectomy-razor --mcp
 ```
 
-### 2. Model Context Protocol (MCP) Setup
+#### Google Antigravity / Gemini CLI
+```bash
+agy mcp add tokenectomy-razor -- npx -y tokenectomy-razor --mcp
+```
 
 #### Cursor Composer (`.cursor/mcp.json`)
 ```json
@@ -76,17 +121,7 @@ razor --proxy --proxy-bind 127.0.0.1:8080 --upstream-url http://127.0.0.1:11434/
 }
 ```
 
-#### Claude Code CLI
-```bash
-claude mcp add tokenectomy npx -y tokenectomy-razor --mcp
-```
-
-#### Google Antigravity / Gemini CLI
-```bash
-agy mcp add tokenectomy-razor -- npx -y tokenectomy-razor --mcp
-```
-
-### 3. Terminal Piping & CLI Scrubbing
+### 5. Terminal Piping & CLI Scrubbing
 ```bash
 npm test 2>&1 | npx tokenectomy-razor
 ```
@@ -260,84 +295,42 @@ Evaluated across an internal benchmark test fixture (`tests/fixtures/`) of **12 
 
 ---
 
-<a id="quick-start"></a>
-## 🚀 Quick Start
+<a id="agent-configuration"></a>
+## 🔌 Advanced Agent & Gateway Configuration
 
-### 1. Model Context Protocol (MCP) Setup
+### 1. Multi-Provider AI Gateway Options (`--proxy`)
 
-Tokenectomy Razor operates natively over JSON-RPC 2.0 stdio, compliant with the official Model Context Protocol specification.
+Tokenectomy's gateway runs locally on `127.0.0.1:8080` with zero manual configuration. In complex development environments or containerized agent topologies, you can customize binding and routing:
 
-#### Cursor Composer
-Add to `.cursor/mcp.json` in your workspace root:
-
-```json
-{
-  "mcpServers": {
-    "tokenectomy": {
-      "command": "npx",
-      "args": ["-y", "tokenectomy-razor", "--mcp"]
-    }
-  }
-}
-```
-
-#### Claude Desktop
-Add to `claude_desktop_config.json`:
-- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
-- **Linux:** `~/.config/Claude/claude_desktop_config.json`
-
-```json
-{
-  "mcpServers": {
-    "tokenectomy": {
-      "command": "npx",
-      "args": ["-y", "tokenectomy-razor", "--mcp"]
-    }
-  }
-}
-```
-
-#### Windsurf (Codeium)
-Add to `~/.codeium/windsurf/mcp_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "tokenectomy": {
-      "command": "npx",
-      "args": ["-y", "tokenectomy-razor", "--mcp"]
-    }
-  }
-}
-```
-
-#### VS Code (Cline / Roo Code)
-In Cline or Roo Code settings (`cline_mcp_settings.json`):
-
-```json
-{
-  "mcpServers": {
-    "tokenectomy": {
-      "command": "npx",
-      "args": ["-y", "tokenectomy-razor", "--mcp"],
-      "disabled": false,
-      "autoApprove": ["get_error_context", "analyze_code"]
-    }
-  }
-}
-```
-
-#### Google Antigravity CLI
 ```bash
-agy mcp add tokenectomy-razor -- npx -y tokenectomy-razor --mcp
+# Default Smart Auto-Routing (routes Anthropic, OpenAI, and Ollama requests dynamically):
+razor --proxy
+
+# Safety Circuit Breaker: Prevent runaway agent loops from burning your hourly budget or 5-hour window:
+razor --proxy --max-hourly-tokens 200000
+
+# Resilient 429 Auto-Retry: Automatically pause and retry when hitting upstream rate limits (default: on):
+razor --proxy --max-retries 5
+
+# Explicit upstream override (e.g. Groq, vLLM, or OpenRouter):
+razor --proxy --upstream-url https://api.groq.com/openai/v1
+
+# Secure remote container binding with mandatory bearer token:
+razor --proxy --proxy-bind 0.0.0.0:8080 --allow-remote --proxy-token "$MY_GATEWAY_TOKEN"
 ```
+
+#### Real-Time Metrics & Prometheus Export
+Tokenectomy exposes live FinOps and token economics data via JSON:
+```bash
+curl http://127.0.0.1:8080/v1/metrics
+```
+Returns instant telemetry for `rate_limits_mitigated`, `circuit_breaker_trips`, `last_latency_ms`, `current_hourly_tokens`, `cache_hits`, `cache_tokens_saved`, and `estimated_cost_saved_usd`.
 
 ---
 
-### 2. Standalone CLI & Terminal Piping
+### 2. Standalone CLI & Terminal Scrubbing
 
-When debugging or piping terminal output directly:
+When debugging or piping terminal test output directly:
 
 ```bash
 # Pipe terminal test failures through the surgical redactor:
@@ -349,29 +342,6 @@ razor --scrub --file /var/log/app/error.log > sanitized.log
 # Offline local air-gapped mode (zero external network calls):
 cat failure.log | razor --scrub --local-only
 ```
-
----
-
-### 3. AI Gateway Reverse Proxy (`--proxy`)
-
-Tokenectomy Razor can operate as a high-throughput local HTTP reverse proxy on `127.0.0.1:8080`. It intercepts outbound prompt streams, performs real-time token excision and credential sanitization, and forwards clean requests upstream to OpenAI, Anthropic, or Ollama.
-
-```bash
-# Start local gateway proxy forwarding to OpenAI:
-razor --proxy --proxy-bind 127.0.0.1:8080 --upstream-url https://api.openai.com/v1
-
-# Start local gateway forwarding to Ollama:
-razor --proxy --proxy-bind 127.0.0.1:8080 --upstream-url http://127.0.0.1:11434/v1
-```
-
-Point any standard SDK client to the local proxy:
-
-```bash
-export OPENAI_BASE_URL="http://127.0.0.1:8080/v1"
-```
-
-#### FinOps Economics Dashboard
-Open `http://127.0.0.1:8080/dashboard` in any browser to monitor real-time token savings, dollar savings (blended LLM pricing), total requests, and active security redactions.
 
 ---
 
@@ -477,7 +447,12 @@ docker run -i ghcr.io/tokenectomy-labs/razor:latest --mcp
 | `awesome-mcp-servers` Community Catalog Listing | ✅ Complete | v1.2.4 |
 | Inline Dropped Frame Identities (`[DROPPED_FRAMES: ...]`) & Anti-Silent Truncation Audit | ✅ Complete | v1.3.1 |
 | Content-Addressable Raw Log Cache & Verification Hash (`--diff-verify`) | ✅ Complete | v1.3.1 |
-| Deprecation & Removal of `cognitive_directive` alias | 📋 Planned | v1.4.0 |
+| Smart Multi-Provider Auto-Routing (Anthropic, OpenAI, Ollama) & Zero-Cost Prompt Caching | ✅ Complete | v1.3.3 |
+| Agent Safety Circuit Breaker (`--max-hourly-tokens`), 429 Auto-Retry Mitigator & CORS Preflight | ✅ Complete | v1.3.3 |
+| Universal LLM Format Transpiler (OpenAI `/v1/chat/completions` ⇄ Anthropic `/v1/messages` ⇄ Gemini) | 🚧 In Progress | v1.4.0 |
+| Multi-Provider High-Availability & Automatic Outage Fallback | 📋 Planned | v1.4.0 |
+| Declarative AI Gateway Configuration (`gateway.toml` / `tokenectomy.yaml`) | 📋 Planned | v1.4.0 |
+| Full SSE Streaming Token Caching Engine | 📋 Planned | v1.4.0 |
 | Native VS Code & JetBrains companion extensions | 📋 Planned | v1.4.0 |
 | Server-Sent Events (SSE) remote MCP transport | 📋 Planned | v1.4.0 |
 

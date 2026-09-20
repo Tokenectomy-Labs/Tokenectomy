@@ -53,8 +53,17 @@ pub struct Cli {
     #[arg(long, default_value = "127.0.0.1:8080", help = "Bind address for the reverse proxy gateway")]
     pub proxy_bind: String,
 
-    #[arg(long, default_value = "https://api.openai.com/v1", help = "Upstream LLM base URL to forward requests to")]
+    #[arg(long, default_value = "auto", help = "Upstream LLM base URL (default: 'auto' routes Anthropic to api.anthropic.com, OpenAI to api.openai.com, Ollama to localhost:11434)")]
     pub upstream_url: String,
+
+    #[arg(long, env = "TOKENECTOMY_MAX_HOURLY_TOKENS", help = "Safety circuit breaker: maximum raw tokens allowed per rolling hour (prevents runaway agent loops)")]
+    pub max_hourly_tokens: Option<u64>,
+
+    #[arg(long, default_value_t = 3, help = "Maximum retries when upstream returns HTTP 429 rate limit")]
+    pub max_retries: usize,
+
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set, help = "Automatically mitigate upstream HTTP 429 rate limits with exponential backoff")]
+    pub auto_retry_429: bool,
 
     #[arg(long, help = "Allow proxy to bind to non-loopback addresses (requires --proxy-token)")]
     pub allow_remote: bool,
