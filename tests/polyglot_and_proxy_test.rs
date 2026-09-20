@@ -1085,3 +1085,171 @@ fn test_in_process_tree_sitter_syntax_verification_rust_js_ts() {
 
     let _ = std::fs::remove_dir_all(&temp_dir);
 }
+
+#[test]
+fn test_proxy_resolve_upstream_target_auto_routing() {
+    use tokenectomy::proxy::resolve_upstream_target;
+
+    // 1. Auto mode: Anthropic endpoints
+    assert_eq!(
+        resolve_upstream_target("auto", "/v1/messages", &[]),
+        "https://api.anthropic.com/v1/messages"
+    );
+    assert_eq!(
+        resolve_upstream_target("auto", "/v1/messages?stream=true", &[]),
+        "https://api.anthropic.com/v1/messages?stream=true"
+    );
+    assert_eq!(
+        resolve_upstream_target("auto", "/v1/complete", &[]),
+        "https://api.anthropic.com/v1/complete"
+    );
+    // Anthropic via headers
+    let anthropic_headers = vec![("x-api-key".to_string(), "sk-ant-test".to_string())];
+    assert_eq!(
+        resolve_upstream_target("auto", "/custom/messages", &anthropic_headers),
+        "https://api.anthropic.com/custom/messages"
+    );
+
+    // 2. Auto mode: Ollama endpoints
+    assert_eq!(
+        resolve_upstream_target("auto", "/api/generate", &[]),
+        "http://localhost:11434/api/generate"
+    );
+    assert_eq!(
+        resolve_upstream_target("auto", "/api/tags", &[]),
+        "http://localhost:11434/api/tags"
+    );
+    assert_eq!(
+        resolve_upstream_target("auto", "/api/chat", &[]),
+        "http://localhost:11434/api/chat"
+    );
+
+    // 3. Auto mode: OpenAI endpoints (default fallback)
+    assert_eq!(
+        resolve_upstream_target("auto", "/v1/chat/completions", &[]),
+        "https://api.openai.com/v1/chat/completions"
+    );
+    assert_eq!(
+        resolve_upstream_target("auto", "/v1/embeddings", &[]),
+        "https://api.openai.com/v1/embeddings"
+    );
+    assert_eq!(
+        resolve_upstream_target("auto", "/v1/models", &[]),
+        "https://api.openai.com/v1/models"
+    );
+
+    // 4. Custom upstream path normalization (prevents duplicate /v1/v1)
+    assert_eq!(
+        resolve_upstream_target("http://127.0.0.1:11434/v1", "/v1/chat/completions", &[]),
+        "http://127.0.0.1:11434/v1/chat/completions"
+    );
+    assert_eq!(
+        resolve_upstream_target("http://127.0.0.1:11434", "/v1/chat/completions", &[]),
+        "http://127.0.0.1:11434/v1/chat/completions"
+    );
+    assert_eq!(
+        resolve_upstream_target("https://api.groq.com/openai/v1", "/v1/models", &[]),
+        "https://api.groq.com/openai/v1/models"
+    );
+}
+
+#[test]
+fn test_proxy_metrics_cache_and_finops_calculation() {
+    let metrics = tokenectomy::proxy::ProxyMetrics::new();
+    // 1000 raw chars -> 250 raw tokens. 200 sanitized chars -> 50 sanitized tokens. Tokens saved: 200.
+    metrics.record(1000, 200, 3);
+    // Cache hit saves 400 prompt tokens
+    metrics.record_cache_hit(400);
+
+    let json = metrics.to_json();
+    assert_eq!(json["total_requests"], 2);
+    assert_eq!(json["secrets_redacted"], 3);
+    assert_eq!(json["cache_hits"], 1);
+    assert_eq!(json["cache_tokens_saved"], 400);
+    assert_eq!(json["tokens_saved_by_surgery"], 200);
+    assert_eq!(json["estimated_tokens_saved"], 600); // 200 + 400
+    // Cost saved: 600 / 1M * $3.00 = $0.0018 -> rounded to $0.002
+    assert!(json["estimated_cost_saved_usd"].as_f64().unwrap() > 0.0);
+}
+
+#[tokio::test]
+async fn test_proxy_zero_cost_prompt_cache_hit_and_miss_e2e() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    let upstream_call_count = Arc::new(AtomicUsize::new(0));
+    let uc_clone = upstream_call_count.clone();
+
+    // 1. Spin up mock upstream server on 127.0.0.1:18081
+    let mock_listener = tokio::net::TcpListener::bind("127.0.0.1:18081").await.expect("bind mock upstream");
+    tokio::spawn(async move {
+        while let Ok((mut stream, _)) = mock_listener.accept().await {
+            uc_clone.fetch_add(1, Ordering::SeqCst);
+            let mut buf = vec![0u8; 4096];
+            let _ = stream.read(&mut buf).await;
+            let mock_body = r#"{"id":"chatcmpl-test","choices":[{"message":{"role":"assistant","content":"Cached Response OK"}}]}"#;
+            let mock_http = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                mock_body.len(),
+                mock_body
+            );
+            let _ = stream.write_all(mock_http.as_bytes()).await;
+            let _ = stream.flush().await;
+        }
+    });
+
+    // 2. Spin up Tokenectomy Gateway Reverse Proxy on 127.0.0.1:18080 pointing to mock upstream
+    tokio::spawn(async move {
+        let _ = tokenectomy::proxy::run_reverse_proxy("127.0.0.1:18080", "http://127.0.0.1:18081").await;
+    });
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
+    let client = reqwest::Client::new();
+
+    let completion_payload = serde_json::json!({
+        "model": "gpt-4o",
+        "messages": [
+            {"role": "system", "content": "You are an AI code reviewer."},
+            {"role": "user", "content": "Please review this pull request."}
+        ]
+    });
+
+    // Request 1: Fresh prompt -> Cache MISS -> Forwarded to upstream
+    let resp1 = client.post("http://127.0.0.1:18080/v1/chat/completions")
+        .json(&completion_payload)
+        .send()
+        .await
+        .expect("send request 1");
+    assert_eq!(resp1.status(), 200);
+    assert_eq!(
+        resp1.headers().get("x-tokenectomy-cache").and_then(|v| v.to_str().ok()),
+        Some("MISS")
+    );
+    assert_eq!(upstream_call_count.load(Ordering::SeqCst), 1);
+
+    // Request 2: Identical prompt -> Cache HIT -> Zero LLM/upstream request!
+    let resp2 = client.post("http://127.0.0.1:18080/v1/chat/completions")
+        .json(&completion_payload)
+        .send()
+        .await
+        .expect("send request 2");
+    assert_eq!(resp2.status(), 200);
+    assert_eq!(
+        resp2.headers().get("x-tokenectomy-cache").and_then(|v| v.to_str().ok()),
+        Some("HIT")
+    );
+    assert!(resp2.headers().get("x-tokenectomy-saved-tokens").is_some());
+    // Upstream counter MUST still be 1!
+    assert_eq!(upstream_call_count.load(Ordering::SeqCst), 1);
+
+    let body2: serde_json::Value = resp2.json().await.expect("parse cached json response");
+    assert_eq!(body2["choices"][0]["message"]["content"], "Cached Response OK");
+
+    // Request 3: Check /v1/metrics reflects cache hit and FinOps token savings
+    let metrics_resp = client.get("http://127.0.0.1:18080/v1/metrics").send().await.expect("get metrics");
+    assert_eq!(metrics_resp.status(), 200);
+    let metrics_json: serde_json::Value = metrics_resp.json().await.expect("parse metrics json");
+    assert_eq!(metrics_json["cache_hits"], 1);
+    assert!(metrics_json["cache_tokens_saved"].as_u64().unwrap() > 0);
+}

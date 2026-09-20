@@ -1,11 +1,13 @@
 use crate::redact::redact_secrets;
 use serde_json::Value;
+use sha2::{Digest, Sha256};
+use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
-
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::Instant;
+use tokio::sync::RwLock;
 
 #[derive(Debug, Clone, Default)]
 pub struct ProxySanitizeStats {
@@ -13,6 +15,19 @@ pub struct ProxySanitizeStats {
     pub sanitized_chars: usize,
     pub secrets_redacted: usize,
 }
+
+#[derive(Clone, Debug)]
+pub struct CachedCompletion {
+    pub status: u16,
+    pub reason: String,
+    pub headers: Vec<(String, String)>,
+    pub body: Vec<u8>,
+    pub timestamp: Instant,
+    pub ttl: Duration,
+    pub estimated_tokens: u64,
+}
+
+pub type SharedResponseCache = Arc<RwLock<HashMap<String, CachedCompletion>>>;
 
 /// Real-time thread-safe metrics collector for FinOps and token economics monitoring.
 #[derive(Debug)]
@@ -22,6 +37,8 @@ pub struct ProxyMetrics {
     pub total_raw_chars: AtomicU64,
     pub total_sanitized_chars: AtomicU64,
     pub total_secrets_redacted: AtomicU64,
+    pub total_cache_hits: AtomicU64,
+    pub total_cache_tokens_saved: AtomicU64,
 }
 
 impl Default for ProxyMetrics {
@@ -38,6 +55,8 @@ impl ProxyMetrics {
             total_raw_chars: AtomicU64::new(0),
             total_sanitized_chars: AtomicU64::new(0),
             total_secrets_redacted: AtomicU64::new(0),
+            total_cache_hits: AtomicU64::new(0),
+            total_cache_tokens_saved: AtomicU64::new(0),
         }
     }
 
@@ -52,16 +71,25 @@ impl ProxyMetrics {
         self.total_requests.fetch_add(1, Ordering::Relaxed);
     }
 
+    pub fn record_cache_hit(&self, saved_tokens: u64) {
+        self.total_requests.fetch_add(1, Ordering::Relaxed);
+        self.total_cache_hits.fetch_add(1, Ordering::Relaxed);
+        self.total_cache_tokens_saved.fetch_add(saved_tokens, Ordering::Relaxed);
+    }
+
     pub fn to_json(&self) -> serde_json::Value {
         let raw_chars = self.total_raw_chars.load(Ordering::Relaxed);
         let sanitized_chars = self.total_sanitized_chars.load(Ordering::Relaxed);
         let requests = self.total_requests.load(Ordering::Relaxed);
         let secrets = self.total_secrets_redacted.load(Ordering::Relaxed);
+        let cache_hits = self.total_cache_hits.load(Ordering::Relaxed);
+        let cache_tokens = self.total_cache_tokens_saved.load(Ordering::Relaxed);
         let uptime = self.start_time.elapsed().as_secs();
 
         let raw_tokens = raw_chars / 4;
         let sanitized_tokens = sanitized_chars / 4;
-        let tokens_saved = raw_tokens.saturating_sub(sanitized_tokens);
+        let tokens_saved_by_surgery = raw_tokens.saturating_sub(sanitized_tokens);
+        let total_tokens_saved = tokens_saved_by_surgery + cache_tokens;
         let saved_pct = if raw_chars > 0 {
             (raw_chars.saturating_sub(sanitized_chars) as f64 / raw_chars as f64) * 100.0
         } else {
@@ -69,7 +97,7 @@ impl ProxyMetrics {
         };
 
         // Standard blended LLM input token pricing: ~$3.00 per 1M prompt tokens ($0.003/1K)
-        let cost_saved_usd = (tokens_saved as f64 / 1_000_000.0) * 3.0;
+        let cost_saved_usd = (total_tokens_saved as f64 / 1_000_000.0) * 3.0;
 
         serde_json::json!({
             "status": "ok",
@@ -81,7 +109,10 @@ impl ProxyMetrics {
             "sanitized_characters": sanitized_chars,
             "estimated_raw_tokens": raw_tokens,
             "estimated_sanitized_tokens": sanitized_tokens,
-            "estimated_tokens_saved": tokens_saved,
+            "estimated_tokens_saved": total_tokens_saved,
+            "tokens_saved_by_surgery": tokens_saved_by_surgery,
+            "cache_hits": cache_hits,
+            "cache_tokens_saved": cache_tokens,
             "reduction_percentage": (saved_pct * 10.0).round() / 10.0,
             "secrets_redacted": secrets,
             "estimated_cost_saved_usd": (cost_saved_usd * 1000.0).round() / 1000.0,
@@ -311,6 +342,45 @@ pub fn is_loopback(bind_addr: &str) -> bool {
     false
 }
 
+/// Resolves the actual upstream target URL.
+/// Supports 'auto' mode (dynamically routes Anthropic endpoints to api.anthropic.com,
+/// OpenAI endpoints to api.openai.com, and Ollama endpoints to localhost:11434).
+/// Also cleanses and normalizes path joining to prevent duplicate /v1 prefixes.
+pub fn resolve_upstream_target(
+    configured_upstream: &str,
+    full_path: &str,
+    headers: &[(String, String)],
+) -> String {
+    let clean_path = if full_path.is_empty() { "/" } else { full_path };
+    let (path_no_query, _) = clean_path.split_once('?').unwrap_or((clean_path, ""));
+
+    if configured_upstream.trim().is_empty() || configured_upstream.eq_ignore_ascii_case("auto") {
+        let has_anthropic_header = headers.iter().any(|(k, _)| {
+            k.eq_ignore_ascii_case("x-api-key") || k.eq_ignore_ascii_case("anthropic-version")
+        });
+
+        if path_no_query.starts_with("/v1/messages")
+            || path_no_query.starts_with("/v1/complete")
+            || has_anthropic_header
+        {
+            format!("https://api.anthropic.com{}", clean_path)
+        } else if path_no_query.starts_with("/api/") {
+            format!("http://localhost:11434{}", clean_path)
+        } else {
+            format!("https://api.openai.com{}", clean_path)
+        }
+    } else {
+        let base = configured_upstream.trim_end_matches('/');
+        if base.ends_with("/v1") && clean_path.starts_with("/v1/") {
+            format!("{}{}", base, &clean_path[3..])
+        } else if !clean_path.starts_with('/') {
+            format!("{}/{}", base, clean_path)
+        } else {
+            format!("{}{}", base, clean_path)
+        }
+    }
+}
+
 /// Runs the AI Gateway Reverse Proxy on the specified bind address (default loopback).
 pub async fn run_reverse_proxy(bind_addr: &str, upstream_url: &str) -> anyhow::Result<()> {
     run_reverse_proxy_configured(bind_addr, upstream_url, false, None).await
@@ -350,16 +420,21 @@ pub async fn run_reverse_proxy_configured(
     let semaphore = Arc::new(tokio::sync::Semaphore::new(MAX_CONCURRENT_CONNECTIONS));
     let analyzer_state = Arc::new(crate::analyzer::AppState::new());
     let metrics = Arc::new(ProxyMetrics::new());
+    let prompt_cache: SharedResponseCache = Arc::new(RwLock::new(HashMap::new()));
     let bind_addr_arc = Arc::new(bind_addr.to_string());
 
     println!("⚡ Tokenectomy AI Gateway Proxy active on http://{}", bind_addr);
     println!("📊 Real-Time FinOps Dashboard: http://{}/dashboard", bind_addr);
     println!("📈 Prometheus / JSON Metrics: http://{}/v1/metrics", bind_addr);
-    println!("🔗 Forwarding to upstream: {}", upstream);
+    if upstream.eq_ignore_ascii_case("auto") {
+        println!("🔀 Smart Upstream Routing: AUTO (Anthropic -> api.anthropic.com, OpenAI -> api.openai.com, Ollama -> localhost:11434)");
+    } else {
+        println!("🔗 Forwarding to upstream: {}", upstream);
+    }
     if !loopback {
         println!("🔒 Remote mode ACTIVE (Protected with mandatory bearer authentication)");
     }
-    println!("🛡️ Active filters: Zero-Leak Redaction + Polyglot Framework Surgery + AST Analyzer");
+    println!("🛡️ Active filters: Zero-Leak Redaction + Polyglot Framework Surgery + Prompt Cache");
 
     loop {
         let (mut socket, peer_addr) = listener.accept().await?;
@@ -379,6 +454,7 @@ pub async fn run_reverse_proxy_configured(
         let token_clone = required_token.clone();
         let analyzer_clone = Arc::clone(&analyzer_state);
         let metrics_clone = Arc::clone(&metrics);
+        let prompt_cache_clone = Arc::clone(&prompt_cache);
         let bind_addr_clone = Arc::clone(&bind_addr_arc);
 
         tokio::spawn(async move {
@@ -706,8 +782,59 @@ pub async fn run_reverse_proxy_configured(
                     metrics_clone.record_request();
                 }
 
-                // Forward to upstream with complete query string preserved
-                let target_url = format!("{}{}", upstream_clone, full_path);
+                // Forward to upstream with complete query string preserved and dynamic auto-routing
+                let target_url = resolve_upstream_target(&upstream_clone, full_path, &forward_headers);
+
+                // Check zero-cost prompt cache for non-streaming completion requests
+                let is_stream = if let Ok(json_val) = serde_json::from_slice::<Value>(&final_body) {
+                    json_val.get("stream").and_then(|s| s.as_bool()).unwrap_or(false)
+                } else {
+                    false
+                };
+
+                let cache_eligible = method == "POST" && !is_stream && (path.ends_with("/chat/completions") || path.ends_with("/messages"));
+                let cache_key = if cache_eligible {
+                    let mut hasher = Sha256::new();
+                    hasher.update(target_url.as_bytes());
+                    hasher.update(b":");
+                    hasher.update(&final_body);
+                    let result = hasher.finalize();
+                    let mut hash_str = String::with_capacity(64);
+                    for byte in result {
+                        hash_str.push_str(&format!("{:02x}", byte));
+                    }
+                    Some(hash_str)
+                } else {
+                    None
+                };
+
+                if let Some(ref key) = cache_key {
+                    let cache_read = prompt_cache_clone.read().await;
+                    if let Some(entry) = cache_read.get(key) {
+                        if entry.timestamp.elapsed() < entry.ttl {
+                            metrics_clone.record_cache_hit(entry.estimated_tokens);
+                            eprintln!(
+                                "⚡ [Gateway Cache HIT] Saved {} tokens for {}",
+                                entry.estimated_tokens, peer_addr
+                            );
+
+                            let mut head = format!("HTTP/1.1 {} {}\r\n", entry.status, entry.reason);
+                            for (k, v) in &entry.headers {
+                                head.push_str(&format!("{}: {}\r\n", k, v));
+                            }
+                            head.push_str("X-Tokenectomy-Cache: HIT\r\n");
+                            head.push_str(&format!("X-Tokenectomy-Saved-Tokens: {}\r\n", entry.estimated_tokens));
+                            head.push_str(&format!("Content-Length: {}\r\n", entry.body.len()));
+                            head.push_str("Connection: close\r\n\r\n");
+
+                            let _ = socket.write_all(head.as_bytes()).await;
+                            let _ = socket.write_all(&entry.body).await;
+                            let _ = socket.flush().await;
+                            return;
+                        }
+                    }
+                }
+
                 let mut req_builder = match method {
                     "POST" => client_clone.post(&target_url),
                     "GET" => client_clone.get(&target_url),
@@ -727,13 +854,21 @@ pub async fn run_reverse_proxy_configured(
                 if !final_body.is_empty() {
                     req_builder = req_builder
                         .header("Content-Type", "application/json")
-                        .body(final_body);
+                        .body(final_body.clone());
                 }
 
                 match req_builder.send().await {
                     Ok(mut upstream_resp) => {
                         let status = upstream_resp.status();
+                        let is_event_stream = upstream_resp.headers()
+                            .get("content-type")
+                            .and_then(|ct| ct.to_str().ok())
+                            .map(|ct| ct.contains("text/event-stream"))
+                            .unwrap_or(false);
+
                         let mut head = format!("HTTP/1.1 {} {}\r\n", status.as_u16(), status.canonical_reason().unwrap_or(""));
+                        let mut captured_headers = Vec::new();
+
                         for (k, v) in upstream_resp.headers() {
                             let k_lower = k.as_str().to_ascii_lowercase();
                             // RFC 7230 §6.1: Strip hop-by-hop headers to prevent chunked framing mismatches
@@ -745,19 +880,49 @@ pub async fn run_reverse_proxy_configured(
                             {
                                 continue;
                             }
-                            head.push_str(&format!("{}: {}\r\n", k.as_str(), v.to_str().unwrap_or("")));
+                            let v_str = v.to_str().unwrap_or("");
+                            head.push_str(&format!("{}: {}\r\n", k.as_str(), v_str));
+                            captured_headers.push((k.as_str().to_string(), v_str.to_string()));
+                        }
+
+                        if cache_eligible {
+                            head.push_str("X-Tokenectomy-Cache: MISS\r\n");
                         }
                         head.push_str("Connection: close\r\n\r\n");
                         let _ = socket.write_all(head.as_bytes()).await;
 
                         // P15: Stream chunk by chunk with idle timeout
+                        let mut captured_body = Vec::new();
                         while let Ok(Ok(Some(chunk))) = tokio::time::timeout(SOCKET_IDLE_TIMEOUT, upstream_resp.chunk()).await {
+                            if cache_eligible && !is_event_stream && captured_body.len() < 4 * 1024 * 1024 {
+                                captured_body.extend_from_slice(&chunk);
+                            }
                             if socket.write_all(&chunk).await.is_err() {
                                 break;
                             }
                             let _ = socket.flush().await;
                         }
                         let _ = socket.flush().await;
+
+                        // Store in zero-cost prompt cache on success
+                        if let Some(key) = cache_key {
+                            if status.is_success() && !is_event_stream && !captured_body.is_empty() {
+                                let est_tokens = (final_body.len() + captured_body.len()) as u64 / 4;
+                                let mut cache_write = prompt_cache_clone.write().await;
+                                if cache_write.len() >= 1000 {
+                                    cache_write.clear();
+                                }
+                                cache_write.insert(key, CachedCompletion {
+                                    status: status.as_u16(),
+                                    reason: status.canonical_reason().unwrap_or("OK").to_string(),
+                                    headers: captured_headers,
+                                    body: captured_body,
+                                    timestamp: Instant::now(),
+                                    ttl: Duration::from_secs(300),
+                                    estimated_tokens: est_tokens,
+                                });
+                            }
+                        }
                     }
                     Err(e) => {
                         let err_json = serde_json::json!({

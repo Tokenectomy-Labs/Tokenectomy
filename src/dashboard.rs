@@ -357,6 +357,16 @@ const DASHBOARD_HTML: &str = r#"<!DOCTYPE html>
       </div>
 
       <div class="kpi-card">
+      <div class="kpi-card">
+        <div class="kpi-label">
+          <span>Prompt Cache Hits</span>
+          <span>⚡</span>
+        </div>
+        <div class="kpi-value cyan" id="val-cache-hits">0</div>
+        <div class="kpi-subtext" id="sub-cache">0 tokens served from cache</div>
+      </div>
+
+      <div class="kpi-card">
         <div class="kpi-label">
           <span>Noise Pruning</span>
           <span>📉</span>
@@ -405,7 +415,9 @@ const DASHBOARD_HTML: &str = r#"<!DOCTYPE html>
         <span>Route Coding Agents Through Tokenectomy Gateway</span>
       </div>
       <div class="guide-tabs">
-        <button class="tab-btn active" onclick="switchTab('cursor')">Cursor / Windsurf</button>
+        <button class="tab-btn active" onclick="switchTab('claude')">Claude Code</button>
+        <button class="tab-btn" onclick="switchTab('cursor')">Cursor / Windsurf</button>
+        <button class="tab-btn" onclick="switchTab('antigravity')">Antigravity</button>
         <button class="tab-btn" onclick="switchTab('cline')">Cline / Roo Code</button>
         <button class="tab-btn" onclick="switchTab('python')">Python SDK</button>
         <button class="tab-btn" onclick="switchTab('curl')">cURL</button>
@@ -413,14 +425,13 @@ const DASHBOARD_HTML: &str = r#"<!DOCTYPE html>
 
       <div class="code-box" id="code-content">
         <button class="copy-btn" onclick="copyCode()">Copy</button>
-        <pre><code id="code-text">// Point your OpenAI Base URL to Tokenectomy Gateway:
-export OPENAI_BASE_URL="http://127.0.0.1:8080/v1"
-export OPENAI_API_KEY="your-real-openai-api-key"</code></pre>
+        <pre><code id="code-text">// Point Claude Code to Tokenectomy Gateway:
+export ANTHROPIC_BASE_URL="http://127.0.0.1:8080"</code></pre>
       </div>
     </div>
 
     <footer>
-      <div>Tokenectomy Razor — Autonomous Sub-Cortex Infrastructure</div>
+      <div>Tokenectomy Gateway — Context-Surgery AI Infrastructure</div>
       <div>
         <a href="/v1/metrics" target="_blank">JSON Metrics API</a> · 
         <a href="https://github.com/Tokenectomy-Labs/Tokenectomy" target="_blank">GitHub</a> · 
@@ -431,9 +442,14 @@ export OPENAI_API_KEY="your-real-openai-api-key"</code></pre>
 
   <script>
     const snippets = {
+      claude: `// Claude Code CLI:
+export ANTHROPIC_BASE_URL="http://127.0.0.1:8080"`,
       cursor: `// Cursor / Windsurf custom OpenAI Base URL:
 // In Settings -> Models -> OpenAI API Base URL:
 http://127.0.0.1:8080/v1`,
+      antigravity: `// Google Antigravity Sidecar & Environment:
+export OPENAI_BASE_URL="http://127.0.0.1:8080/v1"
+export ANTHROPIC_BASE_URL="http://127.0.0.1:8080"`,
       cline: `// In Cline / Roo Code Settings:
 // API Provider: OpenAI Compatible
 // Base URL: http://127.0.0.1:8080/v1
@@ -476,6 +492,8 @@ client = OpenAI(
         document.getElementById('val-cost').textContent = '$' + (data.estimated_cost_saved_usd || 0).toFixed(2);
         document.getElementById('val-tokens').textContent = (data.estimated_tokens_saved || 0).toLocaleString();
         document.getElementById('sub-tokens').textContent = (data.estimated_raw_tokens || 0).toLocaleString() + ' raw tokens intercepted';
+        document.getElementById('val-cache-hits').textContent = (data.cache_hits || 0).toLocaleString();
+        document.getElementById('sub-cache').textContent = (data.cache_tokens_saved || 0).toLocaleString() + ' zero-cost tokens served';
         document.getElementById('val-reduction').textContent = (data.reduction_percentage || 0).toFixed(1) + '%';
         document.getElementById('val-secrets').textContent = (data.secrets_redacted || 0).toLocaleString();
         document.getElementById('version-badge').textContent = 'v' + (data.version || '1.3.0');
