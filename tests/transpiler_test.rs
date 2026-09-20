@@ -2,7 +2,7 @@ use serde_json::json;
 use tokenectomy::transpiler::{
     anthropic_to_openai_request, anthropic_to_openai_response,
     openai_chunk_to_anthropic_sse, openai_to_anthropic_request,
-    openai_to_anthropic_response,
+    openai_to_anthropic_response, rewrite_transpiled_url,
 };
 
 #[test]
@@ -16,7 +16,7 @@ fn test_anthropic_to_openai_simple_conversion() {
         ]
     });
 
-    let openai_req = anthropic_to_openai_request(&ant_req).expect("transpile failed");
+    let openai_req = anthropic_to_openai_request(&ant_req, None).expect("transpile failed");
     assert_eq!(openai_req["model"], "claude-3-5-sonnet-20241022");
     assert_eq!(openai_req["max_tokens"], 1024);
 
@@ -76,7 +76,7 @@ fn test_anthropic_to_openai_content_blocks_and_tools() {
         ]
     });
 
-    let openai_req = anthropic_to_openai_request(&ant_req).expect("transpile failed");
+    let openai_req = anthropic_to_openai_request(&ant_req, None).expect("transpile failed");
     let msgs = openai_req["messages"].as_array().unwrap();
     assert_eq!(msgs.len(), 3);
 
@@ -147,7 +147,7 @@ fn test_openai_to_anthropic_request_conversion() {
         "temperature": 0.2
     });
 
-    let ant_req = openai_to_anthropic_request(&openai_req).expect("transpile failed");
+    let ant_req = openai_to_anthropic_request(&openai_req, None).expect("transpile failed");
     assert_eq!(ant_req["system"], "Act as a senior security researcher.");
     assert_eq!(ant_req["max_tokens"], 2048);
     assert_eq!(ant_req["temperature"], 0.2);
@@ -217,4 +217,20 @@ fn test_openai_sse_chunk_to_anthropic_events() {
     assert!(stop_events.iter().any(|e| e.contains("event: content_block_stop")));
     assert!(stop_events.iter().any(|e| e.contains("event: message_delta") && e.contains("end_turn")));
     assert!(stop_events.iter().any(|e| e.contains("event: message_stop")));
+}
+
+#[test]
+fn test_rewrite_transpiled_url() {
+    assert_eq!(
+        rewrite_transpiled_url("http://localhost:11434/v1/messages?foo=bar", "/v1/chat/completions"),
+        "http://localhost:11434/v1/chat/completions?foo=bar"
+    );
+    assert_eq!(
+        rewrite_transpiled_url("https://api.openai.com/v1/chat/completions", "/v1/messages"),
+        "https://api.openai.com/v1/messages"
+    );
+    assert_eq!(
+        rewrite_transpiled_url("http://localhost:11434/messages", "/v1/chat/completions"),
+        "http://localhost:11434/v1/chat/completions"
+    );
 }

@@ -963,16 +963,20 @@ pub async fn run_reverse_proxy_with_config(config: ProxyConfig) -> anyhow::Resul
                     &forward_headers,
                 );
 
-                if transpile_dir == crate::transpiler::TranspileDirection::AnthropicToOpenAi {
-                    // Rewrite target endpoint to /v1/chat/completions
-                    if let Some(base) = target_url.strip_suffix("/v1/messages").or_else(|| target_url.strip_suffix("/messages")) {
-                        target_url = format!("{}/v1/chat/completions", base);
-                    } else if let Some(idx) = target_url.find("/v1/messages") {
-                        target_url = format!("{}/v1/chat/completions{}", &target_url[..idx], &target_url[idx + 12..]);
+                let target_model_override = forward_headers.iter().find_map(|(k, v)| {
+                    if k.eq_ignore_ascii_case("x-tokenectomy-target-model") || k.eq_ignore_ascii_case("x-target-model") {
+                        Some(v.clone())
+                    } else {
+                        None
                     }
+                }).or_else(|| std::env::var("TOKENECTOMY_TARGET_MODEL").ok());
+
+                if transpile_dir == crate::transpiler::TranspileDirection::AnthropicToOpenAi {
+                    // Rewrite target endpoint to /v1/chat/completions preserving query string
+                    target_url = crate::transpiler::rewrite_transpiled_url(&target_url, "/v1/chat/completions");
 
                     if let Ok(json_body) = serde_json::from_slice::<Value>(&final_body) {
-                        if let Ok(openai_body) = crate::transpiler::anthropic_to_openai_request(&json_body) {
+                        if let Ok(openai_body) = crate::transpiler::anthropic_to_openai_request(&json_body, target_model_override.as_deref()) {
                             if let Ok(transpiled_bytes) = serde_json::to_vec(&openai_body) {
                                 final_body = transpiled_bytes;
                             }
@@ -986,15 +990,11 @@ pub async fn run_reverse_proxy_with_config(config: ProxyConfig) -> anyhow::Resul
                         }
                     }
                 } else if transpile_dir == crate::transpiler::TranspileDirection::OpenAiToAnthropic {
-                    // Rewrite target endpoint to /v1/messages
-                    if let Some(base) = target_url.strip_suffix("/v1/chat/completions").or_else(|| target_url.strip_suffix("/chat/completions")) {
-                        target_url = format!("{}/v1/messages", base);
-                    } else if let Some(idx) = target_url.find("/v1/chat/completions") {
-                        target_url = format!("{}/v1/messages{}", &target_url[..idx], &target_url[idx + 19..]);
-                    }
+                    // Rewrite target endpoint to /v1/messages preserving query string
+                    target_url = crate::transpiler::rewrite_transpiled_url(&target_url, "/v1/messages");
 
                     if let Ok(json_body) = serde_json::from_slice::<Value>(&final_body) {
-                        if let Ok(ant_body) = crate::transpiler::openai_to_anthropic_request(&json_body) {
+                        if let Ok(ant_body) = crate::transpiler::openai_to_anthropic_request(&json_body, target_model_override.as_deref()) {
                             if let Ok(transpiled_bytes) = serde_json::to_vec(&ant_body) {
                                 final_body = transpiled_bytes;
                             }

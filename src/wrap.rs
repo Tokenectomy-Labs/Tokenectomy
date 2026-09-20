@@ -102,8 +102,8 @@ pub async fn run_wrap_command(
     let executable = &cmd_parts[0];
     let args = &cmd_parts[1..];
 
-    let mut child = Command::new(executable)
-        .args(args)
+    let mut cmd = Command::new(executable);
+    cmd.args(args)
         .env("ANTHROPIC_BASE_URL", &gateway_url)
         .env("OPENAI_BASE_URL", &openai_gateway_url)
         .env("OPENAI_API_BASE", &openai_gateway_url)
@@ -112,15 +112,30 @@ pub async fn run_wrap_command(
         .env("TOKENECTOMY_GATEWAY_URL", &gateway_url)
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .spawn()
-        .with_context(|| format!("Failed to spawn wrapped command: {}", executable))?;
+        .stderr(Stdio::inherit());
 
-    let exit_status = child.wait().await?;
-    let code = exit_status.code().unwrap_or(1);
+    if let Ok(target_m) = std::env::var("TOKENECTOMY_TARGET_MODEL") {
+        cmd.env("TOKENECTOMY_TARGET_MODEL", target_m);
+    }
 
-    // 5. Clean shutdown of background gateway
+    let mut child = match cmd.spawn() {
+        Ok(c) => c,
+        Err(e) => {
+            server_task.abort();
+            return Err(e).with_context(|| format!("Failed to spawn wrapped command: {}", executable));
+        }
+    };
+
+    let exit_status = child.wait().await;
     server_task.abort();
+
+    let code = match exit_status {
+        Ok(s) => s.code().unwrap_or(1),
+        Err(e) => {
+            log::error!("Error waiting on child process {}: {}", executable, e);
+            1
+        }
+    };
 
     eprintln!(
         "\n{}",

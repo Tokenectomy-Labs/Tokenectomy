@@ -1,7 +1,48 @@
 use serde_json::{json, Value};
 
+/// Rewrites a target URL's endpoint path to a new endpoint while preserving scheme, host, port, and query string.
+pub fn rewrite_transpiled_url(original_url: &str, new_endpoint: &str) -> String {
+    let (url_without_query, query_part) = original_url.split_once('?').unwrap_or((original_url, ""));
+
+    let base = if let Some(b) = url_without_query.strip_suffix("/v1/messages") {
+        b
+    } else if let Some(b) = url_without_query.strip_suffix("/messages") {
+        b
+    } else if let Some(b) = url_without_query.strip_suffix("/v1/chat/completions") {
+        b
+    } else if let Some(b) = url_without_query.strip_suffix("/chat/completions") {
+        b
+    } else if let Some(idx) = url_without_query.find("/v1/messages") {
+        &url_without_query[..idx]
+    } else if let Some(idx) = url_without_query.find("/v1/chat/completions") {
+        &url_without_query[..idx]
+    } else if let Some(idx) = url_without_query.find("/messages") {
+        &url_without_query[..idx]
+    } else if let Some(idx) = url_without_query.find("/chat/completions") {
+        &url_without_query[..idx]
+    } else {
+        url_without_query.trim_end_matches('/')
+    };
+
+    let clean_endpoint = if new_endpoint.starts_with('/') {
+        new_endpoint
+    } else {
+        &format!("/{}", new_endpoint)
+    };
+
+    let combined = format!("{}{}", base, clean_endpoint);
+    if query_part.is_empty() {
+        combined
+    } else {
+        format!("{}?{}", combined, query_part)
+    }
+}
+
 /// Converts an Anthropic `/v1/messages` request payload into an OpenAI `/v1/chat/completions` payload.
-pub fn anthropic_to_openai_request(anthropic_body: &Value) -> Result<Value, String> {
+pub fn anthropic_to_openai_request(
+    anthropic_body: &Value,
+    model_override: Option<&str>,
+) -> Result<Value, String> {
     let mut openai_messages = Vec::new();
 
     // 1. Extract system prompt if present
@@ -102,18 +143,23 @@ pub fn anthropic_to_openai_request(anthropic_body: &Value) -> Result<Value, Stri
                     }
                 }
                 _ => {
+                    let content_str = if content_val.is_null() {
+                        String::new()
+                    } else {
+                        content_val.to_string()
+                    };
                     openai_messages.push(json!({
                         "role": role,
-                        "content": content_val.to_string()
+                        "content": content_str
                     }));
                 }
             }
         }
     }
 
-    let model = anthropic_body
-        .get("model")
-        .and_then(|m| m.as_str())
+    let model = model_override
+        .filter(|m| !m.trim().is_empty())
+        .or_else(|| anthropic_body.get("model").and_then(|m| m.as_str()))
         .unwrap_or("gpt-4o");
 
     let mut out = json!({
@@ -164,6 +210,31 @@ pub fn anthropic_to_openai_request(anthropic_body: &Value) -> Result<Value, Stri
 
 /// Converts an OpenAI `/v1/chat/completions` response into an Anthropic `/v1/messages` response.
 pub fn openai_to_anthropic_response(openai_resp: &Value, model_override: Option<&str>) -> Result<Value, String> {
+    // 1. Handle OpenAI error payloads gracefully
+    if let Some(err_obj) = openai_resp.get("error") {
+        let msg = err_obj.get("message").and_then(|m| m.as_str()).unwrap_or("Unknown upstream OpenAI error");
+        let o_type = err_obj.get("type").and_then(|t| t.as_str()).unwrap_or("");
+        let o_code = err_obj.get("code").and_then(|c| c.as_str()).unwrap_or("");
+
+        let ant_type = if o_code == "invalid_api_key" || o_type.contains("auth") || msg.contains("API key") {
+            "authentication_error"
+        } else if o_code == "rate_limit_exceeded" || o_type.contains("rate_limit") {
+            "rate_limit_error"
+        } else if o_type == "invalid_request_error" {
+            "invalid_request_error"
+        } else {
+            "api_error"
+        };
+
+        return Ok(json!({
+            "type": "error",
+            "error": {
+                "type": ant_type,
+                "message": msg
+            }
+        }));
+    }
+
     let id = openai_resp
         .get("id")
         .and_then(|i| i.as_str())
@@ -215,12 +286,17 @@ pub fn openai_to_anthropic_response(openai_resp: &Value, model_override: Option<
                     let name = func.get("name").and_then(|n| n.as_str()).unwrap_or("unknown");
                     let args_raw = func.get("arguments").and_then(|a| a.as_str()).unwrap_or("{}");
                     let parsed_args: Value = serde_json::from_str(args_raw).unwrap_or(json!({}));
+                    let input_val = if parsed_args.is_object() {
+                        parsed_args
+                    } else {
+                        json!({ "raw": parsed_args })
+                    };
 
                     content_blocks.push(json!({
                         "type": "tool_use",
                         "id": tc_id,
                         "name": name,
-                        "input": parsed_args
+                        "input": input_val
                     }));
                 }
             }
@@ -247,7 +323,10 @@ pub fn openai_to_anthropic_response(openai_resp: &Value, model_override: Option<
 }
 
 /// Converts an OpenAI `/v1/chat/completions` request payload into an Anthropic `/v1/messages` payload.
-pub fn openai_to_anthropic_request(openai_body: &Value) -> Result<Value, String> {
+pub fn openai_to_anthropic_request(
+    openai_body: &Value,
+    model_override: Option<&str>,
+) -> Result<Value, String> {
     let mut system_messages = Vec::new();
     let mut anthropic_messages = Vec::new();
 
@@ -294,11 +373,17 @@ pub fn openai_to_anthropic_request(openai_body: &Value) -> Result<Value, String>
                     let name = func.get("name").and_then(|n| n.as_str()).unwrap_or("unknown");
                     let args_raw = func.get("arguments").and_then(|a| a.as_str()).unwrap_or("{}");
                     let parsed: Value = serde_json::from_str(args_raw).unwrap_or(json!({}));
+                    let input_val = if parsed.is_object() {
+                        parsed
+                    } else {
+                        json!({ "raw": parsed })
+                    };
+
                     blocks.push(json!({
                         "type": "tool_use",
                         "id": id,
                         "name": name,
-                        "input": parsed
+                        "input": input_val
                     }));
                 }
                 anthropic_messages.push(json!({
@@ -326,9 +411,9 @@ pub fn openai_to_anthropic_request(openai_body: &Value) -> Result<Value, String>
         }
     }
 
-    let model = openai_body
-        .get("model")
-        .and_then(|m| m.as_str())
+    let model = model_override
+        .filter(|m| !m.trim().is_empty())
+        .or_else(|| openai_body.get("model").and_then(|m| m.as_str()))
         .unwrap_or("claude-3-5-sonnet-latest");
 
     let max_tokens = openai_body
@@ -384,6 +469,21 @@ pub fn openai_to_anthropic_request(openai_body: &Value) -> Result<Value, String>
 
 /// Converts an Anthropic response to an OpenAI response.
 pub fn anthropic_to_openai_response(ant_resp: &Value) -> Result<Value, String> {
+    // 1. Handle Anthropic error payloads gracefully
+    if let Some(err_obj) = ant_resp.get("error") {
+        let msg = err_obj.get("message").and_then(|m| m.as_str()).unwrap_or("Unknown upstream Anthropic error");
+        let ant_type = err_obj.get("type").and_then(|t| t.as_str()).unwrap_or("api_error");
+
+        return Ok(json!({
+            "error": {
+                "message": msg,
+                "type": ant_type,
+                "param": Value::Null,
+                "code": Value::Null
+            }
+        }));
+    }
+
     let id = ant_resp.get("id").and_then(|i| i.as_str()).unwrap_or("chatcmpl-tokenectomy");
     let model = ant_resp.get("model").and_then(|m| m.as_str()).unwrap_or("gpt-4o");
 
