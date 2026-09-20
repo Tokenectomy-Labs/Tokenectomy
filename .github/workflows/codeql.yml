@@ -9,8 +9,7 @@ on:
     - cron: '15 2 * * 1'
   workflow_dispatch:
 
-permissions:
-  contents: read
+permissions: read-all
 
 jobs:
   analyze:

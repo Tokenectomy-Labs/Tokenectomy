@@ -1,0 +1,8 @@
+- id: tokenectomy-scrub
+  name: Tokenectomy Secret & Crash Dump Scrubber
+  description: Prunes framework stack trace noise and redacts API keys, JWTs, and database passwords before committing.
+  entry: razor --scrub --file
+  language: system
+  files: \.(log|txt|json|out|err|trace|diff|patch)$
+  types: [text]
+  pass_filenames: true

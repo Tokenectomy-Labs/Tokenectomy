@@ -13,6 +13,8 @@ description: High-performance MCP server for AI coding agents. Purge 90%+ framew
   <a href="https://glama.ai/mcp/servers/Tokenectomy-Labs/Tokenectomy"><img src="https://img.shields.io/badge/Glama.ai-Tokenectomy--Razor-purple" alt="Glama.ai" height="20" width="155" /></a>
   <a href="https://crates.io/crates/tokenectomy"><img src="https://img.shields.io/crates/v/tokenectomy.svg?logo=rust" alt="Crates.io" height="20" width="95" /></a>
   <a href="https://www.npmjs.com/package/tokenectomy-razor"><img src="https://img.shields.io/npm/v/tokenectomy-razor.svg?logo=npm" alt="npm" height="20" width="100" /></a>
+  <a href="https://securityscorecards.dev/viewer/?uri=github.com/Tokenectomy-Labs/Tokenectomy"><img src="https://api.securityscorecards.dev/projects/github.com/Tokenectomy-Labs/Tokenectomy/badge" alt="OpenSSF Scorecard" height="20" /></a>
+  <a href="https://www.bestpractices.dev/projects/14704"><img src="https://www.bestpractices.dev/projects/14704/badge" alt="OpenSSF Best Practices" height="20" /></a>
   <a href="https://github.com/Tokenectomy-Labs/Tokenectomy/actions/workflows/ci.yml"><img src="https://github.com/Tokenectomy-Labs/Tokenectomy/actions/workflows/ci.yml/badge.svg" alt="CI" height="20" width="80" /></a>
   <a href="https://github.com/Tokenectomy-Labs/Tokenectomy/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" height="20" width="90" /></a>
 </div>

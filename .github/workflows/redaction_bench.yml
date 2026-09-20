@@ -17,8 +17,7 @@ on:
       - ".github/workflows/redaction_bench.yml"
   workflow_dispatch:
 
-permissions:
-  contents: read
+permissions: read-all
 
 jobs:
   redaction-gate:
