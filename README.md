@@ -3,7 +3,7 @@
     <img src="media/logo.png" width="130" alt="Tokenectomy Razor Logo" />
   </a>
 
-  <h1>Tokenectomy ⚡</h1>
+  <h1>Tokenectomy Razor</h1>
 
   <p><b>The High-Performance Privacy & Context-Surgery AI Gateway for Autonomous Coding Agents</b></p>
   <p><i>Sub-millisecond local AI Gateway reverse proxy & companion MCP sub-cortex written in safe Rust. Features zero-cost prompt caching, smart multi-provider auto-routing (Claude, Cursor, Antigravity, Ollama), 41.7%–99.7% polyglot stack trace noise excision, and linear $O(N)$ leak-proof credential redaction.</i></p>
@@ -447,7 +447,12 @@ docker run -i ghcr.io/tokenectomy-labs/razor:latest --mcp
 | `awesome-mcp-servers` Community Catalog Listing | ✅ Complete | v1.2.4 |
 | Inline Dropped Frame Identities (`[DROPPED_FRAMES: ...]`) & Anti-Silent Truncation Audit | ✅ Complete | v1.3.1 |
 | Content-Addressable Raw Log Cache & Verification Hash (`--diff-verify`) | ✅ Complete | v1.3.1 |
-| Deprecation & Removal of `cognitive_directive` alias | 📋 Planned | v1.4.0 |
+| Smart Multi-Provider Auto-Routing (Anthropic, OpenAI, Ollama) & Zero-Cost Prompt Caching | ✅ Complete | v1.3.3 |
+| Agent Safety Circuit Breaker (`--max-hourly-tokens`), 429 Auto-Retry Mitigator & CORS Preflight | ✅ Complete | v1.3.3 |
+| Universal LLM Format Transpiler (OpenAI `/v1/chat/completions` ⇄ Anthropic `/v1/messages` ⇄ Gemini) | 🚧 In Progress | v1.4.0 |
+| Multi-Provider High-Availability & Automatic Outage Fallback | 📋 Planned | v1.4.0 |
+| Declarative AI Gateway Configuration (`gateway.toml` / `tokenectomy.yaml`) | 📋 Planned | v1.4.0 |
+| Full SSE Streaming Token Caching Engine | 📋 Planned | v1.4.0 |
 | Native VS Code & JetBrains companion extensions | 📋 Planned | v1.4.0 |
 | Server-Sent Events (SSE) remote MCP transport | 📋 Planned | v1.4.0 |
 
