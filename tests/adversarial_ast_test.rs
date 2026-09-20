@@ -147,3 +147,45 @@ fn test_mcp_analyze_code_tool_json_serialization() {
     assert_eq!(json_val["findings"][0]["column"], 5);
     assert!(json_val["duration_ms"].is_number());
 }
+
+#[test]
+fn test_polyglot_ast_analysis_javascript_and_typescript() {
+    let state = AppState::new();
+    // Test JS eval and debugger
+    let js_code = "function test() {\n    eval('bad()');\n    debugger;\n}\n";
+    let res_js = analyze_source(&state, "javascript", js_code).unwrap();
+    assert_eq!(res_js.total_findings, 2);
+    assert!(res_js.findings.iter().any(|f| f.rule == "javascript/dangerous-eval" && f.line == 2));
+    assert!(res_js.findings.iter().any(|f| f.rule == "javascript/no-debugger" && f.line == 3));
+
+    // Test TS alias with Function constructor
+    let ts_code = "const f = new Function('return 123');\n";
+    let res_ts = analyze_source(&state, "ts", ts_code).unwrap();
+    assert_eq!(res_ts.total_findings, 1);
+    assert_eq!(res_ts.findings[0].rule, "javascript/dangerous-eval");
+}
+
+#[test]
+fn test_polyglot_ast_analysis_rust_panics() {
+    let state = AppState::new();
+    let rust_code = "fn check() {\n    if true {\n        panic!(\"boom\");\n    }\n    todo!();\n}\n";
+    let res_rs = analyze_source(&state, "rust", rust_code).unwrap();
+    assert_eq!(res_rs.total_findings, 2);
+    assert!(res_rs.findings.iter().any(|f| f.rule == "rust/explicit-panic" && f.line == 3));
+    assert!(res_rs.findings.iter().any(|f| f.rule == "rust/explicit-panic" && f.line == 5));
+}
+
+#[test]
+fn test_find_tolerant_indent_replacement() {
+    let content = "class Worker:\n    def run(self):\n        step_one()\n        step_two()\n";
+    // LLM generated un-indented block:
+    let orig = "def run(self):\n    step_one()\n    step_two()\n";
+    let new_code = "def run(self):\n    step_one()\n    step_improved()\n";
+
+    let (target_orig, target_new) =
+        tokenectomy::mcp::find_tolerant_indent_replacement(content, orig, new_code)
+            .expect("Should locate tolerant indentation block");
+
+    assert_eq!(target_orig, "    def run(self):\n        step_one()\n        step_two()");
+    assert_eq!(target_new, "    def run(self):\n        step_one()\n        step_improved()");
+}

@@ -1044,3 +1044,44 @@ fn test_anti_silent_truncation_and_raw_retrieval_hash() {
     assert!(!clean.contains("node_modules/next"));
     assert!(!clean.contains("node:internal"));
 }
+
+#[test]
+fn test_in_process_tree_sitter_syntax_verification_rust_js_ts() {
+    let temp_dir = std::env::temp_dir().join(format!("tree_sitter_verify_test_{}", std::process::id()));
+    let _ = std::fs::create_dir_all(&temp_dir);
+
+    // 1. Rust in-process syntax check
+    let valid_rs = temp_dir.join("valid.rs");
+    std::fs::write(&valid_rs, "fn test() -> i32 {\n    42\n}\n").unwrap();
+    assert!(tokenectomy::mcp::verify_patch(&valid_rs).is_ok());
+
+    let broken_rs = temp_dir.join("broken.rs");
+    std::fs::write(&broken_rs, "fn broken( {\n    42\n}\n").unwrap();
+    let rs_res = tokenectomy::mcp::verify_patch(&broken_rs);
+    assert!(rs_res.is_err());
+    assert!(rs_res.unwrap_err().contains("Rust syntax error"));
+
+    // 2. JavaScript in-process syntax check
+    let valid_js = temp_dir.join("valid.js");
+    std::fs::write(&valid_js, "function test() {\n    return 42;\n}\n").unwrap();
+    assert!(tokenectomy::mcp::verify_patch(&valid_js).is_ok());
+
+    let broken_js = temp_dir.join("broken.js");
+    std::fs::write(&broken_js, "function broken( {\n    return 42;\n}\n").unwrap();
+    let js_res = tokenectomy::mcp::verify_patch(&broken_js);
+    assert!(js_res.is_err());
+    assert!(js_res.unwrap_err().contains("JavaScript syntax error"));
+
+    // 3. TypeScript in-process syntax check
+    let valid_ts = temp_dir.join("valid.ts");
+    std::fs::write(&valid_ts, "interface User {\n    id: number;\n}\n").unwrap();
+    assert!(tokenectomy::mcp::verify_patch(&valid_ts).is_ok());
+
+    let broken_ts = temp_dir.join("broken.ts");
+    std::fs::write(&broken_ts, "interface User {\n    id: ;\n}\n").unwrap();
+    let ts_res = tokenectomy::mcp::verify_patch(&broken_ts);
+    assert!(ts_res.is_err());
+    assert!(ts_res.unwrap_err().contains("TypeScript syntax error"));
+
+    let _ = std::fs::remove_dir_all(&temp_dir);
+}
