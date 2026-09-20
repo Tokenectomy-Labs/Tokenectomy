@@ -1,7 +1,19 @@
 # Rust build artifacts
 /target
+*.rs.bk
+*.profraw
+*.profdata
 
-# Tokenectomy local runtime & configs
+# Node / npm / pnpm / yarn artifacts
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+dist/
+*.tgz
+
+# Tokenectomy local runtime & cache
 .tokenectomy/
 .tokenectomy.toml
 
@@ -15,6 +27,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 .venv/
 venv/
 env/
@@ -27,20 +41,50 @@ env/
 *.key
 *.pem
 token.json
+*.pfx
+*.p12
 
 # OS & Editor artifacts
 .DS_Store
 Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
 *.swp
+*.swo
 *~
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.sublime-project
+*.sublime-workspace
 
-# Temporary scratch files & media
+# AI Agents & IDE metadata
+.agents/
+.gemini/
+.antigravity/
+.claude/
+.cursor/
+.cline/
+.roo/
+
+# Documentation & Coverage build artifacts
+site/
+coverage/
+cobertura.xml
+lcov.info
+results.sarif
+*.tarpaulin.html
+
+# Temporary scratch files & logs
+*.log
 error.log
 test_bug.py
 server.py
 mcp_call.json
 *.mp4
 
-# Internal agents & dossiers
-.agents/
+# Internal dossiers & staging
 docs/dossier/
