@@ -955,7 +955,61 @@ pub async fn run_reverse_proxy_with_config(config: ProxyConfig) -> anyhow::Resul
                 }
 
                 // Forward to upstream with complete query string preserved and dynamic auto-routing
-                let target_url = resolve_upstream_target(&upstream_clone, full_path, &forward_headers);
+                let mut target_url = resolve_upstream_target(&upstream_clone, full_path, &forward_headers);
+
+                let transpile_dir = crate::transpiler::detect_transpile_direction(
+                    path,
+                    &target_url,
+                    &forward_headers,
+                );
+
+                if transpile_dir == crate::transpiler::TranspileDirection::AnthropicToOpenAi {
+                    // Rewrite target endpoint to /v1/chat/completions
+                    if let Some(base) = target_url.strip_suffix("/v1/messages").or_else(|| target_url.strip_suffix("/messages")) {
+                        target_url = format!("{}/v1/chat/completions", base);
+                    } else if let Some(idx) = target_url.find("/v1/messages") {
+                        target_url = format!("{}/v1/chat/completions{}", &target_url[..idx], &target_url[idx + 12..]);
+                    }
+
+                    if let Ok(json_body) = serde_json::from_slice::<Value>(&final_body) {
+                        if let Ok(openai_body) = crate::transpiler::anthropic_to_openai_request(&json_body) {
+                            if let Ok(transpiled_bytes) = serde_json::to_vec(&openai_body) {
+                                final_body = transpiled_bytes;
+                            }
+                        }
+                    }
+
+                    let has_auth = forward_headers.iter().any(|(k, _)| k.eq_ignore_ascii_case("authorization"));
+                    if !has_auth {
+                        if let Some((_, val)) = forward_headers.iter().find(|(k, _)| k.eq_ignore_ascii_case("x-api-key")) {
+                            forward_headers.push(("Authorization".to_string(), format!("Bearer {}", val)));
+                        }
+                    }
+                } else if transpile_dir == crate::transpiler::TranspileDirection::OpenAiToAnthropic {
+                    // Rewrite target endpoint to /v1/messages
+                    if let Some(base) = target_url.strip_suffix("/v1/chat/completions").or_else(|| target_url.strip_suffix("/chat/completions")) {
+                        target_url = format!("{}/v1/messages", base);
+                    } else if let Some(idx) = target_url.find("/v1/chat/completions") {
+                        target_url = format!("{}/v1/messages{}", &target_url[..idx], &target_url[idx + 19..]);
+                    }
+
+                    if let Ok(json_body) = serde_json::from_slice::<Value>(&final_body) {
+                        if let Ok(ant_body) = crate::transpiler::openai_to_anthropic_request(&json_body) {
+                            if let Ok(transpiled_bytes) = serde_json::to_vec(&ant_body) {
+                                final_body = transpiled_bytes;
+                            }
+                        }
+                    }
+
+                    let has_ant_ver = forward_headers.iter().any(|(k, _)| k.eq_ignore_ascii_case("anthropic-version"));
+                    if !has_ant_ver {
+                        forward_headers.push(("anthropic-version".to_string(), "2023-06-01".to_string()));
+                    }
+                    if let Some((_, val)) = forward_headers.iter().find(|(k, _)| k.eq_ignore_ascii_case("authorization")) {
+                        let token = val.strip_prefix("Bearer ").unwrap_or(val).trim();
+                        forward_headers.push(("x-api-key".to_string(), token.to_string()));
+                    }
+                }
 
                 // Check safety circuit breaker on hourly token budget
                 let est_inbound_tokens = (final_body.len() as u64) / 4;
@@ -1108,47 +1162,86 @@ pub async fn run_reverse_proxy_with_config(config: ProxyConfig) -> anyhow::Resul
                             .map(|ct| ct.contains("text/event-stream"))
                             .unwrap_or(false);
 
-                        let mut head = format!("HTTP/1.1 {} {}\r\n", status.as_u16(), status.canonical_reason().unwrap_or(""));
-                        head.push_str("Access-Control-Allow-Origin: *\r\n");
-                        if retries > 0 {
-                            head.push_str(&format!("X-Tokenectomy-Rate-Limits-Mitigated: {}\r\n", retries));
-                        }
                         let mut captured_headers = Vec::new();
-
-                        for (k, v) in upstream_resp.headers() {
-                            let k_lower = k.as_str().to_ascii_lowercase();
-                            // RFC 7230 §6.1: Strip hop-by-hop headers to prevent chunked framing mismatches
-                            if k_lower == "transfer-encoding"
-                                || k_lower == "connection"
-                                || k_lower == "keep-alive"
-                                || k_lower == "proxy-connection"
-                                || k_lower == "upgrade"
-                            {
-                                continue;
-                            }
-                            let v_str = v.to_str().unwrap_or("");
-                            head.push_str(&format!("{}: {}\r\n", k.as_str(), v_str));
-                            captured_headers.push((k.as_str().to_string(), v_str.to_string()));
-                        }
-
-                        if cache_eligible {
-                            head.push_str("X-Tokenectomy-Cache: MISS\r\n");
-                        }
-                        head.push_str("Connection: close\r\n\r\n");
-                        let _ = socket.write_all(head.as_bytes()).await;
-
-                        // P15: Stream chunk by chunk with idle timeout
                         let mut captured_body = Vec::new();
-                        while let Ok(Ok(Some(chunk))) = tokio::time::timeout(SOCKET_IDLE_TIMEOUT, upstream_resp.chunk()).await {
-                            if cache_eligible && !is_event_stream && captured_body.len() < 4 * 1024 * 1024 {
-                                captured_body.extend_from_slice(&chunk);
+
+                        if !is_event_stream && transpile_dir != crate::transpiler::TranspileDirection::None {
+                            let mut raw_upstream_body = Vec::new();
+                            while let Ok(Ok(Some(chunk))) = tokio::time::timeout(SOCKET_IDLE_TIMEOUT, upstream_resp.chunk()).await {
+                                if raw_upstream_body.len() < MAX_BODY_SIZE {
+                                    raw_upstream_body.extend_from_slice(&chunk);
+                                }
                             }
-                            if socket.write_all(&chunk).await.is_err() {
-                                break;
+
+                            let mut transformed_body = raw_upstream_body.clone();
+                            if let Ok(resp_json) = serde_json::from_slice::<Value>(&raw_upstream_body) {
+                                if transpile_dir == crate::transpiler::TranspileDirection::AnthropicToOpenAi {
+                                    if let Ok(ant_resp) = crate::transpiler::openai_to_anthropic_response(&resp_json, None) {
+                                        if let Ok(bytes) = serde_json::to_vec(&ant_resp) {
+                                            transformed_body = bytes;
+                                        }
+                                    }
+                                } else if transpile_dir == crate::transpiler::TranspileDirection::OpenAiToAnthropic {
+                                    if let Ok(openai_resp) = crate::transpiler::anthropic_to_openai_response(&resp_json) {
+                                        if let Ok(bytes) = serde_json::to_vec(&openai_resp) {
+                                            transformed_body = bytes;
+                                        }
+                                    }
+                                }
+                            }
+
+                            let mut head = format!("HTTP/1.1 {} {}\r\n", status.as_u16(), status.canonical_reason().unwrap_or(""));
+                            head.push_str("Access-Control-Allow-Origin: *\r\n");
+                            head.push_str("Content-Type: application/json\r\n");
+                            head.push_str(&format!("Content-Length: {}\r\n", transformed_body.len()));
+                            head.push_str("X-Tokenectomy-Transpiled: true\r\n");
+                            head.push_str("Connection: close\r\n\r\n");
+
+                            let _ = socket.write_all(head.as_bytes()).await;
+                            let _ = socket.write_all(&transformed_body).await;
+                            let _ = socket.flush().await;
+                            captured_body = transformed_body;
+                        } else {
+                            let mut head = format!("HTTP/1.1 {} {}\r\n", status.as_u16(), status.canonical_reason().unwrap_or(""));
+                            head.push_str("Access-Control-Allow-Origin: *\r\n");
+                            if retries > 0 {
+                                head.push_str(&format!("X-Tokenectomy-Rate-Limits-Mitigated: {}\r\n", retries));
+                            }
+
+                            for (k, v) in upstream_resp.headers() {
+                                let k_lower = k.as_str().to_ascii_lowercase();
+                                // RFC 7230 §6.1: Strip hop-by-hop headers to prevent chunked framing mismatches
+                                if k_lower == "transfer-encoding"
+                                    || k_lower == "connection"
+                                    || k_lower == "keep-alive"
+                                    || k_lower == "proxy-connection"
+                                    || k_lower == "upgrade"
+                                {
+                                    continue;
+                                }
+                                let v_str = v.to_str().unwrap_or("");
+                                head.push_str(&format!("{}: {}\r\n", k.as_str(), v_str));
+                                captured_headers.push((k.as_str().to_string(), v_str.to_string()));
+                            }
+
+                            if cache_eligible {
+                                head.push_str("X-Tokenectomy-Cache: MISS\r\n");
+                            }
+                            head.push_str("Connection: close\r\n\r\n");
+                            let _ = socket.write_all(head.as_bytes()).await;
+
+                            // P15: Stream chunk by chunk with idle timeout
+                            while let Ok(Ok(Some(chunk))) = tokio::time::timeout(SOCKET_IDLE_TIMEOUT, upstream_resp.chunk()).await {
+                                if cache_eligible && !is_event_stream && captured_body.len() < 4 * 1024 * 1024 {
+                                    captured_body.extend_from_slice(&chunk);
+                                }
+                                if socket.write_all(&chunk).await.is_err() {
+                                    break;
+                                }
+                                let _ = socket.flush().await;
                             }
                             let _ = socket.flush().await;
                         }
-                        let _ = socket.flush().await;
 
                         // Store in zero-cost prompt cache on success
                         if let Some(key) = cache_key {

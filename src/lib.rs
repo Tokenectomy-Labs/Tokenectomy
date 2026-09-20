@@ -47,7 +47,9 @@ pub mod provider;
 pub mod proxy;
 pub mod redact;
 pub mod search;
+pub mod transpiler;
 pub mod workspace;
+pub mod wrap;
 
 #[cfg(test)]
 mod tests {

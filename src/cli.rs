@@ -1,4 +1,4 @@
-use clap::{Parser, ValueEnum};
+use clap::{Parser, Subcommand, ValueEnum};
 use serde::Deserialize;
 use std::path::PathBuf;
 
@@ -11,15 +11,48 @@ pub enum ProviderChoice {
     Mock,
 }
 
+#[derive(Subcommand, Debug, Clone)]
+pub enum Commands {
+    #[command(
+        about = "Wrap an agent or test command: runs background AI gateway, injects environment variables, and executes the target process",
+        after_help = "EXAMPLES:\n  $ razor wrap -- claude\n  $ razor wrap -- aider --model deepseek/deepseek-chat\n  $ razor wrap npm test\n"
+    )]
+    Wrap(WrapArgs),
+}
+
+#[derive(clap::Args, Debug, Clone)]
+pub struct WrapArgs {
+    #[arg(long, default_value = "127.0.0.1:8080", help = "Bind address for the background gateway proxy")]
+    pub proxy_bind: Option<String>,
+
+    #[arg(long, default_value = "auto", help = "Upstream LLM base URL (default: 'auto')")]
+    pub upstream_url: Option<String>,
+
+    #[arg(long, env = "TOKENECTOMY_MAX_HOURLY_TOKENS", help = "Safety circuit breaker limit")]
+    pub max_hourly_tokens: Option<u64>,
+
+    #[arg(long, default_value_t = 3, help = "Maximum retries when upstream returns HTTP 429 rate limit")]
+    pub max_retries: usize,
+
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set, help = "Automatically mitigate upstream HTTP 429 rate limits with exponential backoff")]
+    pub auto_retry_429: bool,
+
+    #[arg(trailing_var_arg = true, required = true, help = "Command and arguments to execute with Tokenectomy AI Gateway")]
+    pub cmd: Vec<String>,
+}
+
 #[derive(Parser, Debug)]
 #[command(
     name = "tokenectomy-razor",
     alias = "razor",
     version,
     about = "Tokenectomy Razor 🗡️ — Zero-Waste Token Slicer (Community OSS)",
-    after_help = "EXAMPLES:\n  $ python3 app.py 2>&1 | razor\n  $ razor --file error.log\n  $ razor --proxy\n  $ razor --mcp\n"
+    after_help = "EXAMPLES:\n  $ python3 app.py 2>&1 | razor\n  $ razor --file error.log\n  $ razor --proxy\n  $ razor wrap -- claude\n  $ razor --mcp\n"
 )]
 pub struct Cli {
+    #[command(subcommand)]
+    pub command: Option<Commands>,
+
     #[arg(short, long, help = "File to read error log from (reads from stdin if not provided)")]
     pub file: Option<PathBuf>,
 
