@@ -97,6 +97,14 @@ fn run_command_with_timeout(
 }
 
 fn find_ast_syntax_error(node: &tree_sitter::Node) -> Option<(usize, usize, &'static str)> {
+    if node.is_missing() {
+        let pos = node.start_position();
+        return Some((pos.row + 1, pos.column + 1, "missing expected token"));
+    }
+    if node.is_error() {
+        let pos = node.start_position();
+        return Some((pos.row + 1, pos.column + 1, "syntax error"));
+    }
     let count = node.child_count();
     for i in 0..count {
         if let Some(child) = node.child(i) {
@@ -106,14 +114,6 @@ fn find_ast_syntax_error(node: &tree_sitter::Node) -> Option<(usize, usize, &'st
                 }
             }
         }
-    }
-    if node.is_error() {
-        let pos = node.start_position();
-        return Some((pos.row + 1, pos.column + 1, "syntax error"));
-    }
-    if node.is_missing() {
-        let pos = node.start_position();
-        return Some((pos.row + 1, pos.column + 1, "missing expected token"));
     }
     None
 }
@@ -152,6 +152,23 @@ pub fn verify_patch(path: &std::path::Path) -> Result<(), String> {
     if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
         match ext {
             "rs" => {
+                // Primary: In-process Tree-sitter AST validation (zero external subprocess dependency)
+                let mut parser = tree_sitter::Parser::new();
+                let lang = &tree_sitter_rust::LANGUAGE.into();
+                if parser.set_language(lang).is_ok() {
+                    if let Ok(source) = std::fs::read_to_string(path) {
+                        if let Some(tree) = parser.parse(&source, None) {
+                            if tree.root_node().has_error() {
+                                if let Some((row, col, kind)) = find_ast_syntax_error(&tree.root_node()) {
+                                    return Err(format!("Rust syntax error on line {}:{} ({})", row, col, kind));
+                                } else {
+                                    return Err("Rust syntax error detected by Tree-sitter AST parser".to_string());
+                                }
+                            }
+                        }
+                    }
+                }
+                // Secondary: OS runtime compiler validation if cargo is available
                 let mut cmd = std::process::Command::new("cargo");
                 cmd.args(["check", "--quiet", "--message-format=short"]);
                 // Walk upwards to locate the nearest Cargo.toml manifest root
@@ -222,6 +239,22 @@ pub fn verify_patch(path: &std::path::Path) -> Result<(), String> {
                 }
             }
             "js" | "mjs" | "cjs" => {
+                // Primary: In-process Tree-sitter AST validation (zero external subprocess dependency)
+                let mut parser = tree_sitter::Parser::new();
+                let lang = &tree_sitter_javascript::LANGUAGE.into();
+                if parser.set_language(lang).is_ok() {
+                    if let Ok(source) = std::fs::read_to_string(path) {
+                        if let Some(tree) = parser.parse(&source, None) {
+                            if tree.root_node().has_error() {
+                                if let Some((row, col, kind)) = find_ast_syntax_error(&tree.root_node()) {
+                                    return Err(format!("JavaScript syntax error on line {}:{} ({})", row, col, kind));
+                                } else {
+                                    return Err("JavaScript syntax error detected by Tree-sitter AST parser".to_string());
+                                }
+                            }
+                        }
+                    }
+                }
                 let mut cmd = std::process::Command::new("node");
                 cmd.args(["--check", path.to_str().unwrap_or("")]);
                 if let Ok(output) = run_command_with_timeout(cmd, COMPILER_CHECK_TIMEOUT) {
@@ -232,6 +265,27 @@ pub fn verify_patch(path: &std::path::Path) -> Result<(), String> {
                 }
             }
             "ts" | "mts" | "cts" | "tsx" => {
+                // Primary: In-process Tree-sitter AST validation (zero external subprocess dependency)
+                let mut parser = tree_sitter::Parser::new();
+                let lang: tree_sitter::Language = if ext == "tsx" {
+                    tree_sitter_typescript::LANGUAGE_TSX.into()
+                } else {
+                    tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into()
+                };
+                if parser.set_language(&lang).is_ok() {
+                    if let Ok(source) = std::fs::read_to_string(path) {
+                        if let Some(tree) = parser.parse(&source, None) {
+                            if tree.root_node().has_error() {
+                                if let Some((row, col, kind)) = find_ast_syntax_error(&tree.root_node()) {
+                                    let label = if ext == "tsx" { "TSX" } else { "TypeScript" };
+                                    return Err(format!("{} syntax error on line {}:{} ({})", label, row, col, kind));
+                                } else {
+                                    return Err("TypeScript syntax error detected by Tree-sitter AST parser".to_string());
+                                }
+                            }
+                        }
+                    }
+                }
                 let mut cmd = std::process::Command::new("tsc");
                 cmd.args(["--noEmit", path.to_str().unwrap_or("")]);
                 let mut ts_dir = path.parent();
@@ -458,6 +512,92 @@ pub fn verify_patch(path: &std::path::Path) -> Result<(), String> {
     Ok(())
 }
 
+/// Computes a tolerant indentation-shifted replacement when exact character match fails.
+/// Requires 100% matching trimmed lines and a uniform indentation shift across all non-empty lines.
+/// Only proceeds if exactly one matching block is found in the content.
+pub fn find_tolerant_indent_replacement(
+    content: &str,
+    orig: &str,
+    new_c: &str,
+) -> Option<(String, String)> {
+    let content_lines: Vec<&str> = content.lines().collect();
+    let orig_lines: Vec<&str> = orig.lines().collect();
+    if orig_lines.is_empty() || content_lines.len() < orig_lines.len() {
+        return None;
+    }
+
+    let orig_trimmed: Vec<&str> = orig_lines.iter().map(|l| l.trim()).collect();
+    let m = orig_lines.len();
+    let mut matching_indices = Vec::new();
+
+    for i in 0..=(content_lines.len() - m) {
+        let window = &content_lines[i..i + m];
+        let mut matches = true;
+        let mut common_delta: Option<isize> = None;
+
+        for k in 0..m {
+            let cl = window[k];
+            let ol = orig_lines[k];
+            let cl_trim = cl.trim();
+            let ol_trim = orig_trimmed[k];
+
+            if cl_trim != ol_trim {
+                matches = false;
+                break;
+            }
+
+            if !cl_trim.is_empty() {
+                let cl_indent = (cl.len() - cl.trim_start().len()) as isize;
+                let ol_indent = (ol.len() - ol.trim_start().len()) as isize;
+                let delta = cl_indent - ol_indent;
+                match common_delta {
+                    None => common_delta = Some(delta),
+                    Some(d) if d != delta => {
+                        matches = false;
+                        break;
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        if matches {
+            matching_indices.push((i, common_delta.unwrap_or(0)));
+        }
+    }
+
+    if matching_indices.len() == 1 {
+        let (start_line_idx, delta) = matching_indices[0];
+        let is_crlf = content.contains("\r\n");
+        let newline = if is_crlf { "\r\n" } else { "\n" };
+
+        let matched_slice = &content_lines[start_line_idx..start_line_idx + m];
+        let target_orig = matched_slice.join(newline);
+
+        let new_lines: Vec<&str> = new_c.lines().collect();
+        let mut shifted_new_lines = Vec::new();
+        for nl in new_lines {
+            if nl.trim().is_empty() {
+                shifted_new_lines.push(String::new());
+            } else if delta > 0 {
+                let spaces = " ".repeat(delta as usize);
+                shifted_new_lines.push(format!("{}{}", spaces, nl));
+            } else if delta < 0 {
+                let to_strip = (-delta) as usize;
+                let leading_spaces = nl.len() - nl.trim_start().len();
+                let strip_amt = to_strip.min(leading_spaces);
+                shifted_new_lines.push(nl[strip_amt..].to_string());
+            } else {
+                shifted_new_lines.push(nl.to_string());
+            }
+        }
+        let target_new = shifted_new_lines.join(newline);
+        Some((target_orig, target_new))
+    } else {
+        None
+    }
+}
+
 pub async fn run_server() -> anyhow::Result<()> {
     let boundary = WorkspaceBoundary::current()
         .or_else(|_| WorkspaceBoundary::new(std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."))))
@@ -598,13 +738,13 @@ pub async fn run_server() -> anyhow::Result<()> {
                         },
                         {
                             "name": "analyze_code",
-                            "description": "Performs static AST code analysis using Tree-sitter to detect resource leaks (such as unclosed file handles), security vulnerabilities, and logic flaws with bounded execution limits and precise LSP UTF-16 coordinates.\n\n• Side Effects: None. Strictly read-only analysis of in-memory code; does not execute code, spawn subprocesses, or write to disk.\n• Auth & Permissions: None required. Fully offline, in-memory parser.\n• Rate Limits: None. Bounded to 1MB max source size, 128 max AST depth, and 50,000 max node visits per call.\n• Return Shape: Returns a JSON object containing 'language', 'findings_count', 'duration_ms' (latency metric), and 'findings' (array of objects with rule_id, message, severity, line [1-indexed], column [1-indexed UTF-16 code units], and remediation).\n• Failure Modes: Returns findings: [] if the code contains no detected defects. Returns an error message if the language is unsupported or if source code exceeds the 1MB or 128 AST depth limits.\n• When to use: Use proactively before committing or running code, or when reviewing Python files for unclosed file handles, resource leaks, or AST defects.\n• When NOT to use: Do NOT use when you have an active runtime crash log (use get_error_context instead), and do NOT use to apply fixes automatically (use apply_code_patch instead).\n• Prerequisites: Supported languages currently include Python ('python', 'py').",
+                            "description": "Performs static AST code analysis using Tree-sitter to detect resource leaks (such as unclosed file handles), security vulnerabilities (eval/Function injection), and reliability flaws with bounded execution limits and precise LSP UTF-16 coordinates.\n\n• Side Effects: None. Strictly read-only analysis of in-memory code; does not execute code, spawn subprocesses, or write to disk.\n• Auth & Permissions: None required. Fully offline, in-memory parser.\n• Rate Limits: None. Bounded to 1MB max source size, 128 max AST depth, and 50,000 max node visits per call.\n• Return Shape: Returns a JSON object containing 'language', 'findings_count', 'duration_ms' (latency metric), and 'findings' (array of objects with rule_id, message, severity, line [1-indexed], column [1-indexed UTF-16 code units], and remediation).\n• Failure Modes: Returns findings: [] if the code contains no detected defects. Returns an error message if the language is unsupported or if source code exceeds the 1MB or 128 AST depth limits.\n• When to use: Use proactively before committing or running code, or when reviewing Python, JavaScript, TypeScript, or Rust files for resource leaks, dangerous evals, or active debug statements.\n• When NOT to use: Do NOT use when you have an active runtime crash log (use get_error_context instead), and do NOT use to apply fixes automatically (use apply_code_patch instead).\n• Prerequisites: Supported languages include Python ('python', 'py'), JavaScript ('javascript', 'js'), TypeScript ('typescript', 'ts', 'tsx'), and Rust ('rust', 'rs').",
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {
                                     "language": {
                                         "type": "string",
-                                        "description": "Programming language identifier for the code snippet. Case-insensitive. Supported values: 'python', 'py'."
+                                        "description": "Programming language identifier for the code snippet. Case-insensitive. Supported values: 'python', 'py', 'javascript', 'js', 'typescript', 'ts', 'tsx', 'rust', 'rs'."
                                     },
                                     "code": {
                                         "type": "string",
@@ -852,6 +992,8 @@ pub async fn run_server() -> anyhow::Result<()> {
                                                         let new_lf = new_c.replace("\r\n", "\n");
                                                         if content.matches(&orig_lf).count() > 0 {
                                                             (orig_lf, new_lf)
+                                                        } else if let Some((tol_orig, tol_new)) = find_tolerant_indent_replacement(&content, orig, new_c) {
+                                                            (tol_orig, tol_new)
                                                         } else {
                                                             (orig.to_string(), new_c.to_string())
                                                         }

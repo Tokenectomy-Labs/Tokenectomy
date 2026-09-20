@@ -2,6 +2,9 @@
 
 pub mod python_open;
 pub mod python_exec;
+pub mod js_eval;
+pub mod js_debugger;
+pub mod rust_panic;
 
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
@@ -74,6 +77,9 @@ impl AppState {
         let mut rules: Vec<Box<dyn Rule>> = Vec::new();
         rules.push(Box::new(python_open::PythonUnclosedOpenRule));
         rules.push(Box::new(python_exec::PythonDangerousExecRule));
+        rules.push(Box::new(js_eval::JsDangerousEvalRule));
+        rules.push(Box::new(js_debugger::JsNoDebuggerRule));
+        rules.push(Box::new(rust_panic::RustExplicitPanicRule));
 
         Self {
             rules: Arc::new(rules),
@@ -85,6 +91,9 @@ impl AppState {
         let mut rules: Vec<Box<dyn Rule>> = Vec::new();
         rules.push(Box::new(python_open::PythonUnclosedOpenRule));
         rules.push(Box::new(python_exec::PythonDangerousExecRule));
+        rules.push(Box::new(js_eval::JsDangerousEvalRule));
+        rules.push(Box::new(js_debugger::JsNoDebuggerRule));
+        rules.push(Box::new(rust_panic::RustExplicitPanicRule));
 
         Self {
             rules: Arc::new(rules),
@@ -200,6 +209,26 @@ pub fn analyze_source(
                 .set_language(&tree_sitter_python::LANGUAGE.into())
                 .map_err(|e| format!("Failed to set tree-sitter python language: {}", e))?;
         }
+        "javascript" | "js" | "mjs" | "cjs" => {
+            parser
+                .set_language(&tree_sitter_javascript::LANGUAGE.into())
+                .map_err(|e| format!("Failed to set tree-sitter javascript language: {}", e))?;
+        }
+        "typescript" | "ts" | "mts" | "cts" => {
+            parser
+                .set_language(&tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into())
+                .map_err(|e| format!("Failed to set tree-sitter typescript language: {}", e))?;
+        }
+        "tsx" => {
+            parser
+                .set_language(&tree_sitter_typescript::LANGUAGE_TSX.into())
+                .map_err(|e| format!("Failed to set tree-sitter tsx language: {}", e))?;
+        }
+        "rust" | "rs" => {
+            parser
+                .set_language(&tree_sitter_rust::LANGUAGE.into())
+                .map_err(|e| format!("Failed to set tree-sitter rust language: {}", e))?;
+        }
         other => return Err(format!("Unsupported language: '{}'", other)),
     }
 
@@ -213,9 +242,17 @@ pub fn analyze_source(
 
     // Iterate over pre-registered rules in AppState without allocation (#20)
     for rule in state.rules.iter() {
-        if rule.language().eq_ignore_ascii_case(&lang_lower)
-            || (lang_lower == "py" && rule.language() == "python")
-        {
+        let rule_lang = rule.language();
+        let matches = match lang_lower.as_str() {
+            "python" | "py" => rule_lang == "python",
+            "javascript" | "js" | "mjs" | "cjs" => rule_lang == "javascript",
+            "typescript" | "ts" | "mts" | "cts" | "tsx" => {
+                rule_lang == "javascript" || rule_lang == "typescript"
+            }
+            "rust" | "rs" => rule_lang == "rust",
+            _ => false,
+        };
+        if matches {
             let findings = rule.check(&root, source_bytes, code, &state.config)?;
             all_findings.extend(findings);
         }
