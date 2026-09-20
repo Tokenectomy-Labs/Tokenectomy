@@ -79,9 +79,9 @@ static REDACT_RULES: LazyLock<Vec<RedactRule>> = LazyLock::new(|| {
             regex: Regex::new(r"eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+").unwrap(),
             replacement: "[JWT_REDACTED]",
         },
-        // 5. Private keys (PEM format)
+        // 5. Private keys (PEM format: supports both unescaped newlines and JSON-escaped \n)
         RedactRule {
-            regex: Regex::new(r"-----BEGIN[A-Z ]*PRIVATE KEY-----[\s\S]*?-----END[A-Z ]*PRIVATE KEY-----").unwrap(),
+            regex: Regex::new(r"-----BEGIN[A-Z ]*PRIVATE KEY-----(?:[\s\S]|\\n)*?-----END[A-Z ]*PRIVATE KEY-----").unwrap(),
             replacement: "[PRIVATE_KEY_REDACTED]",
         },
         // 6. Connection strings (postgresql://, postgres://, mysql://, mongodb://, redis://, mssql://, amqp://)

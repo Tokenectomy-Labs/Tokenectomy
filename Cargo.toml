@@ -4,13 +4,13 @@ version = "1.3.3"
 edition = "2024"
 authors = ["Daffa <daffa2555@users.noreply.github.com>", "Tokenectomy Labs"]
 default-run = "razor"
-description = "Cut 95% of useless framework noise and token bloat from error logs before feeding them to AI coding agents (Claude, Cursor, Cline)"
+description = "Local AI Gateway & MCP Server: prune framework noise and redact secrets from error logs before feeding them to AI coding agents (Claude, Cursor, Cline)"
 license = "MIT"
 repository = "https://github.com/Tokenectomy-Labs/Tokenectomy"
 homepage = "https://tokenectomy-labs.github.io/Tokenectomy"
 documentation = "https://docs.rs/tokenectomy"
 readme = "README.md"
-keywords = ["mcp", "mcp-server", "ai-agent", "context-window", "llm"]
+keywords = ["mcp", "mcp-server", "ai-gateway", "llm-proxy", "secret-redaction"]
 categories = ["development-tools", "command-line-utilities", "text-processing"]
 
 [package.metadata.docs.rs]

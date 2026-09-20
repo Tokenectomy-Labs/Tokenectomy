@@ -5,21 +5,19 @@
 
   <h1>Tokenectomy Razor</h1>
 
-  <p><b>Stop Claude & Cursor from burning your rate limits and hallucinating on framework crash logs.</b></p>
-  <p><i>A sub-millisecond local MCP server written in safe Rust. Cuts 95%+ of internal stack trace noise and redacts secrets before context hits your AI.</i></p>
+  <p><b>Stop Claude, Cursor, and AI agents from burning your rate limits on framework internals and leaking production secrets.</b></p>
+  <p><i>A sub-millisecond local AI Gateway & MCP server written in safe Rust. Cuts 41.7% mean noise across polyglot stack traces (up to 99.7% on deep framework dumps) and redacts credentials before context reaches LLMs.</i></p>
 
   <p>
     <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/Official%20MCP%20Registry-io.github.Tokenectomy--Labs%2Frazor-brightgreen?style=flat-square" alt="Official MCP Registry" /></a>
     <a href="https://crates.io/crates/tokenectomy"><img src="https://img.shields.io/crates/v/tokenectomy.svg?style=flat-square&color=ea580c&logo=rust" alt="crates.io" /></a>
     <a href="https://www.npmjs.com/package/tokenectomy-razor"><img src="https://img.shields.io/npm/v/tokenectomy-razor.svg?style=flat-square&color=cb3837&logo=npm" alt="npm" /></a>
-    <a href="https://securityscorecards.dev/viewer/?uri=github.com/Tokenectomy-Labs/Tokenectomy"><img src="https://api.securityscorecards.dev/projects/github.com/Tokenectomy-Labs/Tokenectomy/badge" alt="OpenSSF Scorecard" /></a>
-    <a href="https://www.bestpractices.dev/projects/14704"><img src="https://www.bestpractices.dev/projects/14704/badge" alt="OpenSSF Best Practices" /></a>
     <a href="https://github.com/Tokenectomy-Labs/Tokenectomy/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Tokenectomy-Labs/Tokenectomy/ci.yml?branch=main&style=flat-square&logo=githubactions&label=CI" alt="CI" /></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License" /></a>
   </p>
 
   <p>
-    <a href="#-10-second-quickstart"><b>Quick Start (10s)</b></a> &bull;
+    <a href="#-quick-start"><b>Quick Start (10s)</b></a> &bull;
     <a href="#-the-problem-why-your-ai-hits-rate-limits">The Problem</a> &bull;
     <a href="#-before--after-comparison">Before & After</a> &bull;
     <a href="https://tokenectomy-web.vercel.app">Live Interactive Demo</a> &bull;
@@ -31,13 +29,30 @@
 
 ---
 
-## ⚡ 10-Second Quickstart
+<a id="quick-start"></a>
+## ⚡ Quick Start (10s)
 
-Add Tokenectomy to your coding agent with zero configuration. Works immediately via `npx` (no Rust toolchain required):
+Add Tokenectomy to your workflow with zero toolchain setup. Runs immediately via `npx`:
 
-### 1. Cursor IDE
-Add to `.cursor/mcp.json` in your workspace root (or global `~/.cursor/mcp.json`):
+### 1. AI Gateway Reverse Proxy (`--proxy`)
+Run Tokenectomy as a zero-overhead local HTTP reverse proxy on `127.0.0.1:8080`. It intercepts outbound prompt streams, scrubs stack trace noise, redacts credentials, and forwards clean requests upstream:
 
+```bash
+# Forward to Anthropic Claude:
+razor --proxy --proxy-bind 127.0.0.1:8080 --upstream-url https://api.anthropic.com
+export ANTHROPIC_BASE_URL="http://127.0.0.1:8080"
+
+# Forward to OpenAI:
+razor --proxy --proxy-bind 127.0.0.1:8080 --upstream-url https://api.openai.com/v1
+export OPENAI_BASE_URL="http://127.0.0.1:8080/v1"
+
+# Forward to local Ollama:
+razor --proxy --proxy-bind 127.0.0.1:8080 --upstream-url http://127.0.0.1:11434/v1
+```
+
+### 2. Model Context Protocol (MCP) Setup
+
+#### Cursor Composer (`.cursor/mcp.json`)
 ```json
 {
   "mcpServers": {
@@ -49,9 +64,7 @@ Add to `.cursor/mcp.json` in your workspace root (or global `~/.cursor/mcp.json`
 }
 ```
 
-### 2. Claude Desktop
-Add to your `claude_desktop_config.json`:
-
+#### Claude Desktop (`claude_desktop_config.json`)
 ```json
 {
   "mcpServers": {
@@ -63,7 +76,17 @@ Add to your `claude_desktop_config.json`:
 }
 ```
 
-### 3. Or Pipe Directly in Your Terminal
+#### Claude Code CLI
+```bash
+claude mcp add tokenectomy npx -y tokenectomy-razor --mcp
+```
+
+#### Google Antigravity / Gemini CLI
+```bash
+agy mcp add tokenectomy-razor -- npx -y tokenectomy-razor --mcp
+```
+
+### 3. Terminal Piping & CLI Scrubbing
 ```bash
 npm test 2>&1 | npx tokenectomy-razor
 ```
@@ -94,31 +117,32 @@ Clean Context (118 tokens • Zero Secrets • Sub-millisecond)
 
 ## 🔍 Before & After Comparison
 
-### ❌ Without Tokenectomy: AI Hallucinates & Burns 45,000 Tokens
+### ❌ Without Tokenectomy: AI Hallucinates & Burns Context
 
 ```text
-TypeError: Cannot read properties of undefined (reading 'digest')
-    at Object.<anon> (/node_modules/next/bundle5.js:142:31)
-    at __webpack_require__ (/node_modules/next/bundle5.js:198:12)
-    at Object.execute (/node_modules/next/dev-server.js:412:19)
-    at processTicksAndRejections (task_queues:95:5)
-    Database connection failed: postgresql://admin:super_secret_password@db.prod.internal:5432/primary
-    API key leaked: sk-ant-api03-abcdef1234567890abcdef1234567890
-    [... 480 internal dependency frames flooding your context window ...]
+TypeError: Cannot read properties of undefined (reading 'token')
+    at loadComponents (/app/node_modules/next/dist/server/load-components.js:14:2)
+    at renderToHTML (/app/node_modules/next/dist/server/render.js:50:5)
+    at nextServer (/app/node_modules/next/dist/server/next-server.js:80:12)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at runMicrotasks (node:internal/process/task_queues:120:3)
+    at checkoutHandler (/app/pages/api/checkout.ts:42:15)
+Database connection failed: postgresql://admin:super_secret_password@db.prod.internal:5432/primary
+API key leaked: sk-ant-api03-abcdef1234567890abcdef1234567890
 ```
-> **What Claude does:** Tries to understand `bundle5.js`, suggests modifying your webpack bundle or adjusting Next.js internals, and eats a massive chunk of your context window. Leaks your database credentials to external logs.
+> **What Claude does:** Analyzes `load-components.js` and `next-server.js`, speculates on Webpack / Next.js internals, and leaks connection credentials to remote inference logs.
 
 ### ✅ With Tokenectomy: Clean Context & Instant Fix
 
 ```text
-// [Tokenectomy Surgery: 480 framework frames pruned (99.7%)]
-// Source: src/components/Header.tsx:42
-42 |   const user = useSession( ;
-   |                           ^ Expected ')'
+// [Tokenectomy Surgery: 5 internal framework frames pruned (83.3%)]
+// Source: /app/pages/api/checkout.ts:42:15
+42 |   const sessionToken = req.headers.authorization.token;
+   |                                                  ^ TypeError: Cannot read properties of undefined (reading 'token')
 🛡️ [CONNECTION_STRING_REDACTED]
-🛡️ [REDACTED_ANTHROPIC_KEY]
+🛡️ [ANTHROPIC_KEY_REDACTED]
 ```
-> **What Claude does:** Instantly identifies that line 42 in `Header.tsx` is missing a closing parenthesis `)`. Applies the exact 1-line fix in 2 seconds. Credentials redacted before transmission. 99.7% token reduction.
+> **What Claude does:** Instantly identifies that line 42 in `checkout.ts` attempted to access `.token` on undefined headers. Suggests optional chaining `req.headers.authorization?.token` immediately. Credentials redacted before transmission.
 
 ---
 
@@ -181,13 +205,15 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 | **Log Redaction Throughput** | 250,000 lines (24.44 MB) enterprise dump with API keys & connection URIs | **530,735 lines/sec** (471.0 ms, 51.9 MB/s) | **Pass** |
 | **ReDoS Resilience** | 50,000-character pathological backtracking regex payload | **1.16 ms** (Deterministic Linear $O(N)$ DFA Evaluation) | **Pass** |
 | **Thread Concurrency** | 100 concurrent OS threads executing simultaneous redaction | **17,688 ops/sec** (100/100 completed in 11.31 ms) | **Pass** |
-| **Memory Footprint** | Peak Resident Memory during 250k-line continuous stress test | **76.05 MB VmRSS** via `/proc/self/status` | **Pass** |
-| **Release Test Suite** | Full integration test matrix across extractors, filters, and analyzers | **57 / 57 Verified Green** (Zero panics, zero leaks) | **Pass** |
+| **Memory Footprint** | Peak Resident Memory during 250k-line continuous stress test | **76.05 MB VmRSS** via `/proc/self/status` (~3× input buffer size) | **Pass** |
+| **Release Test Suite** | Full integration test matrix across extractors, filters, and analyzers | **90 / 90 Verified Green** (Zero panics, zero leaks) | **Pass** |
 
 <!-- BEGIN_REDACTION_BENCHMARK -->
 ### 🛡️ Automated Redaction & Secret Sanitization Benchmark
 
-Automated evaluation across **12 polyglot crash traces** (Rust, Python, TypeScript, Go, YAML) containing **22 ground-truth credentials** and clean negative controls. Evaluated head-to-head against **Gitleaks v8.30.1**.
+Evaluated across an internal benchmark test fixture (`tests/fixtures/`) of **12 polyglot crash traces** (Rust, Python, TypeScript, Go, YAML) containing **22 ground-truth credentials** and clean negative controls. Evaluated head-to-head against **Gitleaks v8.30.1** (default ruleset).
+
+> **Architectural Note:** Gitleaks is designed primarily as a repository commit/diff scanner, not an in-memory runtime trace redactor. Tokenectomy Razor is engineered specifically for runtime stream sanitization and stack trace surgery.
 
 #### 1. Per-Category Precision, Recall & F1-Score
 
@@ -216,8 +242,8 @@ Automated evaluation across **12 polyglot crash traces** (Rust, Python, TypeScri
 |---|:---:|:---:|---|
 | **Overall Secret Recall** | **100.0%** (22/22) | 36.4% (8/22) | Razor captures unquoted URIs, DB ports & AI keys missed by diff rules |
 | **Overall Precision** | **100.0%** (0 False Positives) | 88.9% | Zero false triggers on compiler errors & minified traces |
-| **Overall F1-Score** | **100.0%** | 51.6% | Comprehensive coverage engineered specifically for crash context |
-| **Execution Engine** | Zero-allocation Rust DFA ($O(N)$) | Go regex scanner + Git tree crawler | Sub-millisecond latency for agent streaming backtraces |
+| **Overall F1-Score** | **100.0%** (internal fixture) | 51.6% | Comprehensive coverage engineered specifically for crash context |
+| **Execution Engine** | High-throughput Rust DFA ($O(N)$) | Go regex scanner + Git tree crawler | Sub-millisecond latency for agent streaming backtraces |
 | **ReDoS Resilience** | **Deterministic Linear Time** ($O(N)$) | Engine dependent | Non-backtracking DFA regex prevents catastrophic backtracking on tested dumps |
 | **Sanitization Action** | Inline token redaction (`[KEY_REDACTED]`) | Warning log only (No scrub) | Directly sanitizes text before ingestion by LLM cortex |
 
@@ -410,15 +436,16 @@ docker run -i ghcr.io/tokenectomy-labs/razor:latest --mcp
 
 | Capability | Razor (Community OSS) | Sentinel (Commercial Tier) |
 |---|:---:|:---:|
-| **Polyglot Stack Trace Surgery** | Yes (4 Languages) | Yes (All 7 Languages) |
+| **Polyglot Stack Trace Surgery** | Yes (9 Runtime Languages) | Yes (All 9 Languages + Deep AST Semantic Healing) |
 | **O(N) ReDoS-Safe Secret Redaction** | Yes | Yes |
 | **JSON-RPC 2.0 MCP Server** | Yes | Yes |
 | **AI Gateway Reverse Proxy (`--proxy`)** | Yes | Yes |
 | **SHA-256 Idempotency Cache (24h TTL)** | Yes | Yes |
 | **FinOps Metrics Dashboard** | Yes | Yes |
+| **Syntax Validation Rollback (Compilers / Linters)** | Yes | Yes |
+| **Automated Test Suite Rollback (0 Dirty Diff)** | — | **Yes** |
 | **Tree-sitter AST Syntax Healing** | — | **Yes** |
 | **Anti-Hallucination Scope Guard** | — | **Yes** |
-| **Automated Test Rollback (0 Dirty Diff)** | — | **Yes** |
 | **Multi-File Atomic Transactions** | — | **Yes** |
 | **Time Machine Undo Engine (`--undo`)** | — | **Yes** |
 | **Autonomous Healing State Machine** | — | **Yes** |
@@ -450,6 +477,7 @@ docker run -i ghcr.io/tokenectomy-labs/razor:latest --mcp
 | `awesome-mcp-servers` Community Catalog Listing | ✅ Complete | v1.2.4 |
 | Inline Dropped Frame Identities (`[DROPPED_FRAMES: ...]`) & Anti-Silent Truncation Audit | ✅ Complete | v1.3.1 |
 | Content-Addressable Raw Log Cache & Verification Hash (`--diff-verify`) | ✅ Complete | v1.3.1 |
+| Deprecation & Removal of `cognitive_directive` alias | 📋 Planned | v1.4.0 |
 | Native VS Code & JetBrains companion extensions | 📋 Planned | v1.4.0 |
 | Server-Sent Events (SSE) remote MCP transport | 📋 Planned | v1.4.0 |
 
@@ -457,8 +485,9 @@ docker run -i ghcr.io/tokenectomy-labs/razor:latest --mcp
 
 ## 🔒 Security & Invariants
 
-- **Zero-Knowledge Architecture:** All parsing, filtering, and secret redaction execute on physical local hardware. No logs are ever transmitted to third-party telemetry servers.
-- **Deterministic Linear-Time Pattern Matching:** All pattern matchers utilize finite automaton evaluation (Rust non-backtracking DFA regex engine and Aho-Corasick) providing deterministic $O(N)$ linear time guarantees on tested adversarial inputs.
+- **Local Execution by Default:** All stack trace parsing, frame pruning, and secret redaction execute locally on physical hardware.
+- **Documented Network Egress:** In MCP server mode, `search_stack_overflow` is the sole tool with outbound network egress (HTTPS to `api.stackexchange.com`). The payload is strictly limited to sanitized, redacted error signature text (no code lines, no local paths, zero credentials). In air-gapped environments, use `--local-only` to disable network search entirely.
+- **Deterministic Linear-Time Pattern Matching:** All pattern matchers utilize non-backtracking DFA regex engines ($O(N)$ linear time) and Aho-Corasick automaton evaluation.
 - **Path Traversal Boundary Isolation:** File operations are strictly locked within the active workspace root (`CWD`). Path traversals (`../`) and unauthorized symlinks are blocked.
 - **Safe Rust Implementation:** Core execution paths enforce safe Rust memory guarantees with bounded stream readers (`.take()`) preventing resource exhaustion.
 

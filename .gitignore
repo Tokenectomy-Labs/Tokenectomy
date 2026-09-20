@@ -40,3 +40,7 @@ test_bug.py
 server.py
 mcp_call.json
 *.mp4
+
+# Internal agents & dossiers
+.agents/
+docs/dossier/

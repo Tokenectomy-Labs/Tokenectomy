@@ -91,6 +91,8 @@ impl ProxyMetrics {
 }
 
 /// Surgically cleans prompt payload: redacts secrets and strips framework dependency noise.
+/// Point 13: Only sanitizes string content in role:"user" or type:"tool_result".
+/// Never modifies assistant messages, thinking blocks, redacted_thinking, tool_use.id, cache_control, or image blocks.
 pub fn sanitize_prompt_payload(payload: &Value) -> (Value, ProxySanitizeStats) {
     let mut stats = ProxySanitizeStats::default();
     let mut modified = payload.clone();
@@ -109,6 +111,12 @@ pub fn sanitize_prompt_payload(payload: &Value) -> (Value, ProxySanitizeStats) {
     // 1. Process "messages" array (OpenAI, Anthropic, Ollama chat completions)
     if let Some(messages) = modified.get_mut("messages").and_then(|m| m.as_array_mut()) {
         for msg in messages {
+            let role = msg.get("role").and_then(|r| r.as_str()).unwrap_or("");
+            // Point 13: Strictly ignore assistant messages to preserve thinking signatures and model outputs
+            if role == "assistant" {
+                continue;
+            }
+
             if let Some(content) = msg.get_mut("content") {
                 match content {
                     Value::String(s) => {
@@ -116,6 +124,42 @@ pub fn sanitize_prompt_payload(payload: &Value) -> (Value, ProxySanitizeStats) {
                     }
                     Value::Array(parts) => {
                         for part in parts {
+                            let part_type = part.get("type").and_then(|t| t.as_str()).unwrap_or("");
+                            // Point 13: Never touch thinking, redacted_thinking, tool_use, or image blocks
+                            if part_type == "thinking"
+                                || part_type == "redacted_thinking"
+                                || part_type == "image"
+                                || part_type == "tool_use"
+                            {
+                                continue;
+                            }
+
+                            // If tool_result block, sanitize content while preserving tool_use_id and cache_control
+                            if part_type == "tool_result" {
+                                if let Some(content_val) = part.get_mut("content") {
+                                    match content_val {
+                                        Value::String(s) => {
+                                            *s = clean_string(s, &mut stats);
+                                        }
+                                        Value::Array(nested_parts) => {
+                                            for np in nested_parts {
+                                                let np_type = np.get("type").and_then(|t| t.as_str()).unwrap_or("");
+                                                if np_type == "image" || np_type == "thinking" {
+                                                    continue;
+                                                }
+                                                if let Some(t) = np.get_mut("text").and_then(|t| t.as_str()) {
+                                                    let cleaned = clean_string(t, &mut stats);
+                                                    np["text"] = Value::String(cleaned);
+                                                }
+                                            }
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                                continue;
+                            }
+
+                            // Standard user text blocks
                             if let Some(text_val) = part.get_mut("text").and_then(|t| t.as_str()) {
                                 let cleaned = clean_string(text_val, &mut stats);
                                 part["text"] = Value::String(cleaned);
@@ -131,7 +175,7 @@ pub fn sanitize_prompt_payload(payload: &Value) -> (Value, ProxySanitizeStats) {
         }
     }
 
-    // 2. Process top-level "system" prompt (Anthropic Claude Messages API)
+    // 2. Process top-level "system" prompt (Anthropic Claude Messages API / OpenAI system)
     if let Some(system) = modified.get_mut("system") {
         match system {
             Value::String(s) => {
@@ -139,6 +183,10 @@ pub fn sanitize_prompt_payload(payload: &Value) -> (Value, ProxySanitizeStats) {
             }
             Value::Array(parts) => {
                 for part in parts {
+                    let part_type = part.get("type").and_then(|t| t.as_str()).unwrap_or("");
+                    if part_type == "image" || part_type == "thinking" {
+                        continue;
+                    }
                     if let Some(text_val) = part.get_mut("text").and_then(|t| t.as_str()) {
                         let cleaned = clean_string(text_val, &mut stats);
                         part["text"] = Value::String(cleaned);
@@ -179,10 +227,33 @@ pub fn sanitize_prompt_payload(payload: &Value) -> (Value, ProxySanitizeStats) {
 }
 
 pub const MAX_HEADER_SIZE: usize = 64 * 1024; // 64 KB
-pub const MAX_BODY_SIZE: usize = 10 * 1024 * 1024; // 10 MB
-pub const REQUEST_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
-pub const UPSTREAM_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
+pub const MAX_BODY_SIZE: usize = 32 * 1024 * 1024; // 32 MB (P15: Bounded without cutting off large prompts)
+pub const SOCKET_IDLE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60); // P15: Idle read timeout
+pub const UPSTREAM_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(120);
 pub const MAX_CONCURRENT_CONNECTIONS: usize = 128;
+
+/// P16: Performs constant-time string comparison to prevent timing attacks on proxy auth tokens.
+pub fn constant_time_compare(a: &str, b: &str) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    a.bytes().zip(b.bytes()).fold(0, |acc, (x, y)| acc | (x ^ y)) == 0
+}
+
+/// P16: Validates Host header against loopback addresses or configured bind host (DNS rebinding guard).
+pub fn is_allowed_host(host_header: &str, bind_addr: &str) -> bool {
+    let host_clean = host_header.split(':').next().unwrap_or(host_header).trim();
+    if host_clean == "localhost" || host_clean == "127.0.0.1" || host_clean == "::1" || host_clean == "[::1]" {
+        return true;
+    }
+    if let Some((bind_host, _)) = bind_addr.rsplit_once(':') {
+        let b = bind_host.trim_matches(|c| c == '[' || c == ']');
+        if host_clean == b {
+            return true;
+        }
+    }
+    false
+}
 
 /// Decodes an HTTP/1.1 chunked transfer-encoded byte slice (RFC 7230 §4.1) into raw body bytes.
 pub fn decode_chunked_body(mut input: &[u8]) -> Result<Vec<u8>, &'static str> {
@@ -279,6 +350,7 @@ pub async fn run_reverse_proxy_configured(
     let semaphore = Arc::new(tokio::sync::Semaphore::new(MAX_CONCURRENT_CONNECTIONS));
     let analyzer_state = Arc::new(crate::analyzer::AppState::new());
     let metrics = Arc::new(ProxyMetrics::new());
+    let bind_addr_arc = Arc::new(bind_addr.to_string());
 
     println!("⚡ Tokenectomy AI Gateway Proxy active on http://{}", bind_addr);
     println!("📊 Real-Time FinOps Dashboard: http://{}/dashboard", bind_addr);
@@ -307,6 +379,7 @@ pub async fn run_reverse_proxy_configured(
         let token_clone = required_token.clone();
         let analyzer_clone = Arc::clone(&analyzer_state);
         let metrics_clone = Arc::clone(&metrics);
+        let bind_addr_clone = Arc::clone(&bind_addr_arc);
 
         tokio::spawn(async move {
             let _permit = permit;
@@ -314,21 +387,25 @@ pub async fn run_reverse_proxy_configured(
                 let mut buf = vec![0u8; 16384];
                 let mut total_read = 0;
 
-                // Read HTTP request headers with MAX_HEADER_SIZE bound
+                // Read HTTP request headers with MAX_HEADER_SIZE bound and idle timeout
                 while total_read < MAX_HEADER_SIZE {
                     if buf.len() <= total_read {
                         buf.resize(buf.len() * 2, 0);
                     }
-                    match socket.read(&mut buf[total_read..]).await {
-                        Ok(0) => break,
-                        Ok(n) => {
+                    match tokio::time::timeout(SOCKET_IDLE_TIMEOUT, socket.read(&mut buf[total_read..])).await {
+                        Ok(Ok(0)) => break,
+                        Ok(Ok(n)) => {
                             total_read += n;
                             if buf[..total_read].windows(4).any(|w| w == b"\r\n\r\n") {
                                 break;
                             }
                         }
-                        Err(e) => {
+                        Ok(Err(e)) => {
                             log::error!("Socket read error from {}: {}", peer_addr, e);
+                            return;
+                        }
+                        Err(_) => {
+                            log::warn!("Socket idle timeout waiting for headers from {}", peer_addr);
                             return;
                         }
                     }
@@ -389,8 +466,26 @@ pub async fn run_reverse_proxy_configured(
                     return;
                 }
 
-                // Prometheus / JSON Metrics API endpoint
+                let req_host = raw_headers
+                    .lines()
+                    .skip(1)
+                    .find_map(|l| {
+                        let (k, v) = l.split_once(':')?;
+                        if k.trim().eq_ignore_ascii_case("host") {
+                            Some(v.trim())
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or("127.0.0.1");
+
+                // P16: Prometheus / JSON Metrics API endpoint with DNS rebinding protection
                 if path == "/v1/metrics" || path == "/metrics" {
+                    if !is_allowed_host(req_host, &bind_addr_clone) {
+                        let resp = "HTTP/1.1 403 Forbidden\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"error\":{\"message\":\"Forbidden: Host header mismatch (DNS rebinding guard)\",\"code\":403}}\r\n";
+                        let _ = socket.write_all(resp.as_bytes()).await;
+                        return;
+                    }
                     let metrics_json = metrics_clone.to_json().to_string();
                     let resp = if method == "HEAD" {
                         format!(
@@ -408,8 +503,13 @@ pub async fn run_reverse_proxy_configured(
                     return;
                 }
 
-                // Embedded FinOps Dashboard UI
+                // P16: Embedded FinOps Dashboard UI with DNS rebinding protection
                 if (method == "GET" || method == "HEAD") && (path == "/dashboard" || path == "/" || path == "/ui") {
+                    if !is_allowed_host(req_host, &bind_addr_clone) {
+                        let resp = "HTTP/1.1 403 Forbidden\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"error\":{\"message\":\"Forbidden: Host header mismatch (DNS rebinding guard)\",\"code\":403}}\r\n";
+                        let _ = socket.write_all(resp.as_bytes()).await;
+                        return;
+                    }
                     let html = crate::dashboard::render_dashboard_html();
                     let resp = if method == "HEAD" {
                         format!(
@@ -463,12 +563,12 @@ pub async fn run_reverse_proxy_configured(
                     }
                 }
 
-                // Enforce authentication for remote mode
+                // P16: Enforce authentication for remote mode with constant-time compare
                 if let Some(expected_token) = &token_clone {
                     let is_authed = match &client_auth {
                         Some(auth) => {
                             let token_part = auth.strip_prefix("Bearer ").unwrap_or(auth.as_str()).trim();
-                            token_part == expected_token.as_str()
+                            constant_time_compare(token_part, expected_token.as_str())
                         }
                         None => false,
                     };
@@ -479,7 +579,7 @@ pub async fn run_reverse_proxy_configured(
                     }
                 }
 
-                // Read body (either chunked or Content-Length framed)
+                // Read body (either chunked or Content-Length framed) with idle timeout
                 let body_bytes = if is_chunked {
                     let mut raw_chunked_bytes = buf[body_start..total_read].to_vec();
                     while raw_chunked_bytes.len() < MAX_BODY_SIZE {
@@ -487,20 +587,20 @@ pub async fn run_reverse_proxy_configured(
                             break;
                         }
                         let mut temp = vec![0u8; 8192];
-                        match socket.read(&mut temp).await {
-                            Ok(0) => break,
-                            Ok(n) => {
+                        match tokio::time::timeout(SOCKET_IDLE_TIMEOUT, socket.read(&mut temp)).await {
+                            Ok(Ok(0)) => break,
+                            Ok(Ok(n)) => {
                                 raw_chunked_bytes.extend_from_slice(&temp[..n]);
                                 if raw_chunked_bytes.windows(5).any(|w| w == b"0\r\n\r\n") {
                                     break;
                                 }
                             }
-                            Err(_) => break,
+                            _ => break,
                         }
                     }
 
                     if raw_chunked_bytes.len() >= MAX_BODY_SIZE {
-                        let resp = "HTTP/1.1 413 Payload Too Large\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"error\":{\"message\":\"Payload exceeds 10MB limit\",\"code\":413}}\r\n";
+                        let resp = "HTTP/1.1 413 Payload Too Large\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"error\":{\"message\":\"Payload exceeds configured body limit\",\"code\":413}}\r\n";
                         let _ = socket.write_all(resp.as_bytes()).await;
                         return;
                     }
@@ -518,7 +618,7 @@ pub async fn run_reverse_proxy_configured(
                     }
                 } else {
                     if content_length > MAX_BODY_SIZE {
-                        let resp = "HTTP/1.1 413 Payload Too Large\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"error\":{\"message\":\"Payload exceeds 10MB limit\",\"code\":413}}\r\n";
+                        let resp = "HTTP/1.1 413 Payload Too Large\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"error\":{\"message\":\"Payload exceeds configured body limit\",\"code\":413}}\r\n";
                         let _ = socket.write_all(resp.as_bytes()).await;
                         return;
                     }
@@ -527,10 +627,10 @@ pub async fn run_reverse_proxy_configured(
                     while bytes.len() < content_length {
                         let to_read = (content_length - bytes.len()).min(16384);
                         let mut temp = vec![0u8; to_read];
-                        match socket.read(&mut temp).await {
-                            Ok(0) => break,
-                            Ok(n) => bytes.extend_from_slice(&temp[..n]),
-                            Err(_) => break,
+                        match tokio::time::timeout(SOCKET_IDLE_TIMEOUT, socket.read(&mut temp)).await {
+                            Ok(Ok(0)) => break,
+                            Ok(Ok(n)) => bytes.extend_from_slice(&temp[..n]),
+                            _ => break,
                         }
                     }
                     bytes
@@ -650,7 +750,8 @@ pub async fn run_reverse_proxy_configured(
                         head.push_str("Connection: close\r\n\r\n");
                         let _ = socket.write_all(head.as_bytes()).await;
 
-                        while let Ok(Some(chunk)) = upstream_resp.chunk().await {
+                        // P15: Stream chunk by chunk with idle timeout
+                        while let Ok(Ok(Some(chunk))) = tokio::time::timeout(SOCKET_IDLE_TIMEOUT, upstream_resp.chunk()).await {
                             if socket.write_all(&chunk).await.is_err() {
                                 break;
                             }
@@ -675,9 +776,8 @@ pub async fn run_reverse_proxy_configured(
                 }
             };
 
-            if let Err(_) = tokio::time::timeout(REQUEST_TIMEOUT, handler).await {
-                log::warn!("Proxy connection from {} timed out after {}s", peer_addr, REQUEST_TIMEOUT.as_secs());
-            }
+            // P15: Connection lifetime bounded by active stream idle reads rather than arbitrary total connection cutoff
+            handler.await;
         });
     }
 }

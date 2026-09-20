@@ -47,23 +47,29 @@ Tokenectomy Razor is architected with uncompromising security-first principles f
 
 ### 5. **Network Proxy Hardening & Remote Mode Authentication** ✅
 - **Loopback Default Invariant**: Reverse proxy binds strictly to local loopback (`127.0.0.1`, `[::1]`) by default.
-- **Mandatory Remote Auth**: Binding to external interfaces (`0.0.0.0`) requires explicit `--allow-remote` flag AND a mandatory proxy bearer token (`--proxy-token` or `TOKENECTOMY_PROXY_TOKEN`).
-- **Resource Bounds & DoS Resistance**: Strict upper limits enforced: `MAX_HEADER_SIZE` (64 KB), `MAX_BODY_SIZE` (10 MB), client/upstream timeouts (30s / 60s), and concurrency throttling via asynchronous permits (max 128 concurrent connections).
+- **Mandatory Remote Auth with Constant-Time Comparison**: Binding to external interfaces (`0.0.0.0`) requires explicit `--allow-remote` flag AND a mandatory proxy bearer token verified using constant-time byte comparison to prevent timing attacks.
+- **DNS Rebinding Guard**: Administrative endpoints (`/dashboard`, `/v1/metrics`) validate the HTTP `Host` header against local loopback and configured bind address.
+- **Resource Bounds & DoS Resistance**: Strict bounds enforced: `MAX_HEADER_SIZE` (64 KB), `MAX_BODY_SIZE` (32 MB), socket read idle timeouts (60s), and concurrency throttling via asynchronous permits (max 128 concurrent connections).
 
-### 6. **Memory Safety & Zero Allocations** ✅
+### 6. **Controlled Network Egress & Air-Gapped Mode** ✅
+- **Local Execution Invariant**: Tokenectomy never sends user logs, source code, or telemetry to external servers.
+- **Sole Egress Boundary**: In MCP mode, `search_stack_overflow` is the sole tool that initiates outbound requests (HTTPS to `api.stackexchange.com`). The query payload is strictly limited to sanitized error signatures (zero file paths, zero code lines, zero credentials).
+- **Air-Gapped Mode**: The `--local-only` flag completely disables outbound network queries for air-gapped environments.
+
+### 7. **Memory Safety & Bounded Allocations** ✅
 - **Pure Rust Guarantee**: Zero buffer overflows, use-after-free, or data races guaranteed by the Rust compiler.
 - **Zero Unsafe Code**: No unvetted `unsafe` blocks in trace parsing, workspace boundaries, or redaction paths.
 
-### 7. **Cryptographic Integrity** ✅
-- **SHA-256 Cache Keying**: Content hashes and response caches use SHA-256 (not vulnerable non-cryptographic hashers).
+### 8. **Cryptographic Integrity** ✅
+- **SHA-256 Cache Keying**: Content hashes and response caches use SHA-256 (not vulnerable non-cryptographic hashers), incorporating local source context hashes to prevent stale cache hits.
 - **Secure File Permissions**: Temporary caches enforce strict POSIX permissions (`0700`).
 
-### 8. **Declarative Advisory Control Envelope (Anti-Prompt-Injection Architecture)** ✅
+### 9. **Declarative Advisory Control Envelope (Anti-Prompt-Injection Architecture)** ✅
 - **Advisory Declarative Metadata**: Control-plane fields are declarative advisory hints, not imperative instructions, to avoid resembling prompt-injection patterns and to keep the control envelope safe for consumption by third-party agents with independent reasoning.
 - **Explicit Advisory Disclaimer**: Every emitted control envelope explicitly specifies `[ADVISORY_ONLY=true]`.
 - **Non-Imperative Field Vocabulary**: Directives are framed without imperative verbs (`[SUGGESTED_NEXT_FRAME=<file:line>]` rather than imperative action commands like `INSPECT_CALLER_AT_`), ensuring static security scanners, enterprise tool-safety audits, and client-side prompt-injection classifiers do not flag M2M telemetry as adversarial execution directives.
 
-### 9. **Downstream Forks, Clones & Acceptable Use Disclaimer** ⚖️
+### 10. **Downstream Forks, Clones & Acceptable Use Disclaimer** ⚖️
 - **Independent Third-Party Custody**: Tokenectomy Razor is open-source software provided under the MIT License exclusively for defensive observability, crash log sanitization, token budgeting, and developer productivity.
 - **Zero Liability for Downstream Abuse**: Any third-party fork, clone, private deployment, modified binary, or derivative work operates completely outside the custody, telemetry, and control of Tokenectomy Labs and its maintainers. Under no circumstances shall the original author (@daffa2555), Tokenectomy Labs, or contributors be held liable or legally responsible for any illegal, unlawful, malicious, abusive, or unauthorized acts committed by downstream users or fork operators.
 - **Sole Operator Liability**: Downstream users, fork maintainers, and individual operators assume 100% personal, commercial, and legal accountability for their usage and compliance with all applicable cybercrime, privacy, and intellectual property laws. See [DISCLAIMER.md](DISCLAIMER.md) for complete details.

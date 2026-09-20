@@ -20,9 +20,18 @@ pub fn get_cache_dir() -> Option<PathBuf> {
 }
 
 pub fn hash_payload(payload: &str) -> String {
-    // VULN-03: Use SHA-256 instead of DefaultHasher to prevent hash collision attacks
+    hash_payload_with_source_context(payload, None)
+}
+
+/// Combines the raw error log with an optional hash of local workspace source context.
+/// P19: Ensures cache invalidation if local code files change even if the error message is identical.
+pub fn hash_payload_with_source_context(payload: &str, source_context_hash: Option<&str>) -> String {
     let mut hasher = Sha256::new();
     hasher.update(payload.as_bytes());
+    if let Some(ctx_hash) = source_context_hash {
+        hasher.update(b":source_context:");
+        hasher.update(ctx_hash.as_bytes());
+    }
     let result = hasher.finalize();
     let mut hash_str = String::new();
     for byte in result {
@@ -32,16 +41,19 @@ pub fn hash_payload(payload: &str) -> String {
 }
 
 pub fn get_cached_response(payload: &str) -> Option<String> {
+    get_cached_sanitized_context(payload, None)
+}
+
+pub fn get_cached_sanitized_context(payload: &str, source_context_hash: Option<&str>) -> Option<String> {
     let dir = get_cache_dir()?;
-    let hash = hash_payload(payload);
+    let hash = hash_payload_with_source_context(payload, source_context_hash);
     let cache_file = dir.join(format!("{}.txt", hash));
 
     if cache_file.exists() {
-        // TTL: Abaikan cache yang berusia lebih dari 24 jam
         if let Ok(metadata) = std::fs::metadata(&cache_file) {
             if let Ok(modified) = metadata.modified() {
                 if let Ok(elapsed) = modified.elapsed() {
-                    if elapsed.as_secs() > 86400 {
+                    if elapsed.as_secs() > CACHE_TTL_SECS {
                         let _ = std::fs::remove_file(&cache_file);
                         return None;
                     }
@@ -58,13 +70,24 @@ const MAX_CACHE_ENTRIES: usize = 1000;
 const CACHE_TTL_SECS: u64 = 86400; // 24 hours
 
 pub fn save_cached_response(payload: &str, response: &str) {
+    save_cached_sanitized_context(payload, None, response);
+}
+
+/// P19: Saves deterministic sanitized context (not LLM responses) with 24-hour TTL,
+/// keyed by combined log payload and source context hash.
+pub fn save_cached_sanitized_context(payload: &str, source_context_hash: Option<&str>, sanitized_context: &str) {
     if let Some(dir) = get_cache_dir() {
-        let hash = hash_payload(payload);
+        let hash = hash_payload_with_source_context(payload, source_context_hash);
         let cache_file = dir.join(format!("{}.txt", hash));
-        let tmp_file = dir.join(format!("{}.tmp.{}", hash, std::process::id()));
+        let tmp_file = dir.join(format!(
+            "{}.tmp.{}.{}",
+            hash,
+            std::process::id(),
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_nanos()
+        ));
 
         // Atomic write: write to temp file then atomic rename
-        if fs::write(&tmp_file, response).is_ok() {
+        if fs::write(&tmp_file, sanitized_context).is_ok() {
             let _ = fs::rename(&tmp_file, &cache_file);
         }
 
@@ -132,8 +155,14 @@ pub fn save_raw_dump(raw: &str) -> String {
     let full_hash = format!("sha256:{}", hash);
     if let Some(dir) = get_raw_dumps_dir() {
         let dump_file = dir.join(format!("{}.log", hash));
-        if !dump_file.exists() {
-            let tmp_file = dir.join(format!("{}.tmp.{}", hash, std::process::id()));
+        let needs_write = !dump_file.exists() || dump_file.metadata().map(|m| m.len() == 0).unwrap_or(true);
+        if needs_write {
+            let tmp_file = dir.join(format!(
+                "{}.tmp.{}.{}",
+                hash,
+                std::process::id(),
+                std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_nanos()
+            ));
             if fs::write(&tmp_file, raw).is_ok() {
                 let _ = fs::rename(&tmp_file, &dump_file);
             }
