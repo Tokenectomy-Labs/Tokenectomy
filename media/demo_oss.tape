@@ -1,7 +1,7 @@
 # VHS Tape for Tokenectomy OSS Demo
 # Generates demo.gif for GitHub README
 
-Output demo.gif
+Output media/demo.gif
 
 Set FontSize 14
 Set Width 1050
@@ -13,7 +13,7 @@ Set TypingSpeed 45ms
 
 # Prepare environment invisibly
 Hide
-Type "export PATH=./target/release:$PATH && ./setup_demo.sh && clear"
+Type "export PATH=./target/release:$PATH && ./scripts/setup_demo.sh && clear"
 Enter
 Sleep 600ms
 Show

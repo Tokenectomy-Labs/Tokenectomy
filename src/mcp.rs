@@ -534,7 +534,15 @@ pub async fn run_server() -> anyhow::Result<()> {
                                 "properties": {
                                     "log": {
                                         "type": "string",
-                                        "description": "Raw error stack trace, compiler panic, or terminal stderr string to analyze (e.g. Python traceback, Node.js error, Rust panic). Must be non-empty UTF-8 text up to 1MB. Automatically sanitized of API keys, JWTs, and passwords."
+                                        "description": "Raw error stack trace, compiler panic, or terminal stderr string to analyze. (Optional if log_path or command is provided)."
+                                    },
+                                    "log_path": {
+                                        "type": "string",
+                                        "description": "Path to a log file within the workspace boundary to read directly, avoiding model argument serialization bloat."
+                                    },
+                                    "command": {
+                                        "type": "string",
+                                        "description": "Optional terminal command (e.g. 'cargo test', 'npm test') to execute locally within the workspace root to capture output directly."
                                     },
                                     "context_lines": {
                                         "type": "integer",
@@ -545,8 +553,7 @@ pub async fn run_server() -> anyhow::Result<()> {
                                         "description": "Context pruning and token budgeting strategy. Options: 'aggressive' (default: excises all framework internals and idle threads), 'conservative' (retains boundary transition frames), or 'lossless_compact' (preserves all frames, compressing only whitespace and redacting credentials).",
                                         "enum": ["aggressive", "conservative", "lossless_compact"]
                                     }
-                                },
-                                "required": ["log"]
+                                }
                             }
                         },
                         {
@@ -632,7 +639,44 @@ pub async fn run_server() -> anyhow::Result<()> {
                 if let (Some(name), Some(args)) = (name, args) {
                     match name {
                         "get_error_context" => {
-                            if let Some(log) = args.get("log").and_then(|l| l.as_str()) {
+                            let (log_input, err_resp) = if let Some(log) = args.get("log").and_then(|l| l.as_str()) {
+                                (Some(log.to_string()), None)
+                            } else if let Some(path_str) = args.get("log_path").and_then(|p| p.as_str()) {
+                                match boundary.read(path_str) {
+                                    Ok(content) => (Some(content), None),
+                                    Err(e) => (None, Some(error_response(id.clone(), -32602, &format!("Failed to read log_path within workspace boundary: {}", e)))),
+                                }
+                            } else if let Some(cmd_str) = args.get("command").and_then(|c| c.as_str()) {
+                                let mut cmd = if cfg!(windows) {
+                                    let mut c = std::process::Command::new("cmd");
+                                    c.args(["/C", cmd_str]);
+                                    c
+                                } else {
+                                    let mut c = std::process::Command::new("sh");
+                                    c.args(["-c", cmd_str]);
+                                    c
+                                };
+                                cmd.current_dir(boundary.root());
+                                match run_command_with_timeout(cmd, std::time::Duration::from_secs(30)) {
+                                    Ok(output) => {
+                                        let mut combined = String::from_utf8_lossy(&output.stdout).into_owned();
+                                        if !output.stderr.is_empty() {
+                                            if !combined.is_empty() {
+                                                combined.push('\n');
+                                            }
+                                            combined.push_str(&String::from_utf8_lossy(&output.stderr));
+                                        }
+                                        (Some(combined), None)
+                                    }
+                                    Err(e) => (None, Some(error_response(id.clone(), -32603, &format!("Failed to execute command: {}", e)))),
+                                }
+                            } else {
+                                (None, None)
+                            };
+
+                            if let Some(err) = err_resp {
+                                Some(err)
+                            } else if let Some(log) = &log_input {
                                 let context_lines = args
                                     .get("context_lines")
                                     .and_then(|c| c.as_u64())
@@ -748,7 +792,7 @@ pub async fn run_server() -> anyhow::Result<()> {
                                 Some(success_response(
                                     id.unwrap_or(Value::Null),
                                     json!({
-                                        "content": [{ "type": "text", "text": "Error: Missing required 'log' argument." }],
+                                        "content": [{ "type": "text", "text": "Error: Missing required input: one of 'log', 'log_path', or 'command' must be provided." }],
                                         "isError": true
                                     }),
                                 ))
@@ -1061,7 +1105,7 @@ pub async fn run_server() -> anyhow::Result<()> {
                                         "state": if noise_pct > 25.0 { "REQUIRES_PRUNING" } else { "OPTIMAL_HEALTH" },
                                         "health_grade": health_grade,
                                         "suggested_action": suggested_action,
-                                        // Deprecated backward-compatible alias for 1 minor version
+                                        // Deprecated backward-compatible alias scheduled for removal in v1.4.0. Use 'suggested_action'.
                                         "cognitive_directive": suggested_action
                                     },
                                     "raw_characters": raw_chars,
