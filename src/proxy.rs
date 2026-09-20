@@ -135,9 +135,9 @@ impl ProxyMetrics {
                 }
             }
 
-            let current_hourly: u64 = history.iter().map(|(_, t)| *t).sum();
+            let current_hourly: u64 = history.iter().fold(0u64, |acc, (_, t)| acc.saturating_add(*t));
             if let Some(limit) = max_hourly {
-                if limit > 0 && current_hourly + new_tokens > limit {
+                if limit > 0 && current_hourly.saturating_add(new_tokens) > limit {
                     self.record_circuit_breaker_trip();
                     return false;
                 }
@@ -250,48 +250,64 @@ pub fn sanitize_prompt_payload(payload: &Value) -> (Value, ProxySanitizeStats) {
                     }
                     Value::Array(parts) => {
                         for part in parts {
-                            let part_type = part.get("type").and_then(|t| t.as_str()).unwrap_or("");
-                            // Point 13: Never touch thinking, redacted_thinking, tool_use, or image blocks
-                            if part_type == "thinking"
-                                || part_type == "redacted_thinking"
-                                || part_type == "image"
-                                || part_type == "tool_use"
-                            {
-                                continue;
-                            }
+                            match part {
+                                Value::String(s) => {
+                                    *s = clean_string(s, &mut stats);
+                                }
+                                Value::Object(_) => {
+                                    let part_type = part.get("type").and_then(|t| t.as_str()).unwrap_or("");
+                                    // Point 13: Never touch thinking, redacted_thinking, tool_use, or image blocks
+                                    if part_type == "thinking"
+                                        || part_type == "redacted_thinking"
+                                        || part_type == "image"
+                                        || part_type == "tool_use"
+                                    {
+                                        continue;
+                                    }
 
-                            // If tool_result block, sanitize content while preserving tool_use_id and cache_control
-                            if part_type == "tool_result" {
-                                if let Some(content_val) = part.get_mut("content") {
-                                    match content_val {
-                                        Value::String(s) => {
-                                            *s = clean_string(s, &mut stats);
-                                        }
-                                        Value::Array(nested_parts) => {
-                                            for np in nested_parts {
-                                                let np_type = np.get("type").and_then(|t| t.as_str()).unwrap_or("");
-                                                if np_type == "image" || np_type == "thinking" {
-                                                    continue;
+                                    // If tool_result block, sanitize content while preserving tool_use_id and cache_control
+                                    if part_type == "tool_result" {
+                                        if let Some(content_val) = part.get_mut("content") {
+                                            match content_val {
+                                                Value::String(s) => {
+                                                    *s = clean_string(s, &mut stats);
                                                 }
-                                                if let Some(t) = np.get_mut("text").and_then(|t| t.as_str()) {
-                                                    let cleaned = clean_string(t, &mut stats);
-                                                    np["text"] = Value::String(cleaned);
+                                                Value::Array(nested_parts) => {
+                                                    for np in nested_parts {
+                                                        match np {
+                                                            Value::String(s) => {
+                                                                *s = clean_string(s, &mut stats);
+                                                            }
+                                                            Value::Object(_) => {
+                                                                let np_type = np.get("type").and_then(|t| t.as_str()).unwrap_or("");
+                                                                if np_type == "image" || np_type == "thinking" {
+                                                                    continue;
+                                                                }
+                                                                if let Some(t) = np.get_mut("text").and_then(|t| t.as_str()) {
+                                                                    let cleaned = clean_string(t, &mut stats);
+                                                                    np["text"] = Value::String(cleaned);
+                                                                }
+                                                            }
+                                                            _ => {}
+                                                        }
+                                                    }
                                                 }
+                                                _ => {}
                                             }
                                         }
-                                        _ => {}
+                                        continue;
+                                    }
+
+                                    // Standard user text blocks
+                                    if let Some(text_val) = part.get_mut("text").and_then(|t| t.as_str()) {
+                                        let cleaned = clean_string(text_val, &mut stats);
+                                        part["text"] = Value::String(cleaned);
+                                    } else if let Some(content_val) = part.get_mut("content").and_then(|c| c.as_str()) {
+                                        let cleaned = clean_string(content_val, &mut stats);
+                                        part["content"] = Value::String(cleaned);
                                     }
                                 }
-                                continue;
-                            }
-
-                            // Standard user text blocks
-                            if let Some(text_val) = part.get_mut("text").and_then(|t| t.as_str()) {
-                                let cleaned = clean_string(text_val, &mut stats);
-                                part["text"] = Value::String(cleaned);
-                            } else if let Some(content_val) = part.get_mut("content").and_then(|c| c.as_str()) {
-                                let cleaned = clean_string(content_val, &mut stats);
-                                part["content"] = Value::String(cleaned);
+                                _ => {}
                             }
                         }
                     }
@@ -368,13 +384,29 @@ pub fn constant_time_compare(a: &str, b: &str) -> bool {
 
 /// P16: Validates Host header against loopback addresses or configured bind host (DNS rebinding guard).
 pub fn is_allowed_host(host_header: &str, bind_addr: &str) -> bool {
-    let host_clean = host_header.split(':').next().unwrap_or(host_header).trim();
-    if host_clean == "localhost" || host_clean == "127.0.0.1" || host_clean == "::1" || host_clean == "[::1]" {
+    let host_trimmed = host_header.trim();
+    let host_clean = if host_trimmed.starts_with('[') {
+        if let Some(end_bracket) = host_trimmed.find(']') {
+            &host_trimmed[..=end_bracket]
+        } else {
+            host_trimmed
+        }
+    } else {
+        host_trimmed.split(':').next().unwrap_or(host_trimmed).trim()
+    };
+
+    let host_inner = host_clean.trim_matches(|c| c == '[' || c == ']');
+    if host_clean == "localhost"
+        || host_clean == "127.0.0.1"
+        || host_clean == "::1"
+        || host_clean == "[::1]"
+        || host_inner == "::1"
+    {
         return true;
     }
     if let Some((bind_host, _)) = bind_addr.rsplit_once(':') {
         let b = bind_host.trim_matches(|c| c == '[' || c == ']');
-        if host_clean == b {
+        if host_inner == b {
             return true;
         }
     }
@@ -400,8 +432,16 @@ pub fn decode_chunked_body(mut input: &[u8]) -> Result<Vec<u8>, &'static str> {
             return Ok(decoded);
         }
 
+        // Hardened: Guard against integer overflow and unbounded memory consumption (MAX_BODY_SIZE = 32MB)
+        if chunk_len > MAX_BODY_SIZE || decoded.len().saturating_add(chunk_len) > MAX_BODY_SIZE {
+            return Err("Chunked payload exceeds maximum allowable size");
+        }
+
         let data_start = nl + 2;
-        let data_end = data_start + chunk_len;
+        let data_end = match data_start.checked_add(chunk_len) {
+            Some(end) => end,
+            None => return Err("Chunk size overflow"),
+        };
         if input.len() < data_end + 2 {
             return Err("Incomplete chunk data");
         }
@@ -466,8 +506,16 @@ pub fn resolve_upstream_target(
         }
     } else {
         let base = configured_upstream.trim_end_matches('/');
-        if base.ends_with("/v1") && clean_path.starts_with("/v1/") {
-            format!("{}{}", base, &clean_path[3..])
+        if base.ends_with("/v1") {
+            if clean_path == "/v1" {
+                base.to_string()
+            } else if clean_path.starts_with("/v1/") {
+                format!("{}{}", base, &clean_path[3..])
+            } else if !clean_path.starts_with('/') {
+                format!("{}/{}", base, clean_path)
+            } else {
+                format!("{}{}", base, clean_path)
+            }
         } else if !clean_path.starts_with('/') {
             format!("{}/{}", base, clean_path)
         } else {
@@ -608,8 +656,7 @@ pub async fn run_reverse_proxy_with_config(config: ProxyConfig) -> anyhow::Resul
                     return;
                 }
 
-                let req_str = String::from_utf8_lossy(&buf[..total_read]);
-                let header_end = match req_str.find("\r\n\r\n") {
+                let header_end = match buf[..total_read].windows(4).position(|w| w == b"\r\n\r\n") {
                     Some(idx) => idx,
                     None => {
                         let resp = "HTTP/1.1 431 Request Header Fields Too Large\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"error\":{\"message\":\"Headers exceed 64KB limit\",\"code\":431}}\r\n";
@@ -618,8 +665,9 @@ pub async fn run_reverse_proxy_with_config(config: ProxyConfig) -> anyhow::Resul
                     }
                 };
 
-                let raw_headers = &req_str[..header_end];
                 let body_start = header_end + 4;
+                let req_str = String::from_utf8_lossy(&buf[..header_end]);
+                let raw_headers = req_str.as_ref();
                 let mut lines = raw_headers.split("\r\n");
                 let req_line = lines.next().unwrap_or("");
                 let parts: Vec<&str> = req_line.split_whitespace().collect();
