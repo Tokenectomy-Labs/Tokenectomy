@@ -53,7 +53,7 @@ pub struct Cli {
     #[arg(long, default_value = "127.0.0.1:8080", help = "Bind address for the reverse proxy gateway")]
     pub proxy_bind: String,
 
-    #[arg(long, default_value = "https://api.openai.com/v1", help = "Upstream LLM base URL to forward requests to")]
+    #[arg(long, default_value = "auto", help = "Upstream LLM base URL (default: 'auto' routes Anthropic to api.anthropic.com, OpenAI to api.openai.com, Ollama to localhost:11434)")]
     pub upstream_url: String,
 
     #[arg(long, help = "Allow proxy to bind to non-loopback addresses (requires --proxy-token)")]
