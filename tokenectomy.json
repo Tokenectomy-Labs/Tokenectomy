@@ -1,0 +1,21 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Tokenectomy-Labs/tokenectomy-bot/main/schema.json",
+  "extends": "recommended",
+  "fail_on": "error",
+  "rules": {
+    "TB001": { "enabled": true, "severity": "error" },
+    "TB002": { "enabled": true, "severity": "error" },
+    "TB003": { "enabled": true, "severity": "error" },
+    "TB004": { "enabled": true, "severity": "error" },
+    "TB005": { "enabled": true, "severity": "error" },
+    "TB101": { "enabled": true, "severity": "warn" },
+    "TB201": { "enabled": true, "severity": "error" }
+  },
+  "ignore": [
+    "**/target/**",
+    "**/vendor/**",
+    "**/benches/**",
+    "**/*.generated.*"
+  ],
+  "custom_rules_dir": ".tokenectomy/rules"
+}

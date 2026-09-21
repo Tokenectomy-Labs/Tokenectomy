@@ -1,0 +1,25 @@
+name: Tokenectomy PR Verification Gate
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  tokenectomy-gate:
+    name: Deterministic AST PR Verification Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Run Tokenectomy PR Gate
+        uses: Tokenectomy-Labs/tokenectomy-bot@main
+        with:
+          fail_on: error
+          agent_pr: true
