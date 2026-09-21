@@ -14,7 +14,8 @@ dist/
 *.tgz
 
 # Tokenectomy local runtime & cache
-.tokenectomy/
+.tokenectomy/*
+!.tokenectomy/rules/
 .tokenectomy.toml
 
 # Redaction benchmark suite artifacts & binaries
