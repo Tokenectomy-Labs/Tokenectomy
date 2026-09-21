@@ -1,0 +1,25 @@
+[package]
+name = "tokenectomy-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+tokenectomy = { path = ".." }
+serde_json = "1.0"
+
+[[bin]]
+name = "fuzz_prompt_sanitizer"
+path = "fuzz_targets/fuzz_prompt_sanitizer.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_chunked_decoder"
+path = "fuzz_targets/fuzz_chunked_decoder.rs"
+test = false
+doc = false

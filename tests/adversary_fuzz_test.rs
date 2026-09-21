@@ -1,3 +1,4 @@
+// Continuous adversarial fuzz suite complementing cargo-fuzz (libfuzzer_sys) targets in fuzz/
 use tokenectomy::proxy::{
     decode_chunked_body, is_allowed_host, sanitize_prompt_payload, ProxyMetrics, resolve_upstream_target,
 };

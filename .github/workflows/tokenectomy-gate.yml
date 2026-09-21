@@ -26,7 +26,7 @@ jobs:
           private-key: ${{ secrets.TMY_JOY_PRIVATE_KEY }}
 
       - name: Run Tokenectomy PR Gate
-        uses: Tokenectomy-Labs/tokenectomy-bot@main
+        uses: Tokenectomy-Labs/tokenectomy-bot@7d6e620292f317d553f6f424dce5cbb2ef212999 # v1.0.0
         with:
           fail_on: error
           agent_pr: true
