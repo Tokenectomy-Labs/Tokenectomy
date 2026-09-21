@@ -12,6 +12,8 @@
     <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/Official%20MCP%20Registry-io.github.Tokenectomy--Labs%2Frazor-brightgreen?style=flat-square" alt="Official MCP Registry" /></a>
     <a href="https://crates.io/crates/tokenectomy"><img src="https://img.shields.io/crates/v/tokenectomy.svg?style=flat-square&color=ea580c&logo=rust" alt="crates.io" /></a>
     <a href="https://www.npmjs.com/package/tokenectomy-razor"><img src="https://img.shields.io/npm/v/tokenectomy-razor.svg?style=flat-square&color=cb3837&logo=npm" alt="npm" /></a>
+    <a href="https://securityscorecards.dev/viewer/?uri=github.com/Tokenectomy-Labs/Tokenectomy"><img src="https://api.securityscorecards.dev/projects/github.com/Tokenectomy-Labs/Tokenectomy/badge" alt="OpenSSF Scorecard" /></a>
+    <a href="https://www.bestpractices.dev/projects/14704"><img src="https://www.bestpractices.dev/projects/14704/badge" alt="OpenSSF Best Practices" /></a>
     <a href="https://github.com/Tokenectomy-Labs/Tokenectomy/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Tokenectomy-Labs/Tokenectomy/ci.yml?branch=main&style=flat-square&logo=githubactions&label=CI" alt="CI" /></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License" /></a>
   </p>
@@ -62,11 +64,25 @@
 <a id="quick-start"></a>
 ## ⚡ Quick Start (10s)
 
-### 1. Launch the AI Gateway (Zero Toolchain Setup)
+### 0. Zero-Config One-Liner Wrapper (`wrap`)
+Run any coding agent or test suite directly behind Tokenectomy's privacy & caching gateway with zero manual environment variable setup:
+
+```bash
+# Wrap Claude Code CLI
+razor wrap -- claude
+
+# Wrap Aider with DeepSeek or Ollama (Auto-Transpiled on the fly!)
+razor wrap -- aider --model deepseek/deepseek-chat
+
+# Wrap test runs to scrub logs and prevent accidental credential leakage
+razor wrap npm test
+```
+
+### 1. Launch the Standalone AI Gateway (Manual Mode)
 ```bash
 npx -y tokenectomy-razor --proxy
 ```
-> 💡 **Smart Multi-Provider Auto-Routing is ON by default!** Tokenectomy automatically analyzes request paths and headers, forwarding Claude requests (`/v1/messages`) to Anthropic, OpenAI/Cursor requests (`/v1/chat/completions`) to OpenAI, and local requests (`/api/*`) to Ollama with zero port conflicts.
+> 💡 **Smart Multi-Provider Auto-Routing & Universal LLM Transpiler ON by default!** Tokenectomy automatically analyzes request paths and headers. Need to run **Claude Code against DeepSeek or Ollama**? Tokenectomy transparently transpiles Anthropic `/v1/messages` format into OpenAI `/v1/chat/completions` on-the-fly and vice-versa.
 
 ### 2. Connect Your Favorite Agent
 Point your coding agent or CLI to the local gateway on `127.0.0.1:8080`:
@@ -449,7 +465,8 @@ docker run -i ghcr.io/tokenectomy-labs/razor:latest --mcp
 | Content-Addressable Raw Log Cache & Verification Hash (`--diff-verify`) | ✅ Complete | v1.3.1 |
 | Smart Multi-Provider Auto-Routing (Anthropic, OpenAI, Ollama) & Zero-Cost Prompt Caching | ✅ Complete | v1.3.3 |
 | Agent Safety Circuit Breaker (`--max-hourly-tokens`), 429 Auto-Retry Mitigator & CORS Preflight | ✅ Complete | v1.3.3 |
-| Universal LLM Format Transpiler (OpenAI `/v1/chat/completions` ⇄ Anthropic `/v1/messages` ⇄ Gemini) | 🚧 In Progress | v1.4.0 |
+| Universal LLM Format Transpiler (OpenAI `/v1/chat/completions` ⇄ Anthropic `/v1/messages`) | ✅ Complete | v1.3.4 |
+| Zero-Config Agent Command Wrapper (`razor wrap -- <cmd>`) & Git Pre-commit Hook | ✅ Complete | v1.3.4 |
 | Multi-Provider High-Availability & Automatic Outage Fallback | 📋 Planned | v1.4.0 |
 | Declarative AI Gateway Configuration (`gateway.toml` / `tokenectomy.yaml`) | 📋 Planned | v1.4.0 |
 | Full SSE Streaming Token Caching Engine | 📋 Planned | v1.4.0 |

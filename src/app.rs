@@ -16,6 +16,18 @@ pub async fn run_cli() -> anyhow::Result<()> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     let args = Cli::parse();
+
+    if let Some(crate::cli::Commands::Wrap(wrap_args)) = args.command {
+        let code = crate::wrap::run_wrap_command(
+            wrap_args.cmd,
+            wrap_args.proxy_bind,
+            wrap_args.upstream_url,
+            wrap_args.max_hourly_tokens,
+            wrap_args.max_retries,
+            wrap_args.auto_retry_429,
+        ).await?;
+        std::process::exit(code);
+    }
     
     if args.mcp {
         return mcp::run_server().await;
