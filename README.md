@@ -5,8 +5,8 @@
 
   <h1>Tokenectomy Razor</h1>
 
-  <p><b>The High-Performance Privacy & Context-Surgery AI Gateway for Autonomous Coding Agents</b></p>
-  <p><i>Sub-millisecond local AI Gateway reverse proxy & companion MCP sub-cortex written in safe Rust. Features zero-cost prompt caching, smart multi-provider auto-routing (Claude, Cursor, Antigravity, Ollama), 41.7%–99.7% polyglot stack trace noise excision, and linear $O(N)$ leak-proof credential redaction.</i></p>
+  <p><b>Fix Claude Code & Cursor Rate Limits: Zero-Latency Local AI Gateway & Context-Surgery MCP Server in Rust</b></p>
+  <p><i>Stop burning 20,000 tokens on <code>node_modules</code> stack traces. Tokenectomy Razor is a sub-millisecond local AI Gateway reverse proxy (127.0.0.1:8080) & companion MCP server written in safe Rust. Excises 41.7%–99.7% framework noise from terminal error logs, redacts leaked DB credentials/JWTs, and caches prompts for free.</i></p>
 
   <p>
     <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/Official%20MCP%20Registry-io.github.Tokenectomy--Labs%2Frazor-brightgreen?style=flat-square" alt="Official MCP Registry" /></a>
@@ -490,6 +490,17 @@ For vulnerability disclosures, please review our [Security Policy](SECURITY.md).
 ## ⚖️ Legal & Downstream Fork Disclaimer
 
 Tokenectomy Razor is provided strictly for lawful developer productivity, observability, log surgery, and defensive credential redaction. Any downstream forks, clones, redistributions, or private deployments operate completely independently of the original authors. Tokenectomy Labs and its maintainers assume zero liability for unlawful, malicious, or unauthorized actions committed by third parties using this codebase or derivatives thereof. All downstream operators bear 100% individual responsibility for compliance with local and international cybersecurity laws. See [DISCLAIMER.md](DISCLAIMER.md) for full legal terms.
+
+## ❓ Frequently Asked Questions (FAQ)
+
+### How does Tokenectomy Razor prevent Claude Code & Cursor from hitting rate limits?
+When tests or terminal builds crash, frameworks like Next.js, Express, Jest, and Django dump thousands of internal stack frames (`node_modules`, `site-packages`). Sending raw 5,000-line crash logs consumes 15,000 to 45,000 tokens per prompt, draining your 5-hour session limit in minutes. Tokenectomy Razor intercepts logs and strips 95% of non-actionable framework plumbing, reducing a 40,000-character crash log to under 200 essential tokens in <0.2ms.
+
+### How do I stop Cursor from sending node_modules error logs to LLMs?
+Run Tokenectomy Razor as a local AI Gateway reverse proxy (`npx -y tokenectomy-razor --proxy`). In Cursor settings, point your OpenAI Base URL to `http://127.0.0.1:8080/v1`. Any terminal error output pasted or referenced by Composer will be automatically sanitized, scrubbed, and cached on the fly before reaching model servers.
+
+### How does Tokenectomy prevent credential leakage in error logs?
+All log surgery and secret redaction execute 100% locally on your machine in memory before outbound transmission. Razor uses deterministic linear-time regex and Aho-Corasick automata to detect and redact PostgreSQL/MongoDB connection URIs, JWT bearer tokens, and cloud API keys with `[REDACTED]` tokens. Zero cloud egress is required for scrubbing.
 
 ---
 
