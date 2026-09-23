@@ -608,29 +608,26 @@ async fn main() -> Result<()> {
     let workspace_str = workspace_abs.to_string_lossy().to_string();
     let project_type = detect_project_type(&workspace_str);
 
-    // ── Transparent-Friendly Brand Banner ───────────────────────────────────
+    // ── Minimalist Transparent-Friendly Greeting ───────────────────────────
     println!();
-    println!("{}", "  ╦╔═╦═╗╔═╗╔╗╔╦ ╦╔╦╗╔═╗╔═╗".bright_cyan().bold());
-    println!("{}", "  ╠╩╗╠╦╝║ ║║║║║ ║║║║║ ║╚═╗".bright_cyan().bold());
-    println!("{}", "  ╩ ╩╩╚═╚═╝╝╚╝╚═╝╩ ╩╚═╝╚═╝".bright_cyan().bold());
-    println!("  {}", "Autonomous Code Remediation & SRE Agent • v1.0".bright_white().bold());
+    println!(
+        "{}  {}",
+        "╦╔═╦═╗╔═╗╔╗╔╦ ╦╔╦╗╔═╗╔═╗".bright_cyan().bold(),
+        "Kronumos Kairos".bright_white().bold()
+    );
+    println!(
+        "{}  {}",
+        "╠╩╗╠╦╝║ ║║║║║ ║║║║║ ║╚═╗".bright_cyan().bold(),
+        "v1.0 • Autonomous Remediation Agent".dimmed()
+    );
+    println!(
+        "{}  {}",
+        "╩ ╩╩╚═╚═╝╝╚╝╚═╝╩ ╩╚═╝╚═╝".bright_cyan().bold(),
+        "Type /help for help, or ask anything to start.".dimmed()
+    );
     println!();
-    println!("{}", "╭──────────────────────────────────────────────────────────────╮".bright_black());
-    println!("│  {} {:<45} │", "Workspace :".bright_black(), workspace_str.cyan());
-    println!("│  {} {:<45} │", "Project   :".bright_black(), project_type.bright_yellow());
-    println!("│  {} {:<45} │", "Backend   :".bright_black(), cli.backend.bright_green());
-    println!("│  {} {:<45} │", "Sub-Cortex:".bright_black(), "ACTIVE (Zero-Leak Redaction + AST)".bright_cyan());
-    println!("{}", "╰──────────────────────────────────────────────────────────────╯".bright_black());
-    println!();
-    println!("{}", "Interactive Agent Commands:".dimmed());
-    println!("  {}     chat with Kronumos or explain code/errors", "Any text".bright_white());
-    println!("  {}         autonomous diagnostics & repair loop", "/fix".bright_yellow().bold());
-    println!("  {}        inspect git diff in workspace", "/diff".bright_cyan());
-    println!("  {}        run test suite with Sub-Cortex scrubbing", "/test".bright_green());
-    println!("  {}       clear conversation memory buffer", "/clear".dimmed());
-    println!("  {}        display help and shortcuts", "/help".dimmed());
-    println!("  {}        exit Kronumos cleanly", "/exit".dimmed());
-    println!();
+
+
 
     let mut history: Vec<Message> = vec![Message {
         role: "system".to_string(),
@@ -710,11 +707,13 @@ async fn main() -> Result<()> {
                         continue;
                     }
                     "/help" => {
-                        println!("{}", "Kronumos Agent Capabilities:".bright_white().bold());
-                        println!("  - Chat: Ask questions about code, architecture, or stack traces.");
-                        println!("  - Fix: Type `/fix` to trigger autonomous test-driven remediation.");
-                        println!("  - Backends: --backend cloudflare | ollama | openai");
-                        println!("  - Sub-Cortex: Automatic secret scrubbing and Tree-sitter AST validation.");
+                        println!("{}", "Commands:".bright_white().bold());
+                        println!("  {}        Autonomous test-and-repair loop", "/fix".bright_yellow());
+                        println!("  {}       Show uncommitted git diff", "/diff".bright_cyan());
+                        println!("  {}       Run detected project test runner", "/test".bright_green());
+                        println!("  {}      Clear conversation context", "/clear".dimmed());
+                        println!("  {}       Show this help message", "/help".dimmed());
+                        println!("  {}       Exit Kronumos session", "/exit".dimmed());
                         continue;
                     }
                     "/fix" => {
