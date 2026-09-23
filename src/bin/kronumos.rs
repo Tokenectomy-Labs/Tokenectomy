@@ -125,12 +125,75 @@ Guidelines:
 - Re-run tests immediately after patching to verify regression-free status.
 - Once verified, commit the fix cleanly or explain findings to the user."#;
 
+// ── Security Guardrails ──────────────────────────────────────────────────────
+
+fn is_safe_workspace_path(path: &str, workspace: &str) -> Result<PathBuf, String> {
+    // 1. Block obvious sensitive files
+    let lower = path.to_lowercase();
+    let sensitive_patterns = [
+        ".env", "id_rsa", "id_ed25519", "id_ecdsa", "credentials",
+        ".aws/credentials", ".ssh/", ".gnupg/", "passwd", "shadow",
+        ".bash_history", ".zsh_history", ".git/config",
+    ];
+    for pattern in &sensitive_patterns {
+        if lower.contains(pattern) {
+            return Err(format!("Security error: Access to sensitive file '{}' is prohibited.", path));
+        }
+    }
+
+    // 2. Prevent path traversal outside workspace
+    let ws_path = fs::canonicalize(workspace).map_err(|e| e.to_string())?;
+    let target = ws_path.join(path);
+
+    // If file exists, canonicalize and verify workspace prefix
+    if target.exists() {
+        let canon_target = fs::canonicalize(&target).map_err(|e| e.to_string())?;
+        if !canon_target.starts_with(&ws_path) {
+            return Err(format!("Security error: Path traversal outside workspace: '{}'", path));
+        }
+        Ok(canon_target)
+    } else {
+        // If file doesn't exist yet (new file creation), check parent
+        let mut check_dir = target.clone();
+        check_dir.pop();
+        if let Ok(canon_dir) = fs::canonicalize(&check_dir) {
+            if !canon_dir.starts_with(&ws_path) {
+                return Err(format!("Security error: Target parent outside workspace: '{}'", path));
+            }
+        }
+        Ok(target)
+    }
+}
+
+fn is_command_safe(cmd: &str) -> Result<(), String> {
+    let trimmed = cmd.trim().to_lowercase();
+    let dangerous_patterns = [
+        "rm -rf /", "rm -rf ~", "rm -rf $home", "mkfs", "dd if=",
+        ":(){ :|:& };:", "> /dev/sda", "chmod -r 777 /", "chown -r",
+        "curl | sh", "curl | bash", "wget | sh", "wget | bash",
+        "shutdown", "reboot", "init 0",
+    ];
+    for pattern in &dangerous_patterns {
+        if trimmed.contains(pattern) {
+            return Err(format!("Security error: Destructive command blocked: '{}'", pattern));
+        }
+    }
+    Ok(())
+}
+
 // ── Tool Executor ────────────────────────────────────────────────────────────
 
 fn execute_tool(tool: &ToolCall, workspace: &str) -> String {
     match tool.name.as_str() {
         "run_command" => {
             let cmd = tool.args["command"].as_str().unwrap_or("echo 'no command provided'");
+            
+            // Security check: block destructive commands
+            if let Err(err) = is_command_safe(cmd) {
+                eprintln!("  {} {}", "🛡️ Security Block:".bright_red().bold(), err);
+                return err;
+            }
+
             println!(
                 "  {} {}",
                 "▶ run_command:".cyan().bold(),
@@ -170,6 +233,16 @@ fn execute_tool(tool: &ToolCall, workspace: &str) -> String {
             let path = tool.args["path"].as_str().unwrap_or("");
             let start = tool.args["start_line"].as_u64().unwrap_or(1) as usize;
             let end = tool.args["end_line"].as_u64().unwrap_or(0) as usize;
+
+            // Security check: sandbox within workspace & block credentials
+            let full_path = match is_safe_workspace_path(path, workspace) {
+                Ok(p) => p,
+                Err(e) => {
+                    eprintln!("  {} {}", "🛡️ Security Block:".bright_red().bold(), e);
+                    return e;
+                }
+            };
+
             println!(
                 "  {} {} (lines {}-{})",
                 "📄 view_file:".cyan().bold(),
@@ -177,10 +250,12 @@ fn execute_tool(tool: &ToolCall, workspace: &str) -> String {
                 start,
                 if end == 0 { "end".to_string() } else { end.to_string() }
             );
-            let full_path = PathBuf::from(workspace).join(path);
+
             match fs::read_to_string(&full_path) {
                 Ok(content) => {
-                    let lines: Vec<&str> = content.lines().collect();
+                    // Sub-Cortex: redact secrets in viewed file before returning
+                    let scrubbed = redact_secrets(&content);
+                    let lines: Vec<&str> = scrubbed.lines().collect();
                     let from = start.saturating_sub(1);
                     let to = if end == 0 || end > lines.len() { lines.len() } else { end };
                     lines[from..to]
@@ -198,12 +273,22 @@ fn execute_tool(tool: &ToolCall, workspace: &str) -> String {
             let path = tool.args["path"].as_str().unwrap_or("");
             let original = tool.args["original"].as_str().unwrap_or("");
             let replacement = tool.args["replacement"].as_str().unwrap_or("");
+
+            // Security check: sandbox within workspace & block credentials
+            let full_path = match is_safe_workspace_path(path, workspace) {
+                Ok(p) => p,
+                Err(e) => {
+                    eprintln!("  {} {}", "🛡️ Security Block:".bright_red().bold(), e);
+                    return e;
+                }
+            };
+
             println!(
                 "  {} {}",
                 "🩹 apply_patch:".bright_yellow().bold(),
                 path.bright_white()
             );
-            let full_path = PathBuf::from(workspace).join(path);
+
             match fs::read_to_string(&full_path) {
                 Ok(content) => {
                     if !content.contains(original) {
@@ -232,26 +317,54 @@ fn execute_tool(tool: &ToolCall, workspace: &str) -> String {
 
         "git_action" => {
             let action = tool.args["action"].as_str().unwrap_or("status");
-            let message = tool.args["message"].as_str().unwrap_or("kronumos: automated remediation patch");
+            let message = tool.args["message"].as_str().unwrap_or("kronumos: patch remediation");
             let branch = tool.args["branch"].as_str().unwrap_or("kronumos/fix");
+
             println!(
                 "  {} {} ({})",
                 "🚀 git_action:".bright_green().bold(),
                 action.bright_white(),
                 branch.dimmed()
             );
-            let cmd = match action {
-                "branch" => format!("git checkout -b {}", branch),
-                "commit" => format!("git add -A && git commit -m \"{}\"", message),
-                "diff" => "git diff".to_string(),
-                "push" => format!("git push -u origin {}", branch),
-                _ => "git status --short".to_string(),
+
+            // Immunity against shell injection: use direct Command args without sh -c
+            let output = match action {
+                "branch" => {
+                    Command::new("git")
+                        .args(["checkout", "-b", branch])
+                        .current_dir(workspace)
+                        .output()
+                }
+                "commit" => {
+                    let _ = Command::new("git")
+                        .args(["add", "-A"])
+                        .current_dir(workspace)
+                        .output();
+                    Command::new("git")
+                        .args(["commit", "-m", message])
+                        .current_dir(workspace)
+                        .output()
+                }
+                "diff" => {
+                    Command::new("git")
+                        .args(["diff"])
+                        .current_dir(workspace)
+                        .output()
+                }
+                "push" => {
+                    Command::new("git")
+                        .args(["push", "-u", "origin", branch])
+                        .current_dir(workspace)
+                        .output()
+                }
+                _ => {
+                    Command::new("git")
+                        .args(["status", "--short"])
+                        .current_dir(workspace)
+                        .output()
+                }
             };
-            let output = Command::new("sh")
-                .arg("-c")
-                .arg(&cmd)
-                .current_dir(workspace)
-                .output();
+
             match output {
                 Ok(o) => {
                     let out = String::from_utf8_lossy(&o.stdout);
