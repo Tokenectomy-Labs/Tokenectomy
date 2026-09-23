@@ -29,7 +29,7 @@ use tokenectomy::redact_secrets;
 #[derive(Parser, Debug)]
 #[command(
     name = "kronumos",
-    about = "⚡ Kronumos — Autonomous Code Remediation & SRE Agent",
+    about = "Kronumos Kairos",
     version = "1.0.0"
 )]
 struct Cli {
@@ -618,7 +618,7 @@ async fn main() -> Result<()> {
     println!(
         "{}  {}",
         "╠╩╗╠╦╝║ ║║║║║ ║║║║║ ║╚═╗".bright_cyan().bold(),
-        "v1.0 • Autonomous Remediation Agent".dimmed()
+        "v1.0".dimmed()
     );
     println!(
         "{}  {}",
@@ -663,7 +663,7 @@ async fn main() -> Result<()> {
 
                 match input.as_str() {
                     "/exit" | "/quit" | "exit" | "quit" => {
-                        println!("{}", "✓ Kronumos session closed. Zero dirty diffs.".bright_cyan());
+                        println!("{}", "✓ Session closed.".dimmed());
                         break;
                     }
                     "/clear" => {
@@ -708,12 +708,12 @@ async fn main() -> Result<()> {
                     }
                     "/help" => {
                         println!("{}", "Commands:".bright_white().bold());
-                        println!("  {}        Autonomous test-and-repair loop", "/fix".bright_yellow());
+                        println!("  {}        Run test-and-repair loop", "/fix".bright_yellow());
                         println!("  {}       Show uncommitted git diff", "/diff".bright_cyan());
                         println!("  {}       Run detected project test runner", "/test".bright_green());
                         println!("  {}      Clear conversation context", "/clear".dimmed());
                         println!("  {}       Show this help message", "/help".dimmed());
-                        println!("  {}       Exit Kronumos session", "/exit".dimmed());
+                        println!("  {}       Exit session", "/exit".dimmed());
                         continue;
                     }
                     "/fix" => {
