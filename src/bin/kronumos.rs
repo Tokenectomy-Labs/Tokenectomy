@@ -723,6 +723,18 @@ async fn main() -> Result<()> {
 
     // ── Minimalist Transparent-Friendly Greeting ───────────────────────────
     println!();
+    println!("{}", "                                       /▀▀\\/▀▀\\".bright_cyan().bold());
+    println!("{}", "                                     ▄██████ (O)".bright_cyan().bold());
+    println!("{}", "                            \\ /    /████████\\_/ \\".bright_cyan().bold());
+    println!("{}", "                             \\____████████████/  \\".bright_cyan().bold());
+    println!("{}", "                                    \\█████████    \\".bright_cyan().bold());
+    println!("{}", "                                      ▀████████    \\".bright_cyan().bold());
+    println!("{}", "                                        ████████    |".bright_cyan().bold());
+    println!("{}", "                                 ▄████▄  ███████    /".bright_cyan().bold());
+    println!("{}", "                              ▄█████████▄ █████    /".bright_cyan().bold());
+    println!("{}", "                           ▄████▀▀   ▀▀███████   _/".bright_cyan().bold());
+    println!("{}", "                           ▀████▄▄▄▄▄▄████▀▀  ~-~".bright_cyan().bold());
+    println!();
     println!("{}", "    ██╗  ██╗██████╗  ██████╗ ███╗   ██╗██╗   ██╗███╗   ███╗ ██████╗ ███████╗".bright_cyan().bold());
     println!("{}", "    ██║ ██╔╝██╔══██╗██╔═══██╗████╗  ██║██║   ██║████╗ ████║██╔═══██╗██╔════╝".bright_cyan().bold());
     println!("{}", "    █████╔╝ ██████╔╝██║   ██║██╔██╗ ██║██║   ██║██╔████╔██║██║   ██║███████╗".bright_cyan().bold());
