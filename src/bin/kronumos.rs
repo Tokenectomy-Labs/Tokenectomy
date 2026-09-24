@@ -723,21 +723,15 @@ async fn main() -> Result<()> {
 
     // ── Minimalist Transparent-Friendly Greeting ───────────────────────────
     println!();
-    println!(
-        "{}  {}",
-        "╦╔═╦═╗╔═╗╔╗╔╦ ╦╔╦╗╔═╗╔═╗".bright_cyan().bold(),
-        "Kronumos Kairos".bright_white().bold()
-    );
-    println!(
-        "{}  {}",
-        "╠╩╗╠╦╝║ ║║║║║ ║║║║║ ║╚═╗".bright_cyan().bold(),
-        "v1.0".dimmed()
-    );
-    println!(
-        "{}  {}",
-        "╩ ╩╩╚═╚═╝╝╚╝╚═╝╩ ╩╚═╝╚═╝".bright_cyan().bold(),
-        "Type /help for help, or ask anything to start.".dimmed()
-    );
+    println!("{}", "    ██╗  ██╗██████╗  ██████╗ ███╗   ██╗██╗   ██╗███╗   ███╗ ██████╗ ███████╗".bright_cyan().bold());
+    println!("{}", "    ██║ ██╔╝██╔══██╗██╔═══██╗████╗  ██║██║   ██║████╗ ████║██╔═══██╗██╔════╝".bright_cyan().bold());
+    println!("{}", "    █████╔╝ ██████╔╝██║   ██║██╔██╗ ██║██║   ██║██╔████╔██║██║   ██║███████╗".bright_cyan().bold());
+    println!("{}", "    ██╔═██╗ ██╔══██╗██║   ██║██║╚██╗██║██║   ██║██║╚██╔╝██║██║   ██║╚════██║".bright_cyan().bold());
+    println!("{}", "    ██║  ██╗██║  ██║╚██████╔╝██║ ╚████║╚██████╔╝██║ ╚═╝ ██║╚██████╔╝███████║".bright_cyan().bold());
+    println!("{}", "    ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝ ╚═╝     ╚═╝ ╚═════╝ ╚══════╝".bright_cyan().bold());
+    println!();
+    println!("{}", "                 Autonomous Code Remediation & SRE Agent • v1.0".bright_white().bold());
+    println!("{}", "                 Type /help for help, or ask anything to start.".dimmed());
     println!();
 
 
