@@ -955,6 +955,13 @@ async fn process_turn(
             "cloudflare" => {
                 let default_url = "https://kronumos-gateway.your-subdomain.workers.dev";
                 let url = cli.cf_url.as_deref().unwrap_or(default_url);
+                if url.contains("your-subdomain") {
+                    eprintln!("\n{} Please configure your Cloudflare Worker URL or choose another backend:", "⚠️ Gateway Not Configured:".bright_yellow().bold());
+                    eprintln!("  1. Set environment variable: export KRONUMOS_CF_URL=\"https://your-worker.workers.dev\"");
+                    eprintln!("  2. Or run with local Ollama: kronumos --backend ollama");
+                    eprintln!("  3. Or run with OpenAI/Groq:  export OPENAI_API_KEY=\"...\" && kronumos --backend openai\n");
+                    anyhow::bail!("Cloudflare Worker URL not configured (placeholder detected)");
+                }
                 stream_cloudflare(client, url, cli.cf_key.as_deref(), history, quiet).await?
             }
             "ollama" => {
