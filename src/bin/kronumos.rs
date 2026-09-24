@@ -1,7 +1,7 @@
 /// Kronumos — Autonomous Bug Remediation & Self-Healing CLI Agent
 ///
-/// A fast, transparent-friendly agentic REPL powered by Kronumos Core
-/// and the Tokenectomy Rust Sub-Cortex.
+/// A fast, transparent-friendly agentic REPL and autonomous self-healing loop
+/// powered by Kronumos Core and the Tokenectomy Rust Sub-Cortex.
 ///
 /// Backends:
 ///   1. Cloudflare Workers AI (serverless edge, zero cost, streaming SSE)
@@ -18,21 +18,27 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{
     fs,
-    io::{self, Write},
+    io::{self, IsTerminal, Read, Write},
     path::PathBuf,
-    process::Command,
+    time::Duration,
 };
 use tokenectomy::redact_secrets;
+use tokio::process::Command as TokioCommand;
+use tokio::time::timeout;
 
 // ── CLI Configuration ────────────────────────────────────────────────────────
 
 #[derive(Parser, Debug)]
 #[command(
     name = "kronumos",
-    about = "Kronumos Kairos",
+    about = "Kronumos Kairos — Autonomous Bug Remediation & SRE Agent",
     version = "1.0.0"
 )]
 struct Cli {
+    /// Optional one-shot prompt or command to execute without entering REPL
+    #[arg(value_name = "PROMPT")]
+    prompt: Option<String>,
+
     /// Inference backend: "cloudflare", "ollama", or "openai"
     #[arg(long, default_value = "cloudflare", value_parser = ["cloudflare", "ollama", "openai"])]
     backend: String,
@@ -69,7 +75,19 @@ struct Cli {
     #[arg(long)]
     fix: bool,
 
-    /// Max autonomous tool-call iterations before pausing for user review
+    /// Autonomous self-healing loop alias (test-diagnose-patch-verify until green)
+    #[arg(long, short = 'l')]
+    r#loop: bool,
+
+    /// Suppress banner, progress spinners, and colors (clean piping for unix pipelines)
+    #[arg(long, short = 'q')]
+    quiet: bool,
+
+    /// Command execution timeout in seconds for tests and tools (default: 120s)
+    #[arg(long, default_value = "120")]
+    timeout: u64,
+
+    /// Max autonomous tool-call iterations before pausing or reporting failure
     #[arg(long, default_value = "10")]
     max_iterations: usize,
 
@@ -92,6 +110,21 @@ struct Message {
 struct ToolCall {
     name: String,
     args: Value,
+}
+
+// ── Autonomous Loop Result ───────────────────────────────────────────────────
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FixStatus {
+    AlreadyPassing,
+    Resolved {
+        iterations: usize,
+        diff_stat: String,
+    },
+    Unresolved {
+        iterations: usize,
+        last_error: String,
+    },
 }
 
 // ── System Prompt ────────────────────────────────────────────────────────────
@@ -181,31 +214,37 @@ fn is_command_safe(cmd: &str) -> Result<(), String> {
     Ok(())
 }
 
-// ── Tool Executor ────────────────────────────────────────────────────────────
+// ── Async Tool Executor with Timeout Guard ───────────────────────────────────
 
-fn execute_tool(tool: &ToolCall, workspace: &str) -> String {
+async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet: bool) -> String {
     match tool.name.as_str() {
         "run_command" => {
             let cmd = tool.args["command"].as_str().unwrap_or("echo 'no command provided'");
             
             // Security check: block destructive commands
             if let Err(err) = is_command_safe(cmd) {
-                eprintln!("  {} {}", "🛡️ Security Block:".bright_red().bold(), err);
+                if !quiet {
+                    eprintln!("  {} {}", "🛡️ Security Block:".bright_red().bold(), err);
+                }
                 return err;
             }
 
-            println!(
-                "  {} {}",
-                "▶ run_command:".cyan().bold(),
-                cmd.bright_white()
-            );
-            let output = Command::new("sh")
+            if !quiet {
+                println!(
+                    "  {} {}",
+                    "▶ run_command:".cyan().bold(),
+                    cmd.bright_white()
+                );
+            }
+
+            let mut tokio_cmd = TokioCommand::new("sh");
+            tokio_cmd
                 .arg("-c")
                 .arg(cmd)
-                .current_dir(workspace)
-                .output();
-            match output {
-                Ok(o) => {
+                .current_dir(workspace);
+
+            match timeout(Duration::from_secs(timeout_secs), tokio_cmd.output()).await {
+                Ok(Ok(o)) => {
                     let stdout = String::from_utf8_lossy(&o.stdout);
                     let stderr = String::from_utf8_lossy(&o.stderr);
                     let combined = format!("{}{}", stdout, stderr);
@@ -225,7 +264,10 @@ fn execute_tool(tool: &ToolCall, workspace: &str) -> String {
                     let exit_code = o.status.code().unwrap_or(-1);
                     format!("exit_code: {}\n{}", exit_code, truncated)
                 }
-                Err(e) => format!("error executing command: {}", e),
+                Ok(Err(e)) => format!("error executing command: {}", e),
+                Err(_) => {
+                    format!("error: command timed out after {} seconds.", timeout_secs)
+                }
             }
         }
 
@@ -238,22 +280,25 @@ fn execute_tool(tool: &ToolCall, workspace: &str) -> String {
             let full_path = match is_safe_workspace_path(path, workspace) {
                 Ok(p) => p,
                 Err(e) => {
-                    eprintln!("  {} {}", "🛡️ Security Block:".bright_red().bold(), e);
+                    if !quiet {
+                        eprintln!("  {} {}", "🛡️ Security Block:".bright_red().bold(), e);
+                    }
                     return e;
                 }
             };
 
-            println!(
-                "  {} {} (lines {}-{})",
-                "📄 view_file:".cyan().bold(),
-                path.bright_white(),
-                start,
-                if end == 0 { "end".to_string() } else { end.to_string() }
-            );
+            if !quiet {
+                println!(
+                    "  {} {} (lines {}-{})",
+                    "📄 view_file:".cyan().bold(),
+                    path.bright_white(),
+                    start,
+                    if end == 0 { "end".to_string() } else { end.to_string() }
+                );
+            }
 
             match fs::read_to_string(&full_path) {
                 Ok(content) => {
-                    // Sub-Cortex: redact secrets in viewed file before returning
                     let scrubbed = redact_secrets(&content);
                     let lines: Vec<&str> = scrubbed.lines().collect();
                     let from = start.saturating_sub(1);
@@ -278,16 +323,20 @@ fn execute_tool(tool: &ToolCall, workspace: &str) -> String {
             let full_path = match is_safe_workspace_path(path, workspace) {
                 Ok(p) => p,
                 Err(e) => {
-                    eprintln!("  {} {}", "🛡️ Security Block:".bright_red().bold(), e);
+                    if !quiet {
+                        eprintln!("  {} {}", "🛡️ Security Block:".bright_red().bold(), e);
+                    }
                     return e;
                 }
             };
 
-            println!(
-                "  {} {}",
-                "🩹 apply_patch:".bright_yellow().bold(),
-                path.bright_white()
-            );
+            if !quiet {
+                println!(
+                    "  {} {}",
+                    "🩹 apply_patch:".bright_yellow().bold(),
+                    path.bright_white()
+                );
+            }
 
             match fs::read_to_string(&full_path) {
                 Ok(content) => {
@@ -297,7 +346,6 @@ fn execute_tool(tool: &ToolCall, workspace: &str) -> String {
                             path
                         );
                     }
-                    // Surgical atomic replacement of the first matching instance
                     let new_content = content.replacen(original, replacement, 1);
                     match fs::write(&full_path, &new_content) {
                         Ok(_) => {
@@ -320,48 +368,55 @@ fn execute_tool(tool: &ToolCall, workspace: &str) -> String {
             let message = tool.args["message"].as_str().unwrap_or("kronumos: patch remediation");
             let branch = tool.args["branch"].as_str().unwrap_or("kronumos/fix");
 
-            println!(
-                "  {} {} ({})",
-                "🚀 git_action:".bright_green().bold(),
-                action.bright_white(),
-                branch.dimmed()
-            );
+            if !quiet {
+                println!(
+                    "  {} {} ({})",
+                    "🚀 git_action:".bright_green().bold(),
+                    action.bright_white(),
+                    branch.dimmed()
+                );
+            }
 
-            // Immunity against shell injection: use direct Command args without sh -c
             let output = match action {
                 "branch" => {
-                    Command::new("git")
+                    TokioCommand::new("git")
                         .args(["checkout", "-b", branch])
                         .current_dir(workspace)
                         .output()
+                        .await
                 }
                 "commit" => {
-                    let _ = Command::new("git")
+                    let _ = TokioCommand::new("git")
                         .args(["add", "-A"])
                         .current_dir(workspace)
-                        .output();
-                    Command::new("git")
+                        .output()
+                        .await;
+                    TokioCommand::new("git")
                         .args(["commit", "-m", message])
                         .current_dir(workspace)
                         .output()
+                        .await
                 }
                 "diff" => {
-                    Command::new("git")
+                    TokioCommand::new("git")
                         .args(["diff"])
                         .current_dir(workspace)
                         .output()
+                        .await
                 }
                 "push" => {
-                    Command::new("git")
+                    TokioCommand::new("git")
                         .args(["push", "-u", "origin", branch])
                         .current_dir(workspace)
                         .output()
+                        .await
                 }
                 _ => {
-                    Command::new("git")
+                    TokioCommand::new("git")
                         .args(["status", "--short"])
                         .current_dir(workspace)
                         .output()
+                        .await
                 }
             };
 
@@ -383,7 +438,6 @@ fn execute_tool(tool: &ToolCall, workspace: &str) -> String {
 // ── Tool Call Parser ─────────────────────────────────────────────────────────
 
 fn extract_tool_call(text: &str) -> Option<ToolCall> {
-    // 1. Look for structured JSON block with "name" and "arguments"
     if let Ok(re) = regex::Regex::new(r#"\{[^{}]*"name"\s*:[^{}]*"arguments"\s*:\s*\{[^{}]*\}[^{}]*\}"#) {
         if let Some(m) = re.find(text) {
             if let Ok(v) = serde_json::from_str::<Value>(m.as_str()) {
@@ -394,7 +448,6 @@ fn extract_tool_call(text: &str) -> Option<ToolCall> {
         }
     }
 
-    // 2. Fallback: inspect any JSON-like object containing "name"
     if let Ok(re2) = regex::Regex::new(r#"\{[^{}]+\}"#) {
         for m in re2.find_iter(text) {
             if let Ok(v) = serde_json::from_str::<Value>(m.as_str()) {
@@ -415,6 +468,7 @@ async fn stream_cloudflare(
     url: &str,
     api_key: Option<&str>,
     messages: &[Message],
+    quiet: bool,
 ) -> Result<String> {
     let payload = json!({
         "messages": messages,
@@ -448,8 +502,10 @@ async fn stream_cloudflare(
     let mut full_text = String::new();
     let mut stream = response.bytes_stream();
 
-    print!("{}", "◈ Kronumos ❯ ".bright_cyan().bold());
-    io::stdout().flush()?;
+    if !quiet {
+        print!("{}", "◈ Kronumos ❯ ".bright_cyan().bold());
+        io::stdout().flush()?;
+    }
 
     while let Some(chunk) = stream.next().await {
         let chunk = chunk.context("Stream read error")?;
@@ -457,24 +513,26 @@ async fn stream_cloudflare(
 
         for line in raw.lines() {
             if let Some(data) = line.strip_prefix("data: ") {
-                if data.trim() == "[DONE]" {
-                    break;
-                }
+                if data.trim() == "[DONE]" { break; }
                 if let Ok(v) = serde_json::from_str::<Value>(data) {
                     let token = v["response"]
                         .as_str()
                         .or_else(|| v["choices"][0]["delta"]["content"].as_str())
                         .unwrap_or("");
                     if !token.is_empty() {
-                        print!("{}", token);
-                        io::stdout().flush()?;
+                        if !quiet {
+                            print!("{}", token);
+                            io::stdout().flush()?;
+                        }
                         full_text.push_str(token);
                     }
                 }
             }
         }
     }
-    println!();
+    if !quiet {
+        println!();
+    }
     Ok(full_text)
 }
 
@@ -483,6 +541,7 @@ async fn stream_ollama(
     host: &str,
     model: &str,
     messages: &[Message],
+    quiet: bool,
 ) -> Result<String> {
     let payload = json!({
         "model": model,
@@ -501,8 +560,10 @@ async fn stream_ollama(
     let mut full_text = String::new();
     let mut stream = response.bytes_stream();
 
-    print!("{}", "◈ Kronumos ❯ ".bright_cyan().bold());
-    io::stdout().flush()?;
+    if !quiet {
+        print!("{}", "◈ Kronumos ❯ ".bright_cyan().bold());
+        io::stdout().flush()?;
+    }
 
     while let Some(chunk) = stream.next().await {
         let chunk = chunk.context("Ollama stream read error")?;
@@ -511,8 +572,10 @@ async fn stream_ollama(
             if let Ok(v) = serde_json::from_str::<Value>(line) {
                 let token = v["message"]["content"].as_str().unwrap_or("");
                 if !token.is_empty() {
-                    print!("{}", token);
-                    io::stdout().flush()?;
+                    if !quiet {
+                        print!("{}", token);
+                        io::stdout().flush()?;
+                    }
                     full_text.push_str(token);
                 }
                 if v["done"].as_bool().unwrap_or(false) {
@@ -521,7 +584,9 @@ async fn stream_ollama(
             }
         }
     }
-    println!();
+    if !quiet {
+        println!();
+    }
     Ok(full_text)
 }
 
@@ -531,6 +596,7 @@ async fn stream_openai_compat(
     api_key: &str,
     model: &str,
     messages: &[Message],
+    quiet: bool,
 ) -> Result<String> {
     let payload = json!({
         "model": model,
@@ -557,8 +623,10 @@ async fn stream_openai_compat(
     let mut full_text = String::new();
     let mut stream = response.bytes_stream();
 
-    print!("{}", "◈ Kronumos ❯ ".bright_cyan().bold());
-    io::stdout().flush()?;
+    if !quiet {
+        print!("{}", "◈ Kronumos ❯ ".bright_cyan().bold());
+        io::stdout().flush()?;
+    }
 
     while let Some(chunk) = stream.next().await {
         let chunk = chunk.context("OpenAI stream read error")?;
@@ -569,19 +637,289 @@ async fn stream_openai_compat(
                 if let Ok(v) = serde_json::from_str::<Value>(data) {
                     let token = v["choices"][0]["delta"]["content"].as_str().unwrap_or("");
                     if !token.is_empty() {
-                        print!("{}", token);
-                        io::stdout().flush()?;
+                        if !quiet {
+                            print!("{}", token);
+                            io::stdout().flush()?;
+                        }
                         full_text.push_str(token);
                     }
                 }
             }
         }
     }
-    println!();
+    if !quiet {
+        println!();
+    }
     Ok(full_text)
 }
 
-// ── Agentic Turn Processing ──────────────────────────────────────────────────
+// ── Autonomous Self-Healing Closed Loop Engine ───────────────────────────────
+
+async fn run_autonomous_loop(
+    client: &Client,
+    cli: &Cli,
+    workspace: &str,
+    project_type: &str,
+    max_iter: usize,
+    timeout_secs: u64,
+    quiet: bool,
+) -> Result<FixStatus> {
+    let test_cmd = match project_type {
+        p if p.contains("Rust") => "cargo test",
+        p if p.contains("Python") => "pytest",
+        p if p.contains("Node") => "npm test",
+        p if p.contains("Go") => "go test ./...",
+        _ => "make test",
+    };
+
+    if !quiet {
+        println!("{}", "╭─ 🔄 Autonomous TDD Healing Loop Engaged ───────────────".bright_cyan().bold());
+        println!("  {} Project Type: {}", "📦".cyan(), project_type.bright_white());
+        println!("  {} Test Runner:  `{}`", "🧪".cyan(), test_cmd.bright_yellow());
+        println!("  {} Max Rounds:   {}", "⏱️".cyan(), max_iter.to_string().bright_white());
+        println!("{}", "╰──────────────────────────────────────────────────────────".bright_cyan().bold());
+        println!();
+        println!("  {} Probing workspace test baseline...", "▶".cyan().bold());
+    }
+
+    // Step 1: Baseline test probe
+    let baseline_tool = ToolCall {
+        name: "run_command".to_string(),
+        args: json!({ "command": test_cmd }),
+    };
+    let baseline_res = execute_tool(&baseline_tool, workspace, timeout_secs, quiet).await;
+
+    // Check if tests are already green
+    let baseline_passed = baseline_res.starts_with("exit_code: 0");
+    if baseline_passed {
+        if !quiet {
+            println!("  {}", "✓ Baseline check: All tests already passing. No code defects detected.".bright_green().bold());
+        }
+        return Ok(FixStatus::AlreadyPassing);
+    }
+
+    if !quiet {
+        println!("  {}", "✗ Tests failing. Engaging closed-loop remediation...".bright_red().bold());
+    }
+
+    // Step 2: Initialize conversation with baseline diagnostics
+    let mut history: Vec<Message> = vec![
+        Message {
+            role: "system".to_string(),
+            content: SYSTEM_PROMPT.to_string(),
+        },
+        Message {
+            role: "user".to_string(),
+            content: format!(
+                "The test runner `{}` failed in workspace '{}' ({}):\n\n{}\n\nDiagnose the root cause, view the relevant source files with `view_file`, synthesize a minimal surgical patch with `apply_patch`, and verify that all tests pass.",
+                test_cmd, workspace, project_type, baseline_res
+            ),
+        },
+    ];
+
+    let mut iteration = 0;
+    let mut last_error = baseline_res.clone();
+
+    while iteration < max_iter {
+        iteration += 1;
+        if !quiet {
+            println!(
+                "{}",
+                format!("\n─── [Healing Loop Round {}/{}] Synthesizing Fix ───", iteration, max_iter)
+                    .bright_yellow().bold()
+            );
+        }
+
+        // Stream model inference
+        let response_text = match cli.backend.as_str() {
+            "cloudflare" => {
+                let default_url = "https://kronumos-gateway.your-subdomain.workers.dev";
+                let url = cli.cf_url.as_deref().unwrap_or(default_url);
+                if url.contains("your-subdomain") {
+                    if !quiet {
+                        eprintln!("\n{} Please configure your Cloudflare Worker URL or choose another backend:", "⚠️ Gateway Not Configured:".bright_yellow().bold());
+                        eprintln!("  1. Set environment variable: export KRONUMOS_CF_URL=\"https://your-worker.workers.dev\"");
+                        eprintln!("  2. Or run with local Ollama: kronumos --fix --backend ollama");
+                        eprintln!("  3. Or run with OpenAI/Groq:  export OPENAI_API_KEY=\"...\" && kronumos --fix --backend openai\n");
+                    }
+                    return Ok(FixStatus::Unresolved {
+                        iterations: 0,
+                        last_error: "Cloudflare Worker URL not configured (placeholder detected)".to_string(),
+                    });
+                }
+                match stream_cloudflare(client, url, cli.cf_key.as_deref(), &history, quiet).await {
+                    Ok(t) => t,
+                    Err(e) => {
+                        if !quiet {
+                            eprintln!("  {} Backend connection failed: {}", "✗".bright_red(), e);
+                        }
+                        return Ok(FixStatus::Unresolved {
+                            iterations: iteration,
+                            last_error: format!("Backend connection error: {}", e),
+                        });
+                    }
+                }
+            }
+            "ollama" => {
+                match stream_ollama(client, &cli.ollama_host, &cli.ollama_model, &history, quiet).await {
+                    Ok(t) => t,
+                    Err(e) => {
+                        if !quiet {
+                            eprintln!("  {} Ollama connection failed: {}", "✗".bright_red(), e);
+                        }
+                        return Ok(FixStatus::Unresolved {
+                            iterations: iteration,
+                            last_error: format!("Ollama connection error: {}", e),
+                        });
+                    }
+                }
+            }
+            "openai" => {
+                let key = cli.openai_key.as_deref().unwrap_or("");
+                match stream_openai_compat(client, &cli.openai_url, key, &cli.openai_model, &history, quiet).await {
+                    Ok(t) => t,
+                    Err(e) => {
+                        if !quiet {
+                            eprintln!("  {} OpenAI backend connection failed: {}", "✗".bright_red(), e);
+                        }
+                        return Ok(FixStatus::Unresolved {
+                            iterations: iteration,
+                            last_error: format!("OpenAI connection error: {}", e),
+                        });
+                    }
+                }
+            }
+            _ => unreachable!(),
+        };
+
+        history.push(Message {
+            role: "assistant".to_string(),
+            content: response_text.clone(),
+        });
+
+        if let Some(tool_call) = extract_tool_call(&response_text) {
+            let is_patch = tool_call.name == "apply_patch";
+
+            if !quiet {
+                println!(
+                    "\n{}",
+                    format!("╭─ ⚙️ tool: {} ─────────────────────────────────────", tool_call.name)
+                        .bright_black()
+                );
+            }
+
+            let tool_result = execute_tool(&tool_call, workspace, timeout_secs, quiet).await;
+
+            if !quiet {
+                println!(
+                    "{}",
+                    "╰─ 📋 tool result ────────────────────────────────────".bright_black()
+                );
+                for line in tool_result.lines().take(15) {
+                    println!("  {}", line.dimmed());
+                }
+                if tool_result.lines().count() > 15 {
+                    println!("  {}", format!("[...{} more lines...]", tool_result.lines().count() - 15).dimmed());
+                }
+            }
+
+            history.push(Message {
+                role: "user".to_string(),
+                content: format!("Tool execution result for {}:\n{}", tool_call.name, tool_result),
+            });
+
+            // Verification Gate: if a patch was applied, IMMEDIATELY re-run the test suite!
+            if is_patch && tool_result.contains("patch applied successfully") {
+                if !quiet {
+                    println!("\n  {} Verifying patch with `{}`...", "🧪".bright_cyan().bold(), test_cmd);
+                }
+
+                let verify_tool = ToolCall {
+                    name: "run_command".to_string(),
+                    args: json!({ "command": test_cmd }),
+                };
+                let verify_res = execute_tool(&verify_tool, workspace, timeout_secs, quiet).await;
+                let tests_pass = verify_res.starts_with("exit_code: 0");
+
+                if tests_pass {
+                    // Extract git diff stat for transparent verification summary
+                    let diff_stat = match TokioCommand::new("git")
+                        .args(["diff", "--stat"])
+                        .current_dir(workspace)
+                        .output()
+                        .await
+                    {
+                        Ok(o) => String::from_utf8_lossy(&o.stdout).trim().to_string(),
+                        Err(_) => String::new(),
+                    };
+
+                    if !quiet {
+                        println!("\n{}", "🎉 ────────────────────────────────────────────────────────────".bright_green().bold());
+                        println!("{}", format!("✓ Fix Verified! All tests passed in round {}.", iteration).bright_green().bold());
+                        if !diff_stat.is_empty() {
+                            println!("\n  {} Verified Changes:\n  {}", "📊".cyan(), diff_stat.bright_white());
+                        }
+                        println!("{}", "──────────────────────────────────────────────────────────────".bright_green().bold());
+                    }
+
+                    return Ok(FixStatus::Resolved {
+                        iterations: iteration,
+                        diff_stat,
+                    });
+                } else {
+                    last_error = verify_res.clone();
+                    if !quiet {
+                        println!("  {}", "✗ Tests still failing after patch. Feeding compiler diagnostics back to agent...".bright_red().bold());
+                    }
+                    history.push(Message {
+                        role: "user".to_string(),
+                        content: format!(
+                            "Verification test failed after applying your patch:\n{}\nPlease analyze why this patch was insufficient, view additional context if needed, and synthesize an updated patch.",
+                            verify_res
+                        ),
+                    });
+                }
+            }
+        } else {
+            // Model did not output a tool JSON. Run verification check to see if issue was resolved
+            let verify_tool = ToolCall {
+                name: "run_command".to_string(),
+                args: json!({ "command": test_cmd }),
+            };
+            let verify_res = execute_tool(&verify_tool, workspace, timeout_secs, quiet).await;
+            if verify_res.starts_with("exit_code: 0") {
+                let diff_stat = match TokioCommand::new("git")
+                    .args(["diff", "--stat"])
+                    .current_dir(workspace)
+                    .output()
+                    .await
+                {
+                    Ok(o) => String::from_utf8_lossy(&o.stdout).trim().to_string(),
+                    Err(_) => String::new(),
+                };
+                return Ok(FixStatus::Resolved {
+                    iterations: iteration,
+                    diff_stat,
+                });
+            }
+        }
+    }
+
+    if !quiet {
+        eprintln!(
+            "\n{}",
+            format!("⚠ Autonomous loop completed {} iterations without resolving all failing tests.", max_iter)
+                .bright_yellow().bold()
+        );
+    }
+
+    Ok(FixStatus::Unresolved {
+        iterations: max_iter,
+        last_error,
+    })
+}
+
+// ── Agentic Turn Processing (General Chat / Commands) ─────────────────────────
 
 async fn process_turn(
     client: &Client,
@@ -590,8 +928,9 @@ async fn process_turn(
     user_input: &str,
     workspace: &str,
     max_iter: usize,
+    timeout_secs: u64,
+    quiet: bool,
 ) -> Result<()> {
-    // Add user message to conversation history
     history.push(Message {
         role: "user".to_string(),
         content: user_input.to_string(),
@@ -601,63 +940,59 @@ async fn process_turn(
 
     loop {
         if iterations >= max_iter {
-            println!(
-                "\n{}",
-                format!("⚠ Reached safety limit of {} tool iterations. Pausing for confirmation.", max_iter)
-                    .bright_yellow().bold()
-            );
+            if !quiet {
+                println!(
+                    "\n{}",
+                    format!("⚠ Reached safety limit of {} tool iterations. Pausing for confirmation.", max_iter)
+                        .bright_yellow().bold()
+                );
+            }
             break;
         }
         iterations += 1;
 
-        // Perform streaming inference across the selected backend
         let response_text = match cli.backend.as_str() {
             "cloudflare" => {
                 let default_url = "https://kronumos-gateway.your-subdomain.workers.dev";
                 let url = cli.cf_url.as_deref().unwrap_or(default_url);
-                stream_cloudflare(client, url, cli.cf_key.as_deref(), history).await?
+                stream_cloudflare(client, url, cli.cf_key.as_deref(), history, quiet).await?
             }
             "ollama" => {
-                stream_ollama(client, &cli.ollama_host, &cli.ollama_model, history).await?
+                stream_ollama(client, &cli.ollama_host, &cli.ollama_model, history, quiet).await?
             }
             "openai" => {
                 let key = cli.openai_key.as_deref().unwrap_or("");
-                stream_openai_compat(client, &cli.openai_url, key, &cli.openai_model, history).await?
+                stream_openai_compat(client, &cli.openai_url, key, &cli.openai_model, history, quiet).await?
             }
             _ => unreachable!(),
         };
 
-        // Record assistant response in history
         history.push(Message {
             role: "assistant".to_string(),
             content: response_text.clone(),
         });
 
-        // Parse tool invocation if emitted by model
         if let Some(tool_call) = extract_tool_call(&response_text) {
-            println!(
-                "\n{}",
-                format!("╭─ ⚙️ tool: {} ─────────────────────────────────────", tool_call.name)
-                    .bright_black()
-            );
-
-            let tool_result = execute_tool(&tool_call, workspace);
-
-            println!(
-                "{}",
-                "╰─ 📋 tool result ────────────────────────────────────".bright_black()
-            );
-            
-            let lines: Vec<&str> = tool_result.lines().collect();
-            for line in lines.iter().take(20) {
-                println!("  {}", line.dimmed());
+            if !quiet {
+                println!(
+                    "\n{}",
+                    format!("╭─ ⚙️ tool: {} ─────────────────────────────────────", tool_call.name)
+                        .bright_black()
+                );
             }
-            if lines.len() > 20 {
-                println!("  {}", format!("[...{} more lines...]", lines.len() - 20).dimmed());
-            }
-            println!();
 
-            // Feed tool result back to agent
+            let tool_result = execute_tool(&tool_call, workspace, timeout_secs, quiet).await;
+
+            if !quiet {
+                println!(
+                    "{}",
+                    "╰─ 📋 tool result ────────────────────────────────────".bright_black()
+                );
+                for line in tool_result.lines().take(15) {
+                    println!("  {}", line.dimmed());
+                }
+            }
+
             history.push(Message {
                 role: "user".to_string(),
                 content: format!(
@@ -666,7 +1001,6 @@ async fn process_turn(
                 ),
             });
 
-            // Termination heuristics: if fix was validated or tests passed, allow 1 final turn
             let completion_signals = [
                 "all tests passed",
                 "tests passed",
@@ -678,7 +1012,6 @@ async fn process_turn(
                 continue;
             }
         } else {
-            // Model returned a direct text explanation or finished
             break;
         }
     }
@@ -713,7 +1046,7 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
     let workspace = cli.workspace.clone();
     let client = Client::builder()
-        .timeout(std::time::Duration::from_secs(120))
+        .timeout(Duration::from_secs(180))
         .build()?;
 
     let workspace_abs = fs::canonicalize(&workspace)
@@ -721,21 +1054,75 @@ async fn main() -> Result<()> {
     let workspace_str = workspace_abs.to_string_lossy().to_string();
     let project_type = detect_project_type(&workspace_str);
 
-    // ── Minimalist Transparent-Friendly Greeting ───────────────────────────
-    println!();
-    println!("{}", "    ██╗  ██╗██████╗  ██████╗ ███╗   ██╗██╗   ██╗███╗   ███╗ ██████╗ ███████╗".bright_cyan().bold());
-    println!("{}", "    ██║ ██╔╝██╔══██╗██╔═══██╗████╗  ██║██║   ██║████╗ ████║██╔═══██╗██╔════╝".bright_cyan().bold());
-    println!("{}", "    █████╔╝ ██████╔╝██║   ██║██╔██╗ ██║██║   ██║██╔████╔██║██║   ██║███████╗".bright_cyan().bold());
-    println!("{}", "    ██╔═██╗ ██╔══██╗██║   ██║██║╚██╗██║██║   ██║██║╚██╔╝██║██║   ██║╚════██║".bright_cyan().bold());
-    println!("{}", "    ██║  ██╗██║  ██║╚██████╔╝██║ ╚████║╚██████╔╝██║ ╚═╝ ██║╚██████╔╝███████║".bright_cyan().bold());
-    println!("{}", "    ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝ ╚═╝     ╚═╝ ╚═════╝ ╚══════╝".bright_cyan().bold());
-    println!();
-    println!("{}", "                     · K R O N U M O S   K A I R O S ·".cyan().bold());
-    println!("{}", "               Autonomous Code Remediation & SRE Agent • v1.0".bright_white().bold());
-    println!("{}", "               Type /help for help, or ask anything to start.".dimmed());
-    println!();
+    // ── Mode 1: Piped Stdin Execution (cat error.log | kronumos) ────────────
+    if !io::stdin().is_terminal() {
+        let mut piped_input = String::new();
+        io::stdin().read_to_string(&mut piped_input)?;
+        if !piped_input.trim().is_empty() {
+            let combined = if let Some(ref p) = cli.prompt {
+                format!("{}\n\nContext:\n{}", p, piped_input)
+            } else {
+                piped_input
+            };
+            let mut history = vec![Message {
+                role: "system".to_string(),
+                content: SYSTEM_PROMPT.to_string(),
+            }];
+            let scrubbed = redact_secrets(&combined);
+            process_turn(
+                &client, &cli, &mut history, &scrubbed, &workspace_str,
+                cli.max_iterations, cli.timeout, cli.quiet
+            ).await?;
+            return Ok(());
+        }
+    }
 
+    // ── Mode 2: Positional One-Shot Execution (kronumos "fix test") ──────────
+    if let Some(ref prompt) = cli.prompt {
+        let mut history = vec![Message {
+            role: "system".to_string(),
+            content: SYSTEM_PROMPT.to_string(),
+        }];
+        let scrubbed = redact_secrets(prompt);
+        process_turn(
+            &client, &cli, &mut history, &scrubbed, &workspace_str,
+            cli.max_iterations, cli.timeout, cli.quiet
+        ).await?;
+        return Ok(());
+    }
 
+    // ── Mode 3: Headless Autonomous Loop (--fix or --loop) ───────────────────
+    if cli.fix || cli.r#loop {
+        let status = run_autonomous_loop(
+            &client, &cli, &workspace_str, &project_type,
+            cli.max_iterations, cli.timeout, cli.quiet
+        ).await?;
+
+        match status {
+            FixStatus::AlreadyPassing | FixStatus::Resolved { .. } => {
+                std::process::exit(0);
+            }
+            FixStatus::Unresolved { .. } => {
+                std::process::exit(1);
+            }
+        }
+    }
+
+    // ── Mode 4: Interactive REPL ─────────────────────────────────────────────
+    if !cli.quiet {
+        println!();
+        println!("{}", "    ██╗  ██╗██████╗  ██████╗ ███╗   ██╗██╗   ██╗███╗   ███╗ ██████╗ ███████╗".bright_cyan().bold());
+        println!("{}", "    ██║ ██╔╝██╔══██╗██╔═══██╗████╗  ██║██║   ██║████╗ ████║██╔═══██╗██╔════╝".bright_cyan().bold());
+        println!("{}", "    █████╔╝ ██████╔╝██║   ██║██╔██╗ ██║██║   ██║██╔████╔██║██║   ██║███████╗".bright_cyan().bold());
+        println!("{}", "    ██╔═██╗ ██╔══██╗██║   ██║██║╚██╗██║██║   ██║██║╚██╔╝██║██║   ██║╚════██║".bright_cyan().bold());
+        println!("{}", "    ██║  ██╗██║  ██║╚██████╔╝██║ ╚████║╚██████╔╝██║ ╚═╝ ██║╚██████╔╝███████║".bright_cyan().bold());
+        println!("{}", "    ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝ ╚═╝     ╚═╝ ╚═════╝ ╚══════╝".bright_cyan().bold());
+        println!();
+        println!("{}", "                     · K R O N U M O S   K A I R O S ·".cyan().bold());
+        println!("{}", "               Autonomous Code Remediation & SRE Agent • v1.0".bright_white().bold());
+        println!("{}", "               Type /help for help, or ask anything to start.".dimmed());
+        println!();
+    }
 
     let mut history: Vec<Message> = vec![Message {
         role: "system".to_string(),
@@ -748,16 +1135,6 @@ async fn main() -> Result<()> {
         .join(".kronumos_history");
     let _ = rl.load_history(&history_file);
 
-    // If --fix was specified on command line, immediately start autonomous fix
-    if cli.fix {
-        let fix_prompt = format!(
-            "Run project tests for {} in '{}', diagnose any failures, and synthesize a surgical patch.",
-            project_type, workspace_str
-        );
-        process_turn(&client, &cli, &mut history, &fix_prompt, &workspace_str, cli.max_iterations).await?;
-    }
-
-    // ── Interactive REPL Loop ────────────────────────────────────────────────
     loop {
         let prompt_str = format!("{} ", "⚡ kronumos ❯".bright_cyan().bold());
         let readline = rl.readline(&prompt_str);
@@ -775,15 +1152,16 @@ async fn main() -> Result<()> {
                         break;
                     }
                     "/clear" => {
-                        history.truncate(1); // Retain system prompt
+                        history.truncate(1);
                         println!("{}", "✓ Conversation buffer cleared.".dimmed());
                         continue;
                     }
                     "/diff" => {
-                        let out = Command::new("git")
+                        let out = TokioCommand::new("git")
                             .arg("diff")
                             .current_dir(&workspace_str)
-                            .output();
+                            .output()
+                            .await;
                         match out {
                             Ok(o) => {
                                 let diff = String::from_utf8_lossy(&o.stdout);
@@ -810,13 +1188,14 @@ async fn main() -> Result<()> {
                             name: "run_command".to_string(),
                             args: json!({ "command": test_cmd }),
                         };
-                        let result = execute_tool(&dummy_tool, &workspace_str);
+                        let result = execute_tool(&dummy_tool, &workspace_str, cli.timeout, false).await;
                         println!("  {}", result.dimmed());
                         continue;
                     }
                     "/help" => {
                         println!("{}", "Commands:".bright_white().bold());
-                        println!("  {}        Run test-and-repair loop", "/fix".bright_yellow());
+                        println!("  {}        Autonomous TDD test-and-repair loop", "/fix".bright_yellow());
+                        println!("  {}       Autonomous loop alias", "/loop".bright_yellow());
                         println!("  {}       Show uncommitted git diff", "/diff".bright_cyan());
                         println!("  {}       Run detected project test runner", "/test".bright_green());
                         println!("  {}      Clear conversation context", "/clear".dimmed());
@@ -824,27 +1203,26 @@ async fn main() -> Result<()> {
                         println!("  {}       Exit session", "/exit".dimmed());
                         continue;
                     }
-                    "/fix" => {
-                        let fix_prompt = format!(
-                            "Run the test suite for this {} workspace, diagnose any failing tests, view the source files, apply a minimal surgical patch, and verify tests pass.",
-                            project_type
-                        );
-                        process_turn(
-                            &client, &cli, &mut history,
-                            &fix_prompt, &workspace_str, cli.max_iterations
-                        ).await?;
+                    "/fix" | "/loop" => {
+                        let _ = run_autonomous_loop(
+                            &client, &cli, &workspace_str, &project_type,
+                            cli.max_iterations, cli.timeout, false
+                        ).await;
                     }
                     _ => {
-                        // Sub-Cortex: scrub credentials accidentally pasted into terminal
                         let scrubbed = redact_secrets(&input);
                         process_turn(
                             &client, &cli, &mut history,
-                            &scrubbed, &workspace_str, cli.max_iterations
+                            &scrubbed, &workspace_str, cli.max_iterations, cli.timeout, false
                         ).await?;
                     }
                 }
             }
-            Err(ReadlineError::Interrupted) | Err(ReadlineError::Eof) => {
+            Err(ReadlineError::Interrupted) => {
+                println!("{}", "\n(Session interrupted. Type /exit to quit)".dimmed());
+                continue;
+            }
+            Err(ReadlineError::Eof) => {
                 println!("{}", "\n✓ Kronumos session closed.".bright_cyan());
                 break;
             }
