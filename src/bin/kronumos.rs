@@ -14,7 +14,15 @@ use colored::*;
 use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::Client;
-use rustyline::{DefaultEditor, error::ReadlineError};
+use rustyline::{
+    completion::{Completer, Pair},
+    error::ReadlineError,
+    highlight::Highlighter,
+    hint::Hinter,
+    history::DefaultHistory,
+    validate::Validator,
+    CompletionType, Config, Editor, Helper,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{
@@ -516,9 +524,93 @@ fn print_kronumos_hud(workspace: &str, project_type: &str, backend: &str) {
         col3_plain.bright_cyan().bold()
     );
     println!("{}", "╰──────────────────────────────────────────────────────────────────────────────────╯".bright_black());
-    println!("{}", "  Type /help for command reference, or describe any bug to start autonomous healing.".dimmed());
+    println!("{}", "  Type / (or press Tab) for command menu, or describe any bug to start autonomous healing.".dimmed());
     println!();
 }
+
+fn print_command_cockpit() {
+    println!("{}", "╭─ 💡 Command Cockpit ─────────────────────────────────────╮".bright_cyan().bold());
+    println!("│  {}  {:<45} │", format!("{:<8}", "/fix").bright_yellow().bold(), "Autonomous TDD test-and-repair loop");
+    println!("│  {}  {:<45} │", format!("{:<8}", "/undo").bright_yellow().bold(), "Revert uncommitted patches (zero dirty diff)");
+    println!("│  {}  {:<45} │", format!("{:<8}", "/diff").bright_cyan().bold(), "Inspect current uncommitted git diff");
+    println!("│  {}  {:<45} │", format!("{:<8}", "/test").bright_green().bold(), "Run project test runner on physical hardware");
+    println!("│  {}  {:<45} │", format!("{:<8}", "/clear").dimmed(), "Clear conversation context & buffer");
+    println!("│  {}  {:<45} │", format!("{:<8}", "/help").dimmed(), "Show this command cockpit reference");
+    println!("│  {}  {:<45} │", format!("{:<8}", "/exit").dimmed(), "Exit interactive session (or press Ctrl+C)");
+    println!("{}", "╰──────────────────────────────────────────────────────────╯".bright_cyan().bold());
+}
+
+struct KronumosHelper {
+    commands: Vec<(&'static str, &'static str)>,
+}
+
+impl KronumosHelper {
+    fn new() -> Self {
+        Self {
+            commands: vec![
+                ("/fix", "Autonomous TDD test-and-repair loop"),
+                ("/undo", "Revert uncommitted patches (zero dirty diff)"),
+                ("/diff", "Inspect current uncommitted git diff"),
+                ("/test", "Run project test runner on physical hardware"),
+                ("/clear", "Clear conversation context & buffer"),
+                ("/help", "Show command cockpit reference"),
+                ("/exit", "Exit interactive session (or press Ctrl+C)"),
+                ("/loop", "Autonomous loop alias"),
+            ],
+        }
+    }
+}
+
+impl Completer for KronumosHelper {
+    type Candidate = Pair;
+
+    fn complete(
+        &self,
+        line: &str,
+        pos: usize,
+        _ctx: &rustyline::Context<'_>,
+    ) -> rustyline::Result<(usize, Vec<Pair>)> {
+        let prefix = &line[..pos];
+        if prefix.starts_with('/') {
+            let matches: Vec<Pair> = self
+                .commands
+                .iter()
+                .filter(|(cmd, _)| cmd.starts_with(prefix))
+                .map(|(cmd, desc)| Pair {
+                    display: format!("{:<8} {}", cmd, desc),
+                    replacement: cmd.to_string(),
+                })
+                .collect();
+            return Ok((0, matches));
+        }
+        Ok((0, Vec::new()))
+    }
+}
+
+impl Hinter for KronumosHelper {
+    type Hint = String;
+
+    fn hint(&self, line: &str, pos: usize, _ctx: &rustyline::Context<'_>) -> Option<String> {
+        if pos < line.len() {
+            return None;
+        }
+        if line == "/" {
+            return Some(" (press Tab for completions, Enter for menu)".dimmed().to_string());
+        }
+        if line.starts_with('/') {
+            for (cmd, desc) in &self.commands {
+                if cmd.starts_with(line) && cmd.len() > line.len() {
+                    return Some(format!("{} ({})", &cmd[line.len()..], desc).dimmed().to_string());
+                }
+            }
+        }
+        None
+    }
+}
+
+impl Highlighter for KronumosHelper {}
+impl Validator for KronumosHelper {}
+impl Helper for KronumosHelper {}
 
 // ── Async Tool Executor with Timeout Guard ───────────────────────────────────
 
@@ -1757,7 +1849,11 @@ async fn main() -> Result<()> {
         content: SYSTEM_PROMPT.to_string(),
     }];
 
-    let mut rl = DefaultEditor::new()?;
+    let config = Config::builder()
+        .completion_type(CompletionType::List)
+        .build();
+    let mut rl = Editor::<KronumosHelper, DefaultHistory>::with_config(config)?;
+    rl.set_helper(Some(KronumosHelper::new()));
     let history_file = dirs::home_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join(".kronumos_history");
@@ -1842,16 +1938,8 @@ async fn main() -> Result<()> {
                         let _ = execute_tool(&dummy_tool, &workspace_str, cli.timeout, false).await;
                         continue;
                     }
-                    "/help" => {
-                        println!("{}", "╭─ 💡 Command Cockpit ─────────────────────────────────────╮".bright_cyan().bold());
-                        println!("│  {}  {:<45} │", format!("{:<8}", "/fix").bright_yellow().bold(), "Autonomous TDD test-and-repair loop");
-                        println!("│  {}  {:<45} │", format!("{:<8}", "/undo").bright_yellow().bold(), "Revert uncommitted patches (zero dirty diff)");
-                        println!("│  {}  {:<45} │", format!("{:<8}", "/diff").bright_cyan().bold(), "Inspect current uncommitted git diff");
-                        println!("│  {}  {:<45} │", format!("{:<8}", "/test").bright_green().bold(), "Run project test runner on physical hardware");
-                        println!("│  {}  {:<45} │", format!("{:<8}", "/clear").dimmed(), "Clear conversation context & buffer");
-                        println!("│  {}  {:<45} │", format!("{:<8}", "/help").dimmed(), "Show this command cockpit reference");
-                        println!("│  {}  {:<45} │", format!("{:<8}", "/exit").dimmed(), "Exit interactive session");
-                        println!("{}", "╰──────────────────────────────────────────────────────────╯".bright_cyan().bold());
+                    "/" | "/?" | "/menu" | "/help" => {
+                        print_command_cockpit();
                         continue;
                     }
                     "/fix" | "/loop" => {
@@ -1859,6 +1947,11 @@ async fn main() -> Result<()> {
                             &client, &cli, &workspace_str, &project_type,
                             cli.max_iterations, cli.timeout, false
                         ).await;
+                    }
+                    cmd if cmd.starts_with('/') => {
+                        println!("  {}", format!("Unknown command `{}`. Available commands:", cmd).bright_red());
+                        print_command_cockpit();
+                        continue;
                     }
                     _ => {
                         let scrubbed = redact_secrets(&input);
@@ -1870,11 +1963,11 @@ async fn main() -> Result<()> {
                 }
             }
             Err(ReadlineError::Interrupted) => {
-                println!("{}", "\n(Session interrupted. Type /exit to quit)".dimmed());
-                continue;
+                println!("{}", "\n✓ Session closed (Ctrl+C).".dimmed());
+                break;
             }
             Err(ReadlineError::Eof) => {
-                println!("{}", "\n✓ Kronumos session closed.".bright_cyan());
+                println!("{}", "\n✓ Session closed (Ctrl+D).".dimmed());
                 break;
             }
             Err(e) => {
