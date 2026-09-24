@@ -29,6 +29,7 @@ use std::{
     fs,
     io::{self, IsTerminal, Read, Write},
     path::{Path, PathBuf},
+    sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
 use tokenectomy::redact_secrets;
@@ -536,7 +537,7 @@ fn print_command_cockpit() {
     println!("│  {}  {:<45} │", format!("{:<8}", "/test").bright_green().bold(), "Run project test runner on physical hardware");
     println!("│  {}  {:<45} │", format!("{:<8}", "/clear").dimmed(), "Clear conversation context & buffer");
     println!("│  {}  {:<45} │", format!("{:<8}", "/help").dimmed(), "Show this command cockpit reference");
-    println!("│  {}  {:<45} │", format!("{:<8}", "/exit").dimmed(), "Exit interactive session (or press Ctrl+C)");
+    println!("│  {}  {:<45} │", format!("{:<8}", "/exit").dimmed(), "Exit interactive session (or double Ctrl+C)");
     println!("{}", "╰──────────────────────────────────────────────────────────╯".bright_cyan().bold());
 }
 
@@ -554,7 +555,7 @@ impl KronumosHelper {
                 ("/test", "Run project test runner on physical hardware"),
                 ("/clear", "Clear conversation context & buffer"),
                 ("/help", "Show command cockpit reference"),
-                ("/exit", "Exit interactive session (or press Ctrl+C)"),
+                ("/exit", "Exit interactive session (or double Ctrl+C)"),
                 ("/loop", "Autonomous loop alias"),
             ],
         }
@@ -1854,10 +1855,32 @@ async fn main() -> Result<()> {
         .build();
     let mut rl = Editor::<KronumosHelper, DefaultHistory>::with_config(config)?;
     rl.set_helper(Some(KronumosHelper::new()));
+    rl.bind_sequence(rustyline::KeyEvent::ctrl('c'), rustyline::Cmd::Interrupt);
+    rl.bind_sequence(rustyline::KeyEvent::new('\x03', rustyline::Modifiers::NONE), rustyline::Cmd::Interrupt);
     let history_file = dirs::home_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join(".kronumos_history");
     let _ = rl.load_history(&history_file);
+
+    let last_ctrl_c = Arc::new(Mutex::new(None::<Instant>));
+    let last_ctrl_c_bg = last_ctrl_c.clone();
+
+    tokio::spawn(async move {
+        loop {
+            if tokio::signal::ctrl_c().await.is_ok() {
+                let now = Instant::now();
+                let mut guard = last_ctrl_c_bg.lock().unwrap();
+                if let Some(prev) = *guard {
+                    if now.duration_since(prev) < Duration::from_millis(2000) {
+                        println!("{}", "\n✓ Session closed.".dimmed());
+                        std::process::exit(0);
+                    }
+                }
+                *guard = Some(now);
+                println!("{}", "\n(Press Ctrl+C again to exit)".dimmed());
+            }
+        }
+    });
 
     loop {
         let prompt_str = format!("{} ", "◈ kronumos ❯".bright_cyan().bold());
@@ -1865,6 +1888,7 @@ async fn main() -> Result<()> {
 
         match readline {
             Ok(line) => {
+                *last_ctrl_c.lock().unwrap() = None;
                 let input = line.trim().to_string();
                 if input.is_empty() { continue; }
 
@@ -1963,11 +1987,20 @@ async fn main() -> Result<()> {
                 }
             }
             Err(ReadlineError::Interrupted) => {
-                println!("{}", "\n✓ Session closed (Ctrl+C).".dimmed());
-                break;
+                let now = Instant::now();
+                let mut guard = last_ctrl_c.lock().unwrap();
+                if let Some(prev) = *guard {
+                    if now.duration_since(prev) < Duration::from_millis(2000) {
+                        println!("{}", "\n✓ Session closed.".dimmed());
+                        break;
+                    }
+                }
+                *guard = Some(now);
+                println!("{}", "\n(Press Ctrl+C again to exit)".dimmed());
+                continue;
             }
             Err(ReadlineError::Eof) => {
-                println!("{}", "\n✓ Session closed (Ctrl+D).".dimmed());
+                println!("{}", "\n✓ Session closed.".dimmed());
                 break;
             }
             Err(e) => {
