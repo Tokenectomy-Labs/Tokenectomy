@@ -485,7 +485,7 @@ fn create_spinner(msg: &str) -> ProgressBar {
     pb
 }
 
-fn print_kronumos_hud(workspace: &str, project_type: &str, backend: &str) {
+fn print_kronumos_hud(workspace: &str, project_type: &str, _backend: &str) {
     println!();
     println!("{}", "    ██╗  ██╗██████╗  ██████╗ ███╗   ██╗██╗   ██╗███╗   ███╗ ██████╗ ███████╗".bright_cyan().bold());
     println!("{}", "    ██║ ██╔╝██╔══██╗██╔═══██╗████╗  ██║██║   ██║████╗ ████║██╔═══██╗██╔════╝".bright_cyan().bold());
@@ -515,9 +515,9 @@ fn print_kronumos_hud(workspace: &str, project_type: &str, backend: &str) {
         format!("{:<28}", ws_info)
     };
     let col2_plain = format!("{:<24}", "Token Surgery: Active");
-    let col3_plain = format!("{:<19}", backend.to_uppercase());
+    let col3_plain = format!("{:<19}", "Kairos v1.0");
 
-    println!("{}", "╭─ 🧭 WORKSPACE ────────────────── 🧠 SUB-CORTEX ──────────── ⚡ BACKEND ──────────╮".bright_black());
+    println!("{}", "╭─ 🧭 WORKSPACE ────────────────── 🧠 SUB-CORTEX ──────────── ⚡ ENGINE ───────────╮".bright_black());
     println!(
         "│  {} │  {} │  {} │",
         col1_plain.bright_white(),
