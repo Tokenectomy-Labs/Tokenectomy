@@ -292,11 +292,15 @@ Available Tools — when you decide to take an action, output ONLY a JSON object
    {"name": "list_files", "arguments": {"path": "<optional subpath>", "max_depth": <int>}}
    Lists the project file structure and directories up to max_depth (default: 2).
 
-5. apply_patch
-   {"name": "apply_patch", "arguments": {"path": "<relative file path>", "original": "<exact lines to replace>", "replacement": "<new lines>"}}
-   Performs a surgical, character-exact replacement in the target file.
+5. write_file
+   {"name": "write_file", "arguments": {"path": "<relative file path>", "content": "<entire file content>"}}
+   Creates a new file or completely writes contents with automatic parent directory creation. Use this when creating new test files, modules, or config templates.
 
-6. git_action
+6. apply_patch
+   {"name": "apply_patch", "arguments": {"path": "<relative file path>", "original": "<exact lines to replace>", "replacement": "<new lines>"}}
+   Performs a surgical, character-exact replacement in an existing target file.
+
+7. git_action
    {"name": "git_action", "arguments": {"action": "branch|commit|diff|status", "message": "<commit message>", "branch": "<branch name>"}}
    Manages git branches and commits verified changes.
 
@@ -305,22 +309,24 @@ Guidelines:
 - Use search_code and list_files to explore unfamiliar projects and locate symbol definitions.
 - Never guess code contents: inspect using view_file before editing.
 - Ensure patches are minimal, surgical, and maintain zero dirty diffs in unrelated code.
-- Re-run tests immediately after patching to verify regression-free status.
+- Re-run tests immediately after patching or writing files to verify regression-free status.
 - Once verified, commit the fix cleanly or explain findings to the user."#;
 
 // ── Security Guardrails ──────────────────────────────────────────────────────
 
 fn is_safe_workspace_path(path: &str, workspace: &str) -> Result<PathBuf, String> {
-    // 1. Block obvious sensitive files
-    let lower = path.to_lowercase();
+    // 1. Block obvious sensitive files and credentials
+    let lower = path.to_lowercase().replace('\\', "/");
     let sensitive_patterns = [
         ".env", "id_rsa", "id_ed25519", "id_ecdsa", "credentials",
-        ".aws/credentials", ".ssh/", ".gnupg/", "passwd", "shadow",
-        ".bash_history", ".zsh_history", ".git/config",
+        ".aws/", ".ssh/", ".gnupg/", "passwd", "shadow",
+        ".bash_history", ".zsh_history", ".git/config", ".git/credentials",
+        ".npmrc", ".pypirc", "auth.json", "access_token", "private_key",
+        ".netrc", "keystore", ".pem", ".key",
     ];
     for pattern in &sensitive_patterns {
         if lower.contains(pattern) {
-            return Err(format!("Security error: Access to sensitive file '{}' is prohibited.", path));
+            return Err(format!("Security Block: Access to sensitive file '{}' is prohibited by Sub-Cortex guard.", path));
         }
     }
 
@@ -332,19 +338,111 @@ fn is_safe_workspace_path(path: &str, workspace: &str) -> Result<PathBuf, String
     if target.exists() {
         let canon_target = fs::canonicalize(&target).map_err(|e| e.to_string())?;
         if !canon_target.starts_with(&ws_path) {
-            return Err(format!("Security error: Path traversal outside workspace: '{}'", path));
+            return Err(format!("Security Block: Path traversal outside workspace: '{}'", path));
         }
         Ok(canon_target)
     } else {
-        // If file doesn't exist yet (new file creation), check parent
+        // If file doesn't exist yet (new file creation), check existing ancestor
         let mut check_dir = target.clone();
         check_dir.pop();
-        if let Ok(canon_dir) = fs::canonicalize(&check_dir) {
-            if !canon_dir.starts_with(&ws_path) {
-                return Err(format!("Security error: Target parent outside workspace: '{}'", path));
+        while !check_dir.exists() && check_dir.parent().is_some() {
+            check_dir.pop();
+        }
+        if check_dir.exists() {
+            if let Ok(canon_dir) = fs::canonicalize(&check_dir) {
+                if !canon_dir.starts_with(&ws_path) {
+                    return Err(format!("Security Block: Target parent outside workspace: '{}'", path));
+                }
             }
         }
         Ok(target)
+    }
+}
+
+fn is_critical_file(path: &str) -> bool {
+    let lower = path.to_lowercase().replace('\\', "/");
+    let file_name = Path::new(&lower)
+        .file_name()
+        .map(|s| s.to_string_lossy().to_string())
+        .unwrap_or_default();
+
+    let critical_exact = [
+        "cargo.toml", "cargo.lock",
+        "package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml",
+        "pyproject.toml", "requirements.txt", "pipfile", "setup.py", "setup.cfg",
+        "go.mod", "go.sum",
+        "pom.xml", "build.gradle", "build.gradle.kts",
+        "makefile", "cmakelists.txt",
+        "dockerfile", "docker-compose.yml", "docker-compose.yaml", "compose.yaml",
+        ".gitignore", ".gitmodules",
+    ];
+
+    if critical_exact.contains(&file_name.as_str()) {
+        return true;
+    }
+
+    if lower.contains(".github/workflows") || lower.contains("migrations/") {
+        return true;
+    }
+
+    false
+}
+
+fn confirm_critical_access(path: &str, action: &str, preview: Option<&str>, interactive: bool) -> bool {
+    if !interactive || !io::stdin().is_terminal() {
+        return true;
+    }
+
+    println!();
+    println!("{}", "╭─ 🛡️  Critical File Guard ────────────────────────────────────────╮".bright_yellow().bold());
+    println!("│  Agent requested to {} critical project file:             │", format!("{:<8}", action));
+    println!("│  ▶ {:58} │", path.bright_white().bold());
+    println!("{}", "╰──────────────────────────────────────────────────────────────────╯".bright_yellow().bold());
+
+    loop {
+        if preview.is_some() {
+            print!("  Allow this modification? [y/N/v (view proposed changes)]: ");
+        } else {
+            print!("  Allow agent to view this file? [Y/n]: ");
+        }
+        let _ = io::stdout().flush();
+
+        let mut answer = String::new();
+        if io::stdin().read_line(&mut answer).is_err() {
+            return false;
+        }
+        let ans = answer.trim().to_lowercase();
+
+        if preview.is_none() {
+            // Read confirmation: default Yes
+            if ans.is_empty() || ans == "y" || ans == "yes" {
+                return true;
+            }
+            println!("  {}", "Inspection cancelled by user.".bright_red());
+            return false;
+        }
+
+        // Write confirmation: default No
+        if ans == "v" || ans == "view" {
+            if let Some(p) = preview {
+                println!("{}", "╭─ 🔍 Proposed Change Preview ───────────────────────────────────".bright_yellow());
+                for line in p.lines().take(20) {
+                    println!("│  {}", line.dimmed());
+                }
+                if p.lines().count() > 20 {
+                    println!("│  [...{} more lines...]", p.lines().count() - 20);
+                }
+                println!("{}", "╰────────────────────────────────────────────────────────────────".bright_yellow());
+            }
+            continue;
+        }
+
+        if ans == "y" || ans == "yes" {
+            return true;
+        } else {
+            println!("  {}", "Modification denied by user.".bright_red());
+            return false;
+        }
     }
 }
 
@@ -358,10 +456,131 @@ fn is_command_safe(cmd: &str) -> Result<(), String> {
     ];
     for pattern in &dangerous_patterns {
         if trimmed.contains(pattern) {
-            return Err(format!("Security error: Destructive command blocked: '{}'", pattern));
+            return Err(format!("Security Block: Destructive command blocked: '{}'", pattern));
         }
     }
     Ok(())
+}
+
+// ── Session Telemetry & FinOps Metrics ───────────────────────────────────────
+
+#[derive(Debug, Clone)]
+pub struct SessionStats {
+    pub start_time: Instant,
+    pub turns: usize,
+    pub tools_executed: usize,
+    pub patches_applied: usize,
+    pub files_created: usize,
+    pub pruned_lines: usize,
+    pub estimated_tokens_saved: usize,
+    pub direct_commands_run: usize,
+}
+
+impl Default for SessionStats {
+    fn default() -> Self {
+        Self {
+            start_time: Instant::now(),
+            turns: 0,
+            tools_executed: 0,
+            patches_applied: 0,
+            files_created: 0,
+            pruned_lines: 0,
+            estimated_tokens_saved: 0,
+            direct_commands_run: 0,
+        }
+    }
+}
+
+fn print_session_stats(stats: &SessionStats) {
+    let elapsed = stats.start_time.elapsed();
+    let mins = elapsed.as_secs() / 60;
+    let secs = elapsed.as_secs() % 60;
+    let duration_str = format!("{:02}m {:02}s", mins, secs);
+
+    let dollars_saved = (stats.estimated_tokens_saved as f64) * 0.000003;
+
+    println!();
+    println!("{}", "╭─ 📊 Kronumos FinOps & Session Telemetry ─────────────────────────╮".bright_cyan().bold());
+    println!("│  {:26} {:>36} │", "Session Duration:".dimmed(), duration_str.bright_white().bold());
+    println!("│  {:26} {:>36} │", "Agent Conversation Turns:".dimmed(), stats.turns.to_string().bright_white());
+    println!("│  {:26} {:>36} │", "Direct Shell Escapes (!):".dimmed(), stats.direct_commands_run.to_string().bright_white());
+    println!("│  {:26} {:>36} │", "Tools Executed by Agent:".dimmed(), stats.tools_executed.to_string().bright_white());
+    println!("│  {:26} {:>36} │", "Patches Synthesized:".dimmed(), stats.patches_applied.to_string().bright_green().bold());
+    println!("│  {:26} {:>36} │", "New Files Created:".dimmed(), stats.files_created.to_string().bright_green().bold());
+    println!("│  {:26} {:>36} │", "Sub-Cortex Pruned Lines:".dimmed(), format!("{} lines", stats.pruned_lines).bright_cyan().bold());
+    println!("│  {:26} {:>36} │", "Tokens Saved (FinOps):".dimmed(), format!("~{} tokens (~${:.4})", stats.estimated_tokens_saved, dollars_saved).bright_yellow().bold());
+    println!("{}", "╰──────────────────────────────────────────────────────────────────╯".bright_cyan().bold());
+    println!();
+}
+
+// ── Workspace File Completion & Mention Helpers ──────────────────────────────
+
+fn collect_file_completions(workspace: &Path, query: &str) -> Vec<Pair> {
+    let mut results = Vec::new();
+    let query_lower = query.to_lowercase();
+    let ignored = [
+        ".git", "target", "node_modules", ".cargo", "dist", "build",
+        "__pycache__", ".venv", "venv", ".idea", ".vscode",
+    ];
+
+    fn walk_dir(
+        dir: &Path,
+        root: &Path,
+        query: &str,
+        ignored: &[&str],
+        depth: usize,
+        results: &mut Vec<Pair>,
+    ) {
+        if depth > 4 || results.len() >= 30 {
+            return;
+        }
+        let entries = match fs::read_dir(dir) {
+            Ok(e) => e,
+            Err(_) => return,
+        };
+        for entry in entries.flatten() {
+            if results.len() >= 30 {
+                break;
+            }
+            let name = entry.file_name().to_string_lossy().to_string();
+            if ignored.iter().any(|&ig| ig == name) {
+                continue;
+            }
+            let path = entry.path();
+            if path.is_dir() {
+                walk_dir(&path, root, query, ignored, depth + 1, results);
+            } else if path.is_file() {
+                if let Ok(rel) = path.strip_prefix(root) {
+                    let rel_str = rel.to_string_lossy().replace('\\', "/");
+                    if query.is_empty() || rel_str.to_lowercase().contains(query) {
+                        results.push(Pair {
+                            display: format!("@{}", rel_str),
+                            replacement: format!("@{}", rel_str),
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    walk_dir(workspace, workspace, &query_lower, &ignored, 0, &mut results);
+    results.sort_by(|a, b| a.display.cmp(&b.display));
+    results
+}
+
+fn extract_at_mentions(input: &str) -> Vec<String> {
+    let mut mentions = Vec::new();
+    for word in input.split_whitespace() {
+        if let Some(target) = word.strip_prefix('@') {
+            let clean = target.trim_matches(|c: char| {
+                c == ',' || c == '.' || c == ';' || c == ':' || c == '?' || c == '!' || c == '"' || c == '\'' || c == ')' || c == ']'
+            });
+            if !clean.is_empty() && !mentions.contains(&clean.to_string()) {
+                mentions.push(clean.to_string());
+            }
+        }
+    }
+    mentions
 }
 
 // ── Search & File Exploration Helpers ────────────────────────────────────────
@@ -535,6 +754,9 @@ fn print_command_cockpit() {
     println!("│  {}  {:<45} │", format!("{:<8}", "/undo").bright_yellow().bold(), "Revert uncommitted patches (zero dirty diff)");
     println!("│  {}  {:<45} │", format!("{:<8}", "/diff").bright_cyan().bold(), "Inspect current uncommitted git diff");
     println!("│  {}  {:<45} │", format!("{:<8}", "/test").bright_green().bold(), "Run project test runner on physical hardware");
+    println!("│  {}  {:<45} │", format!("{:<8}", "/stats").bright_magenta().bold(), "Show FinOps token savings & session telemetry");
+    println!("│  {}  {:<45} │", format!("{:<8}", "!<cmd>").bright_cyan().bold(), "Direct shell escape without LLM tokens");
+    println!("│  {}  {:<45} │", format!("{:<8}", "@<file>").bright_white().bold(), "Tab-complete & inline workspace files");
     println!("│  {}  {:<45} │", format!("{:<8}", "/clear").dimmed(), "Clear conversation context & buffer");
     println!("│  {}  {:<45} │", format!("{:<8}", "/help").dimmed(), "Show this command cockpit reference");
     println!("│  {}  {:<45} │", format!("{:<8}", "/exit").dimmed(), "Exit interactive session (or double Ctrl+C)");
@@ -543,21 +765,24 @@ fn print_command_cockpit() {
 
 struct KronumosHelper {
     commands: Vec<(&'static str, &'static str)>,
+    workspace: PathBuf,
 }
 
 impl KronumosHelper {
-    fn new() -> Self {
+    fn new(workspace: PathBuf) -> Self {
         Self {
             commands: vec![
                 ("/fix", "Autonomous TDD test-and-repair loop"),
                 ("/undo", "Revert uncommitted patches (zero dirty diff)"),
                 ("/diff", "Inspect current uncommitted git diff"),
                 ("/test", "Run project test runner on physical hardware"),
+                ("/stats", "Show FinOps token savings & session telemetry"),
                 ("/clear", "Clear conversation context & buffer"),
                 ("/help", "Show command cockpit reference"),
                 ("/exit", "Exit interactive session (or double Ctrl+C)"),
                 ("/loop", "Autonomous loop alias"),
             ],
+            workspace,
         }
     }
 }
@@ -584,6 +809,18 @@ impl Completer for KronumosHelper {
                 .collect();
             return Ok((0, matches));
         }
+
+        if let Some(at_idx) = prefix.rfind('@') {
+            let valid_at = at_idx == 0 || prefix.as_bytes().get(at_idx.saturating_sub(1)).map_or(false, |b| b.is_ascii_whitespace());
+            if valid_at {
+                let query = &prefix[at_idx + 1..];
+                if !query.contains(' ') {
+                    let matches = collect_file_completions(&self.workspace, query);
+                    return Ok((at_idx, matches));
+                }
+            }
+        }
+
         Ok((0, Vec::new()))
     }
 }
@@ -605,6 +842,9 @@ impl Hinter for KronumosHelper {
                 }
             }
         }
+        if line.ends_with('@') {
+            return Some(" (press Tab to browse workspace files)".dimmed().to_string());
+        }
         None
     }
 }
@@ -615,9 +855,20 @@ impl Helper for KronumosHelper {}
 
 // ── Async Tool Executor with Timeout Guard ───────────────────────────────────
 
-async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet: bool) -> String {
+async fn execute_tool(
+    tool: &ToolCall,
+    workspace: &str,
+    timeout_secs: u64,
+    quiet: bool,
+    interactive: bool,
+    stats: &Arc<Mutex<SessionStats>>,
+) -> String {
     match tool.name.as_str() {
         "run_command" => {
+            {
+                let mut st = stats.lock().unwrap();
+                st.tools_executed += 1;
+            }
             let cmd = tool.args["command"].as_str().unwrap_or("echo 'no command provided'");
             
             // Security check: block destructive commands
@@ -664,9 +915,15 @@ async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet
                     let scrubbed = redact_secrets(&combined);
                     let lines: Vec<&str> = scrubbed.lines().collect();
                     let truncated = if lines.len() > 60 {
+                        let pruned_cnt = lines.len() - 60;
+                        {
+                            let mut st = stats.lock().unwrap();
+                            st.pruned_lines += pruned_cnt;
+                            st.estimated_tokens_saved += pruned_cnt * 12;
+                        }
                         format!(
                             "[...{} lines pruned by Sub-Cortex...]\n{}",
-                            lines.len() - 60,
+                            pruned_cnt,
                             lines[lines.len() - 60..].join("\n")
                         )
                     } else {
@@ -702,6 +959,10 @@ async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet
         }
 
         "view_file" => {
+            {
+                let mut st = stats.lock().unwrap();
+                st.tools_executed += 1;
+            }
             let path = tool.args["path"].as_str().unwrap_or("");
             let start = tool.args["start_line"].as_u64().unwrap_or(1) as usize;
             let end = tool.args["end_line"].as_u64().unwrap_or(0) as usize;
@@ -716,6 +977,13 @@ async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet
                     return e;
                 }
             };
+
+            // Critical file confirmation gate
+            if is_critical_file(path) {
+                if !confirm_critical_access(path, "inspect", None, interactive) {
+                    return format!("Security Gate: view_file inspection of critical project file '{}' was denied by user.", path);
+                }
+            }
 
             if !quiet {
                 println!(
@@ -756,6 +1024,10 @@ async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet
         }
 
         "search_code" => {
+            {
+                let mut st = stats.lock().unwrap();
+                st.tools_executed += 1;
+            }
             let pattern = tool.args["pattern"].as_str().unwrap_or("");
             let subpath = tool.args["path"].as_str().unwrap_or(".");
             if pattern.is_empty() {
@@ -805,6 +1077,10 @@ async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet
         }
 
         "list_files" => {
+            {
+                let mut st = stats.lock().unwrap();
+                st.tools_executed += 1;
+            }
             let subpath = tool.args["path"].as_str().unwrap_or(".");
             let max_depth = tool.args["max_depth"].as_u64().unwrap_or(2).min(4) as usize;
 
@@ -850,7 +1126,84 @@ async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet
             }
         }
 
+        "write_file" => {
+            {
+                let mut st = stats.lock().unwrap();
+                st.tools_executed += 1;
+            }
+            let path = tool.args["path"].as_str().unwrap_or("");
+            let content = tool.args["content"].as_str().unwrap_or("");
+
+            if path.trim().is_empty() {
+                return "error: 'path' argument is required for write_file".to_string();
+            }
+
+            // Security check: workspace sandbox & credentials
+            let full_path = match is_safe_workspace_path(path, workspace) {
+                Ok(p) => p,
+                Err(e) => {
+                    if !quiet {
+                        eprintln!("  {} {}", "🛡️ Security Block:".bright_red().bold(), e);
+                    }
+                    return e;
+                }
+            };
+
+            // Critical file confirmation gate
+            if is_critical_file(path) {
+                if !confirm_critical_access(path, "create/write", Some(content), interactive) {
+                    return format!("Security Gate: write_file to critical project file '{}' was denied by user.", path);
+                }
+            }
+
+            let lines_cnt = content.lines().count();
+            if !quiet {
+                println!("{}", format!("╭─ 📝 write_file: {} ({} lines) ──────────────────────────", path, lines_cnt).bright_cyan().bold());
+                for line in content.lines().take(8) {
+                    println!("│ {}", format!("+ {}", line).bright_green());
+                }
+                if lines_cnt > 8 {
+                    println!("│ {}", format!("  [...{} more lines...]", lines_cnt - 8).dimmed());
+                }
+            }
+
+            // Create parent directories if they don't exist
+            if let Some(parent) = full_path.parent() {
+                if !parent.exists() {
+                    if let Err(e) = fs::create_dir_all(parent) {
+                        if !quiet {
+                            println!("{}", "╰─ ✗ failed to create parent directories ────────────────────────".bright_red().bold());
+                        }
+                        return format!("error creating directories for {}: {}", path, e);
+                    }
+                }
+            }
+
+            match fs::write(&full_path, content) {
+                Ok(_) => {
+                    {
+                        let mut st = stats.lock().unwrap();
+                        st.files_created += 1;
+                    }
+                    if !quiet {
+                        println!("{}", format!("╰─ ✓ file written successfully ({} lines created) ────────────", lines_cnt).bright_green().bold());
+                    }
+                    format!("file written successfully: {} ({} lines created)", path, lines_cnt)
+                }
+                Err(e) => {
+                    if !quiet {
+                        println!("{}", "╰─ ✗ write error ───────────────────────────────────────────────".bright_red().bold());
+                    }
+                    format!("error writing file {}: {}", path, e)
+                }
+            }
+        }
+
         "apply_patch" => {
+            {
+                let mut st = stats.lock().unwrap();
+                st.tools_executed += 1;
+            }
             let path = tool.args["path"].as_str().unwrap_or("");
             let original = tool.args["original"].as_str().unwrap_or("");
             let replacement = tool.args["replacement"].as_str().unwrap_or("");
@@ -864,6 +1217,13 @@ async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet
                     return e;
                 }
             };
+
+            // Critical file confirmation gate
+            if is_critical_file(path) {
+                if !confirm_critical_access(path, "modify", Some(replacement), interactive) {
+                    return format!("Security Gate: apply_patch modification to critical project file '{}' was denied by user.", path);
+                }
+            }
 
             if !quiet {
                 println!("{}", format!("╭─ 🩹 apply_patch: {} ─────────────────────────────────────────", path).bright_yellow().bold());
@@ -897,6 +1257,10 @@ async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet
                         Ok(_) => {
                             let added = replacement.lines().count();
                             let removed = original.lines().count();
+                            {
+                                let mut st = stats.lock().unwrap();
+                                st.patches_applied += 1;
+                            }
                             if !quiet {
                                 println!("{}", format!("╰─ ✓ patch applied (+{} lines, -{} lines) ──────────────────────────", added, removed).bright_green().bold());
                             }
@@ -923,6 +1287,10 @@ async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet
         }
 
         "git_action" => {
+            {
+                let mut st = stats.lock().unwrap();
+                st.tools_executed += 1;
+            }
             let action = tool.args["action"].as_str().unwrap_or("status");
             let message = tool.args["message"].as_str().unwrap_or("kronumos: patch remediation");
             let branch = tool.args["branch"].as_str().unwrap_or("kronumos/fix");
@@ -1313,6 +1681,50 @@ fn compact_history(history: &mut Vec<Message>, max_messages: usize) {
     }
 }
 
+// ── Zero-Config Inference Engine Auto-Detection ─────────────────────────────
+
+async fn auto_detect_backend(cli: &mut Cli, client: &Client) {
+    if cli.backend == "cloudflare" {
+        let is_placeholder = cli.cf_url.as_deref().map_or(true, |u| u.contains("your-subdomain"));
+        if is_placeholder {
+            // 1. Probe local Ollama service
+            let ollama_probe = client
+                .get(format!("{}/api/tags", cli.ollama_host.trim_end_matches('/')))
+                .timeout(Duration::from_millis(500))
+                .send()
+                .await;
+            if let Ok(resp) = ollama_probe {
+                if resp.status().is_success() {
+                    cli.backend = "ollama".to_string();
+                    if !cli.quiet {
+                        println!("  {}", format!("⚡ Zero-Config: Auto-detected active Ollama service at {} — switched backend to Ollama.", cli.ollama_host).bright_green().bold());
+                    }
+                    return;
+                }
+            }
+
+            // 2. Probe OpenAI / Groq API keys in environment
+            if cli.openai_key.is_some() || std::env::var("OPENAI_API_KEY").is_ok() || std::env::var("GROQ_API_KEY").is_ok() {
+                cli.backend = "openai".to_string();
+                if cli.openai_key.is_none() {
+                    if let Ok(key) = std::env::var("OPENAI_API_KEY") {
+                        cli.openai_key = Some(key);
+                    } else if let Ok(key) = std::env::var("GROQ_API_KEY") {
+                        cli.openai_key = Some(key);
+                        if cli.openai_url == "https://api.openai.com/v1" {
+                            cli.openai_url = "https://api.groq.com/openai/v1".to_string();
+                            cli.openai_model = "llama-3.3-70b-versatile".to_string();
+                        }
+                    }
+                }
+                if !cli.quiet {
+                    println!("  {}", "⚡ Zero-Config: Auto-detected API key in environment — switched backend to OpenAI.".bright_green().bold());
+                }
+            }
+        }
+    }
+}
+
 // ── Autonomous Self-Healing Closed Loop Engine ───────────────────────────────
 
 async fn run_autonomous_loop(
@@ -1323,6 +1735,7 @@ async fn run_autonomous_loop(
     max_iter: usize,
     timeout_secs: u64,
     quiet: bool,
+    stats: &Arc<Mutex<SessionStats>>,
 ) -> Result<FixStatus> {
     let test_cmd = match project_type {
         p if p.contains("Rust") => "cargo test",
@@ -1347,7 +1760,7 @@ async fn run_autonomous_loop(
         name: "run_command".to_string(),
         args: json!({ "command": test_cmd }),
     };
-    let baseline_res = execute_tool(&baseline_tool, workspace, timeout_secs, quiet).await;
+    let baseline_res = execute_tool(&baseline_tool, workspace, timeout_secs, quiet, false, stats).await;
 
     // Check if tests are already green
     let baseline_passed = baseline_res.starts_with("exit_code: 0");
@@ -1460,7 +1873,7 @@ async fn run_autonomous_loop(
 
         if let Some(tool_call) = extract_tool_call(&response_text) {
             let is_patch = tool_call.name == "apply_patch";
-            let tool_result = execute_tool(&tool_call, workspace, timeout_secs, quiet).await;
+            let tool_result = execute_tool(&tool_call, workspace, timeout_secs, quiet, false, stats).await;
 
             history.push(Message {
                 role: "user".to_string(),
@@ -1477,7 +1890,7 @@ async fn run_autonomous_loop(
                     name: "run_command".to_string(),
                     args: json!({ "command": test_cmd }),
                 };
-                let verify_res = execute_tool(&verify_tool, workspace, timeout_secs, quiet).await;
+                let verify_res = execute_tool(&verify_tool, workspace, timeout_secs, quiet, false, stats).await;
                 let tests_pass = verify_res.starts_with("exit_code: 0");
 
                 if tests_pass {
@@ -1555,7 +1968,7 @@ async fn run_autonomous_loop(
                 name: "run_command".to_string(),
                 args: json!({ "command": test_cmd }),
             };
-            let verify_res = execute_tool(&verify_tool, workspace, timeout_secs, quiet).await;
+            let verify_res = execute_tool(&verify_tool, workspace, timeout_secs, quiet, false, stats).await;
             if verify_res.starts_with("exit_code: 0") {
                 let diff_stat = match TokioCommand::new("git")
                     .args(["diff", "--stat"])
@@ -1632,10 +2045,54 @@ async fn process_turn(
     max_iter: usize,
     timeout_secs: u64,
     quiet: bool,
+    interactive: bool,
+    stats: &Arc<Mutex<SessionStats>>,
 ) -> Result<()> {
+    {
+        let mut st = stats.lock().unwrap();
+        st.turns += 1;
+    }
+
+    // Parse and inline @file mentions
+    let mentions = extract_at_mentions(user_input);
+    let mut inlined_context = String::new();
+    for mention in &mentions {
+        if let Ok(safe_path) = is_safe_workspace_path(mention, workspace) {
+            if safe_path.is_file() {
+                if is_critical_file(mention) {
+                    if !confirm_critical_access(mention, "inspect", None, interactive) {
+                        if !quiet {
+                            println!("  {} Skipping inlining critical file '{}' (access denied by user)", "🛡️".bright_yellow(), mention);
+                        }
+                        continue;
+                    }
+                }
+                if let Ok(content) = fs::read_to_string(&safe_path) {
+                    let scrubbed = redact_secrets(&content);
+                    let line_count = scrubbed.lines().count();
+                    let limited_content = if line_count > 600 {
+                        format!("{}\n[...truncated {} lines...]", scrubbed.lines().take(600).collect::<Vec<_>>().join("\n"), line_count - 600)
+                    } else {
+                        scrubbed
+                    };
+                    if !quiet {
+                        println!("  {} Inlined @{} ({} lines) into prompt context", "📎".bright_cyan().bold(), mention.bright_white(), line_count);
+                    }
+                    inlined_context.push_str(&format!("\n\n[Attached File: {}]\n```\n{}\n```", mention, limited_content));
+                }
+            }
+        }
+    }
+
+    let final_user_prompt = if inlined_context.is_empty() {
+        user_input.to_string()
+    } else {
+        format!("{}{}", user_input, inlined_context)
+    };
+
     history.push(Message {
         role: "user".to_string(),
-        content: user_input.to_string(),
+        content: final_user_prompt,
     });
 
     let mut iterations = 0;
@@ -1683,7 +2140,7 @@ async fn process_turn(
         });
 
         if let Some(tool_call) = extract_tool_call(&response_text) {
-            let tool_result = execute_tool(&tool_call, workspace, timeout_secs, quiet).await;
+            let tool_result = execute_tool(&tool_call, workspace, timeout_secs, quiet, interactive, stats).await;
 
             history.push(Message {
                 role: "user".to_string(),
@@ -1753,7 +2210,11 @@ async fn main() -> Result<()> {
         .timeout(Duration::from_secs(180))
         .build()?;
 
+    // Auto-detect backend (zero-config first run)
+    auto_detect_backend(&mut cli, &client).await;
+
     let project_type = detect_project_type(&workspace_str);
+    let stats = Arc::new(Mutex::new(SessionStats::default()));
 
     // ── Mode 1: Piped Stdin Execution (cat error.log | kronumos) ────────────
     if !io::stdin().is_terminal() {
@@ -1772,7 +2233,7 @@ async fn main() -> Result<()> {
             let scrubbed = redact_secrets(&combined);
             process_turn(
                 &client, &cli, &mut history, &scrubbed, &workspace_str,
-                cli.max_iterations, cli.timeout, cli.quiet
+                cli.max_iterations, cli.timeout, cli.quiet, false, &stats
             ).await?;
             return Ok(());
         }
@@ -1787,7 +2248,7 @@ async fn main() -> Result<()> {
         let scrubbed = redact_secrets(prompt);
         process_turn(
             &client, &cli, &mut history, &scrubbed, &workspace_str,
-            cli.max_iterations, cli.timeout, cli.quiet
+            cli.max_iterations, cli.timeout, cli.quiet, false, &stats
         ).await?;
         return Ok(());
     }
@@ -1797,7 +2258,7 @@ async fn main() -> Result<()> {
         let start_time = Instant::now();
         let status = run_autonomous_loop(
             &client, &cli, &workspace_str, &project_type,
-            cli.max_iterations, cli.timeout, cli.quiet
+            cli.max_iterations, cli.timeout, cli.quiet, &stats
         ).await?;
         let duration_secs = (start_time.elapsed().as_millis() as f64) / 1000.0;
 
@@ -1854,7 +2315,7 @@ async fn main() -> Result<()> {
         .completion_type(CompletionType::List)
         .build();
     let mut rl = Editor::<KronumosHelper, DefaultHistory>::with_config(config)?;
-    rl.set_helper(Some(KronumosHelper::new()));
+    rl.set_helper(Some(KronumosHelper::new(workspace_abs.clone())));
     rl.bind_sequence(rustyline::KeyEvent::ctrl('c'), rustyline::Cmd::Interrupt);
     rl.bind_sequence(rustyline::KeyEvent::new('\x03', rustyline::Modifiers::NONE), rustyline::Cmd::Interrupt);
     let history_file = dirs::home_dir()
@@ -1882,17 +2343,97 @@ async fn main() -> Result<()> {
         }
     });
 
+    let mut multiline_buffer = String::new();
+    let mut in_multiline_block = false;
+
     loop {
-        let prompt_str = format!("{} ", "◈ kronumos ❯".bright_cyan().bold());
+        let prompt_str = if in_multiline_block || !multiline_buffer.is_empty() {
+            format!("{} ", "  ... ❯".bright_black())
+        } else {
+            format!("{} ", "◈ kronumos ❯".bright_cyan().bold())
+        };
         let readline = rl.readline(&prompt_str);
 
         match readline {
             Ok(line) => {
                 *last_ctrl_c.lock().unwrap() = None;
-                let input = line.trim().to_string();
+                let trimmed = line.trim_end();
+
+                // Triple quote block toggle: """
+                let triple_count = line.matches("\"\"\"").count();
+                if triple_count % 2 != 0 {
+                    in_multiline_block = !in_multiline_block;
+                }
+
+                if in_multiline_block {
+                    multiline_buffer.push_str(&line);
+                    multiline_buffer.push('\n');
+                    continue;
+                }
+
+                if trimmed.ends_with('\\') {
+                    let without_slash = &trimmed[..trimmed.len() - 1];
+                    multiline_buffer.push_str(without_slash);
+                    multiline_buffer.push('\n');
+                    continue;
+                }
+
+                let full_line = if multiline_buffer.is_empty() {
+                    line
+                } else {
+                    multiline_buffer.push_str(&line);
+                    let res = multiline_buffer.clone();
+                    multiline_buffer.clear();
+                    res
+                };
+
+                let input = full_line.trim().to_string();
                 if input.is_empty() { continue; }
 
                 let _ = rl.add_history_entry(&input);
+
+                // Direct Shell Escape: !<command>
+                if input.starts_with('!') {
+                    let cmd = input[1..].trim();
+                    if cmd.is_empty() {
+                        println!("  {}", "Usage: !<command> (e.g. !cargo test, !git status, !ls -la)".dimmed());
+                        continue;
+                    }
+                    if let Err(err) = is_command_safe(cmd) {
+                        println!("  {} {}", "🛡️ Security Block:".bright_red().bold(), err);
+                        continue;
+                    }
+                    {
+                        let mut st = stats.lock().unwrap();
+                        st.direct_commands_run += 1;
+                    }
+                    println!("{}", format!("╭─ ⚡ direct hardware execution: `{}` ─────────────", cmd).bright_cyan().bold());
+                    let mut tokio_cmd = TokioCommand::new("sh");
+                    tokio_cmd.arg("-c").arg(cmd).current_dir(&workspace_str);
+                    match tokio_cmd.output().await {
+                        Ok(out) => {
+                            let stdout = String::from_utf8_lossy(&out.stdout);
+                            let stderr = String::from_utf8_lossy(&out.stderr);
+                            if !stdout.is_empty() {
+                                print!("{}", stdout);
+                            }
+                            if !stderr.is_empty() {
+                                eprint!("{}", stderr.bright_red());
+                            }
+                            let exit_code = out.status.code().unwrap_or(-1);
+                            let status_badge = if out.status.success() {
+                                "[✓ exit 0]".bright_green().bold()
+                            } else {
+                                format!("[✗ exit {}]", exit_code).bright_red().bold()
+                            };
+                            println!("{}", format!("╰─ {} ─────────────────────────────────────────────────────────────", status_badge).bright_cyan().bold());
+                        }
+                        Err(e) => {
+                            println!("{}", format!("╰─ ✗ failed to spawn process: {} ───────────────────────────────", e).bright_red().bold());
+                        }
+                    }
+                    continue;
+                }
 
                 match input.as_str() {
                     "/exit" | "/quit" | "exit" | "quit" => {
@@ -1902,6 +2443,11 @@ async fn main() -> Result<()> {
                     "/clear" => {
                         history.truncate(1);
                         println!("{}", "✓ Conversation buffer cleared.".dimmed());
+                        continue;
+                    }
+                    "/stats" => {
+                        let st = stats.lock().unwrap().clone();
+                        print_session_stats(&st);
                         continue;
                     }
                     "/undo" => {
@@ -1931,13 +2477,13 @@ async fn main() -> Result<()> {
                                     println!("{}", "╭─ 🔍 git diff (uncommitted changes) ──────────────────────────".bright_yellow().bold());
                                     for line in diff.lines() {
                                         if line.starts_with('+') && !line.starts_with("+++") {
-                                            println!("│ {}", line.bright_green());
+                                             println!("│ {}", line.bright_green());
                                         } else if line.starts_with('-') && !line.starts_with("---") {
-                                            println!("│ {}", line.bright_red());
+                                             println!("│ {}", line.bright_red());
                                         } else if line.starts_with("@@") {
-                                            println!("│ {}", line.bright_cyan());
+                                             println!("│ {}", line.bright_cyan());
                                         } else {
-                                            println!("│ {}", line.dimmed());
+                                             println!("│ {}", line.dimmed());
                                         }
                                     }
                                     println!("{}", "╰──────────────────────────────────────────────────────────────".bright_yellow().bold());
@@ -1959,7 +2505,7 @@ async fn main() -> Result<()> {
                             name: "run_command".to_string(),
                             args: json!({ "command": test_cmd }),
                         };
-                        let _ = execute_tool(&dummy_tool, &workspace_str, cli.timeout, false).await;
+                        let _ = execute_tool(&dummy_tool, &workspace_str, cli.timeout, false, false, &stats).await;
                         continue;
                     }
                     "/" | "/?" | "/menu" | "/help" => {
@@ -1969,7 +2515,7 @@ async fn main() -> Result<()> {
                     "/fix" | "/loop" => {
                         let _ = run_autonomous_loop(
                             &client, &cli, &workspace_str, &project_type,
-                            cli.max_iterations, cli.timeout, false
+                            cli.max_iterations, cli.timeout, false, &stats
                         ).await;
                     }
                     cmd if cmd.starts_with('/') => {
@@ -1981,12 +2527,18 @@ async fn main() -> Result<()> {
                         let scrubbed = redact_secrets(&input);
                         process_turn(
                             &client, &cli, &mut history,
-                            &scrubbed, &workspace_str, cli.max_iterations, cli.timeout, false
+                            &scrubbed, &workspace_str, cli.max_iterations, cli.timeout, false, true, &stats
                         ).await?;
                     }
                 }
             }
             Err(ReadlineError::Interrupted) => {
+                if !multiline_buffer.is_empty() || in_multiline_block {
+                    multiline_buffer.clear();
+                    in_multiline_block = false;
+                    println!("{}", "  (Input cancelled)".dimmed());
+                    continue;
+                }
                 let now = Instant::now();
                 let mut guard = last_ctrl_c.lock().unwrap();
                 if let Some(prev) = *guard {
