@@ -12,6 +12,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use colored::*;
 use futures_util::StreamExt;
+use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::Client;
 use rustyline::{DefaultEditor, error::ReadlineError};
 use serde::{Deserialize, Serialize};
@@ -460,6 +461,65 @@ fn list_files_in_dir(
     }
 }
 
+// ── Visual Cockpit & Spinner Helpers ─────────────────────────────────────────
+
+fn create_spinner(msg: &str) -> ProgressBar {
+    let pb = ProgressBar::new_spinner();
+    pb.set_style(
+        ProgressStyle::default_spinner()
+            .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏ ")
+            .template("{spinner:.cyan.bold} {msg}")
+            .unwrap_or_else(|_| ProgressStyle::default_spinner())
+    );
+    pb.set_message(msg.to_string());
+    pb.enable_steady_tick(Duration::from_millis(80));
+    pb
+}
+
+fn print_kronumos_hud(workspace: &str, project_type: &str, backend: &str) {
+    println!();
+    println!("{}", "    ██╗  ██╗██████╗  ██████╗ ███╗   ██╗██╗   ██╗███╗   ███╗ ██████╗ ███████╗".bright_cyan().bold());
+    println!("{}", "    ██║ ██╔╝██╔══██╗██╔═══██╗████╗  ██║██║   ██║████╗ ████║██╔═══██╗██╔════╝".bright_cyan().bold());
+    println!("{}", "    █████╔╝ ██████╔╝██║   ██║██╔██╗ ██║██║   ██║██╔████╔██║██║   ██║███████╗".bright_cyan().bold());
+    println!("{}", "    ██╔═██╗ ██╔══██╗██║   ██║██║╚██╗██║██║   ██║██║╚██╔╝██║██║   ██║╚════██║".bright_cyan().bold());
+    println!("{}", "    ██║  ██╗██║  ██║╚██████╔╝██║ ╚████║╚██████╔╝██║ ╚═╝ ██║╚██████╔╝███████║".bright_cyan().bold());
+    println!("{}", "    ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝ ╚═╝     ╚═╝ ╚═════╝ ╚══════╝".bright_cyan().bold());
+    println!();
+    println!("{}", "                     · K R O N U M O S   K A I R O S ·".cyan().bold());
+    println!("{}", "               Autonomous Bug Remediation & SRE Agent • v1.0".bright_white().bold());
+    println!();
+    let ws_basename = Path::new(workspace)
+        .file_name()
+        .map(|s| s.to_string_lossy().to_string())
+        .unwrap_or_else(|| workspace.to_string());
+    let short_project = match project_type {
+        p if p.contains("Rust") => "Rust",
+        p if p.contains("Python") => "Python",
+        p if p.contains("Node") => "Node",
+        p if p.contains("Go") => "Go",
+        _ => "Generic",
+    };
+    let ws_info = format!("{}/ ({})", ws_basename, short_project);
+    let col1_plain = if ws_info.len() > 28 {
+        format!("{:.28}", ws_info)
+    } else {
+        format!("{:<28}", ws_info)
+    };
+    let col2_plain = format!("{:<24}", "Token Surgery: Active");
+    let col3_plain = format!("{:<19}", backend.to_uppercase());
+
+    println!("{}", "╭─ 🧭 WORKSPACE ────────────────── 🧠 SUB-CORTEX ──────────── ⚡ BACKEND ──────────╮".bright_black());
+    println!(
+        "│  {} │  {} │  {} │",
+        col1_plain.bright_white(),
+        col2_plain.bright_green().bold(),
+        col3_plain.bright_cyan().bold()
+    );
+    println!("{}", "╰──────────────────────────────────────────────────────────────────────────────────╯".bright_black());
+    println!("{}", "  Type /help for command reference, or describe any bug to start autonomous healing.".dimmed());
+    println!();
+}
+
 // ── Async Tool Executor with Timeout Guard ───────────────────────────────────
 
 async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet: bool) -> String {
@@ -477,11 +537,17 @@ async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet
 
             if !quiet {
                 println!(
-                    "  {} {}",
-                    "▶ run_command:".cyan().bold(),
-                    cmd.bright_white()
+                    "{}",
+                    format!("╭─ ⚙️  tool: run_command ─────────────────────────────────────────").bright_cyan().bold()
                 );
+                println!("│  ▶ {}", cmd.bright_white().bold());
             }
+
+            let pb = if !quiet {
+                Some(create_spinner(&format!("Executing `{}` on hardware gate...", cmd)))
+            } else {
+                None
+            };
 
             let mut tokio_cmd = TokioCommand::new("sh");
             tokio_cmd
@@ -489,7 +555,13 @@ async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet
                 .arg(cmd)
                 .current_dir(workspace);
 
-            match timeout(Duration::from_secs(timeout_secs), tokio_cmd.output()).await {
+            let res = timeout(Duration::from_secs(timeout_secs), tokio_cmd.output()).await;
+
+            if let Some(ref sp) = pb {
+                sp.finish_and_clear();
+            }
+
+            match res {
                 Ok(Ok(o)) => {
                     let stdout = String::from_utf8_lossy(&o.stdout);
                     let stderr = String::from_utf8_lossy(&o.stderr);
@@ -508,10 +580,29 @@ async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet
                         scrubbed
                     };
                     let exit_code = o.status.code().unwrap_or(-1);
+                    if !quiet {
+                        let status_badge = if o.status.success() {
+                            "[✓ exit 0]".bright_green().bold()
+                        } else {
+                            format!("[✗ exit {}]", exit_code).bright_red().bold()
+                        };
+                        println!(
+                            "{}",
+                            format!("╰─ 📋 result {} ─────────────────────────────────────────────", status_badge).bright_cyan().bold()
+                        );
+                    }
                     format!("exit_code: {}\n{}", exit_code, truncated)
                 }
-                Ok(Err(e)) => format!("error executing command: {}", e),
+                Ok(Err(e)) => {
+                    if !quiet {
+                        println!("{}", "╰─ ✗ execution failed ──────────────────────────────────────────".bright_red().bold());
+                    }
+                    format!("error executing command: {}", e)
+                }
                 Err(_) => {
+                    if !quiet {
+                        println!("{}", format!("╰─ ✗ timed out after {}s ────────────────────────────────────────", timeout_secs).bright_red().bold());
+                    }
                     format!("error: command timed out after {} seconds.", timeout_secs)
                 }
             }
@@ -535,11 +626,8 @@ async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet
 
             if !quiet {
                 println!(
-                    "  {} {} (lines {}-{})",
-                    "📄 view_file:".cyan().bold(),
-                    path.bright_white(),
-                    start,
-                    if end == 0 { "end".to_string() } else { end.to_string() }
+                    "{}",
+                    format!("╭─ 📄 view_file: {} (lines {}-{}) ───────────────────────", path, start, if end == 0 { "end".to_string() } else { end.to_string() }).bright_cyan().bold()
                 );
             }
 
@@ -549,6 +637,15 @@ async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet
                     let lines: Vec<&str> = scrubbed.lines().collect();
                     let from = start.saturating_sub(1);
                     let to = if end == 0 || end > lines.len() { lines.len() } else { end };
+                    if !quiet {
+                        for (i, l) in lines[from..to].iter().take(15).enumerate() {
+                            println!("│ {:4} │ {}", from + i + 1, l.dimmed());
+                        }
+                        if to - from > 15 {
+                            println!("│      [...{} more lines...]", to - from - 15);
+                        }
+                        println!("{}", "╰────────────────────────────────────────────────────────────────".bright_cyan().bold());
+                    }
                     lines[from..to]
                         .iter()
                         .enumerate()
@@ -556,7 +653,12 @@ async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet
                         .collect::<Vec<_>>()
                         .join("\n")
                 }
-                Err(e) => format!("error reading file {}: {}", path, e),
+                Err(e) => {
+                    if !quiet {
+                        println!("{}", "╰─ ✗ error reading file ─────────────────────────────────────────".bright_red().bold());
+                    }
+                    format!("error reading file {}: {}", path, e)
+                }
             }
         }
 
@@ -579,10 +681,8 @@ async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet
 
             if !quiet {
                 println!(
-                    "  {} '{}' in {}",
-                    "🔍 search_code:".cyan().bold(),
-                    pattern.bright_white(),
-                    subpath.dimmed()
+                    "{}",
+                    format!("╭─ 🔍 search_code: '{}' in {} ───────────────────────────────", pattern, subpath).bright_cyan().bold()
                 );
             }
 
@@ -593,6 +693,16 @@ async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet
 
             let mut matches = Vec::new();
             search_code_in_dir(&search_dir, pattern, 25, &mut matches, &ws_path);
+
+            if !quiet {
+                for m in matches.iter().take(8) {
+                    println!("│  {}", m.bright_white());
+                }
+                if matches.len() > 8 {
+                    println!("│  [...{} more occurrences found...]", matches.len() - 8);
+                }
+                println!("{}", format!("╰─ Found {} matches ───────────────────────────────────────────", matches.len()).bright_cyan().bold());
+            }
 
             if matches.is_empty() {
                 format!("No occurrences of '{}' found in '{}'", pattern, subpath)
@@ -617,10 +727,8 @@ async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet
 
             if !quiet {
                 println!(
-                    "  {} {} (max_depth: {})",
-                    "📂 list_files:".cyan().bold(),
-                    subpath.bright_white(),
-                    max_depth
+                    "{}",
+                    format!("╭─ 📂 list_files: {} (max_depth: {}) ──────────────────────────", subpath, max_depth).bright_cyan().bold()
                 );
             }
 
@@ -631,6 +739,16 @@ async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet
 
             let mut lines = Vec::new();
             list_files_in_dir(&target_dir, 0, max_depth, &mut lines, &ws_path);
+
+            if !quiet {
+                for l in lines.iter().take(15) {
+                    println!("│  {}", l.dimmed());
+                }
+                if lines.len() > 15 {
+                    println!("│  [...{} more items...]", lines.len() - 15);
+                }
+                println!("{}", format!("╰─ {} items indexed ─────────────────────────────────────────────", lines.len()).bright_cyan().bold());
+            }
 
             if lines.is_empty() {
                 format!("Directory '{}' is empty or contained only ignored files.", subpath)
@@ -644,7 +762,6 @@ async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet
             let original = tool.args["original"].as_str().unwrap_or("");
             let replacement = tool.args["replacement"].as_str().unwrap_or("");
 
-            // Security check: sandbox within workspace & block credentials
             let full_path = match is_safe_workspace_path(path, workspace) {
                 Ok(p) => p,
                 Err(e) => {
@@ -656,16 +773,27 @@ async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet
             };
 
             if !quiet {
-                println!(
-                    "  {} {}",
-                    "🩹 apply_patch:".bright_yellow().bold(),
-                    path.bright_white()
-                );
+                println!("{}", format!("╭─ 🩹 apply_patch: {} ─────────────────────────────────────────", path).bright_yellow().bold());
+                for line in original.lines().take(6) {
+                    println!("│ {}", format!("- {}", line).bright_red());
+                }
+                if original.lines().count() > 6 {
+                    println!("│ {}", format!("  [...{} lines removed...]", original.lines().count() - 6).dimmed());
+                }
+                for line in replacement.lines().take(6) {
+                    println!("│ {}", format!("+ {}", line).bright_green());
+                }
+                if replacement.lines().count() > 6 {
+                    println!("│ {}", format!("  [...{} lines added...]", replacement.lines().count() - 6).dimmed());
+                }
             }
 
             match fs::read_to_string(&full_path) {
                 Ok(content) => {
                     if !content.contains(original) {
+                        if !quiet {
+                            println!("{}", "╰─ ✗ original hunk context not found in file ──────────────────".bright_red().bold());
+                        }
                         return format!(
                             "error: Target content not found in {}. Ensure exact indentation and matching context.",
                             path
@@ -676,15 +804,28 @@ async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet
                         Ok(_) => {
                             let added = replacement.lines().count();
                             let removed = original.lines().count();
+                            if !quiet {
+                                println!("{}", format!("╰─ ✓ patch applied (+{} lines, -{} lines) ──────────────────────────", added, removed).bright_green().bold());
+                            }
                             format!(
                                 "patch applied successfully: {} (+{} lines, -{} lines)",
                                 path, added, removed
                             )
                         }
-                        Err(e) => format!("error writing file {}: {}", path, e),
+                        Err(e) => {
+                            if !quiet {
+                                println!("{}", "╰─ ✗ write error ───────────────────────────────────────────────".bright_red().bold());
+                            }
+                            format!("error writing file {}: {}", path, e)
+                        }
                     }
                 }
-                Err(e) => format!("error reading file {}: {}", path, e),
+                Err(e) => {
+                    if !quiet {
+                        println!("{}", "╰─ ✗ read error ────────────────────────────────────────────────".bright_red().bold());
+                    }
+                    format!("error reading file {}: {}", path, e)
+                }
             }
         }
 
@@ -695,10 +836,8 @@ async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet
 
             if !quiet {
                 println!(
-                    "  {} {} ({})",
-                    "🚀 git_action:".bright_green().bold(),
-                    action.bright_white(),
-                    branch.dimmed()
+                    "{}",
+                    format!("╭─ 🚀 git_action: {} ({}) ───────────────────────────────────────", action, branch).bright_green().bold()
                 );
             }
 
@@ -750,9 +889,22 @@ async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet
                     let out = String::from_utf8_lossy(&o.stdout);
                     let err = String::from_utf8_lossy(&o.stderr);
                     let res = format!("{}{}", out, err).trim().to_string();
+                    if !quiet {
+                        if !res.is_empty() {
+                            for line in res.lines().take(10) {
+                                println!("│  {}", line.dimmed());
+                            }
+                        }
+                        println!("{}", "╰─────────────────────────────────────────────────────────────────".bright_green().bold());
+                    }
                     if res.is_empty() { "ok (no output)".to_string() } else { res }
                 }
-                Err(e) => format!("error executing git action: {}", e),
+                Err(e) => {
+                    if !quiet {
+                        println!("{}", "╰─ ✗ git error ──────────────────────────────────────────────────".bright_red().bold());
+                    }
+                    format!("error executing git action: {}", e)
+                }
             }
         }
 
@@ -802,6 +954,12 @@ async fn stream_cloudflare(
         "temperature": 0.2,
     });
 
+    let pb = if !quiet {
+        Some(create_spinner("Consulting Sub-Cortex & synthesizing response..."))
+    } else {
+        None
+    };
+
     let mut req = client
         .post(url)
         .header("Content-Type", "application/json");
@@ -812,13 +970,16 @@ async fn stream_cloudflare(
         }
     }
 
-    let response = req
-        .json(&payload)
-        .send()
-        .await
-        .context("Failed to connect to Cloudflare Worker gateway")?;
+    let response = match req.json(&payload).send().await {
+        Ok(r) => r,
+        Err(e) => {
+            if let Some(ref sp) = pb { sp.finish_and_clear(); }
+            return Err(e).context("Failed to connect to Cloudflare Worker gateway");
+        }
+    };
 
     if !response.status().is_success() {
+        if let Some(ref sp) = pb { sp.finish_and_clear(); }
         let status = response.status();
         let err_text = response.text().await.unwrap_or_default();
         anyhow::bail!("Cloudflare Worker error ({}): {}", status, err_text);
@@ -826,14 +987,16 @@ async fn stream_cloudflare(
 
     let mut full_text = String::new();
     let mut stream = response.bytes_stream();
-
-    if !quiet {
-        print!("{}", "◈ Kronumos ❯ ".bright_cyan().bold());
-        io::stdout().flush()?;
-    }
+    let mut first_token = true;
 
     while let Some(chunk) = stream.next().await {
-        let chunk = chunk.context("Stream read error")?;
+        let chunk = match chunk {
+            Ok(c) => c,
+            Err(e) => {
+                if let Some(ref sp) = pb { sp.finish_and_clear(); }
+                return Err(e).context("Stream read error");
+            }
+        };
         let raw = String::from_utf8_lossy(&chunk);
 
         for line in raw.lines() {
@@ -845,6 +1008,16 @@ async fn stream_cloudflare(
                         .or_else(|| v["choices"][0]["delta"]["content"].as_str())
                         .unwrap_or("");
                     if !token.is_empty() {
+                        if first_token {
+                            first_token = false;
+                            if let Some(ref sp) = pb {
+                                sp.finish_and_clear();
+                            }
+                            if !quiet {
+                                print!("{}", "◈ Kronumos Kairos ❯ ".bright_cyan().bold());
+                                io::stdout().flush()?;
+                            }
+                        }
                         if !quiet {
                             print!("{}", token);
                             io::stdout().flush()?;
@@ -854,6 +1027,9 @@ async fn stream_cloudflare(
                 }
             }
         }
+    }
+    if let Some(ref sp) = pb {
+        sp.finish_and_clear();
     }
     if !quiet {
         println!();
@@ -875,28 +1051,52 @@ async fn stream_ollama(
         "options": { "temperature": 0.2, "num_predict": 768 }
     });
 
-    let response = client
+    let pb = if !quiet {
+        Some(create_spinner(&format!("Querying local Ollama model `{}`...", model)))
+    } else {
+        None
+    };
+
+    let response = match client
         .post(format!("{}/api/chat", host.trim_end_matches('/')))
         .json(&payload)
         .send()
         .await
-        .context(format!("Failed to connect to Ollama at {} — is Ollama running?", host))?;
+    {
+        Ok(r) => r,
+        Err(e) => {
+            if let Some(ref sp) = pb { sp.finish_and_clear(); }
+            return Err(e).context(format!("Failed to connect to Ollama at {} — is Ollama running?", host));
+        }
+    };
 
     let mut full_text = String::new();
     let mut stream = response.bytes_stream();
-
-    if !quiet {
-        print!("{}", "◈ Kronumos ❯ ".bright_cyan().bold());
-        io::stdout().flush()?;
-    }
+    let mut first_token = true;
 
     while let Some(chunk) = stream.next().await {
-        let chunk = chunk.context("Ollama stream read error")?;
+        let chunk = match chunk {
+            Ok(c) => c,
+            Err(e) => {
+                if let Some(ref sp) = pb { sp.finish_and_clear(); }
+                return Err(e).context("Ollama stream read error");
+            }
+        };
         let raw = String::from_utf8_lossy(&chunk);
         for line in raw.lines() {
             if let Ok(v) = serde_json::from_str::<Value>(line) {
                 let token = v["message"]["content"].as_str().unwrap_or("");
                 if !token.is_empty() {
+                    if first_token {
+                        first_token = false;
+                        if let Some(ref sp) = pb {
+                            sp.finish_and_clear();
+                        }
+                        if !quiet {
+                            print!("{}", "◈ Kronumos Kairos ❯ ".bright_cyan().bold());
+                            io::stdout().flush()?;
+                        }
+                    }
                     if !quiet {
                         print!("{}", token);
                         io::stdout().flush()?;
@@ -908,6 +1108,9 @@ async fn stream_ollama(
                 }
             }
         }
+    }
+    if let Some(ref sp) = pb {
+        sp.finish_and_clear();
     }
     if !quiet {
         println!();
@@ -931,6 +1134,12 @@ async fn stream_openai_compat(
         "temperature": 0.2,
     });
 
+    let pb = if !quiet {
+        Some(create_spinner(&format!("Consulting inference backend `{}`...", model)))
+    } else {
+        None
+    };
+
     let mut req = client
         .post(format!("{}/chat/completions", base_url.trim_end_matches('/')))
         .header("Content-Type", "application/json");
@@ -939,22 +1148,26 @@ async fn stream_openai_compat(
         req = req.header("Authorization", format!("Bearer {}", api_key.trim()));
     }
 
-    let response = req
-        .json(&payload)
-        .send()
-        .await
-        .context("Failed to connect to OpenAI-compatible inference server")?;
+    let response = match req.json(&payload).send().await {
+        Ok(r) => r,
+        Err(e) => {
+            if let Some(ref sp) = pb { sp.finish_and_clear(); }
+            return Err(e).context("Failed to connect to OpenAI-compatible inference server");
+        }
+    };
 
     let mut full_text = String::new();
     let mut stream = response.bytes_stream();
-
-    if !quiet {
-        print!("{}", "◈ Kronumos ❯ ".bright_cyan().bold());
-        io::stdout().flush()?;
-    }
+    let mut first_token = true;
 
     while let Some(chunk) = stream.next().await {
-        let chunk = chunk.context("OpenAI stream read error")?;
+        let chunk = match chunk {
+            Ok(c) => c,
+            Err(e) => {
+                if let Some(ref sp) = pb { sp.finish_and_clear(); }
+                return Err(e).context("OpenAI stream read error");
+            }
+        };
         let raw = String::from_utf8_lossy(&chunk);
         for line in raw.lines() {
             if let Some(data) = line.strip_prefix("data: ") {
@@ -962,6 +1175,16 @@ async fn stream_openai_compat(
                 if let Ok(v) = serde_json::from_str::<Value>(data) {
                     let token = v["choices"][0]["delta"]["content"].as_str().unwrap_or("");
                     if !token.is_empty() {
+                        if first_token {
+                            first_token = false;
+                            if let Some(ref sp) = pb {
+                                sp.finish_and_clear();
+                            }
+                            if !quiet {
+                                print!("{}", "◈ Kronumos Kairos ❯ ".bright_cyan().bold());
+                                io::stdout().flush()?;
+                            }
+                        }
                         if !quiet {
                             print!("{}", token);
                             io::stdout().flush()?;
@@ -971,6 +1194,9 @@ async fn stream_openai_compat(
                 }
             }
         }
+    }
+    if let Some(ref sp) = pb {
+        sp.finish_and_clear();
     }
     if !quiet {
         println!();
@@ -1141,29 +1367,7 @@ async fn run_autonomous_loop(
 
         if let Some(tool_call) = extract_tool_call(&response_text) {
             let is_patch = tool_call.name == "apply_patch";
-
-            if !quiet {
-                println!(
-                    "\n{}",
-                    format!("╭─ ⚙️ tool: {} ─────────────────────────────────────", tool_call.name)
-                        .bright_black()
-                );
-            }
-
             let tool_result = execute_tool(&tool_call, workspace, timeout_secs, quiet).await;
-
-            if !quiet {
-                println!(
-                    "{}",
-                    "╰─ 📋 tool result ────────────────────────────────────".bright_black()
-                );
-                for line in tool_result.lines().take(15) {
-                    println!("  {}", line.dimmed());
-                }
-                if tool_result.lines().count() > 15 {
-                    println!("  {}", format!("[...{} more lines...]", tool_result.lines().count() - 15).dimmed());
-                }
-            }
 
             history.push(Message {
                 role: "user".to_string(),
@@ -1386,25 +1590,7 @@ async fn process_turn(
         });
 
         if let Some(tool_call) = extract_tool_call(&response_text) {
-            if !quiet {
-                println!(
-                    "\n{}",
-                    format!("╭─ ⚙️ tool: {} ─────────────────────────────────────", tool_call.name)
-                        .bright_black()
-                );
-            }
-
             let tool_result = execute_tool(&tool_call, workspace, timeout_secs, quiet).await;
-
-            if !quiet {
-                println!(
-                    "{}",
-                    "╰─ 📋 tool result ────────────────────────────────────".bright_black()
-                );
-                for line in tool_result.lines().take(15) {
-                    println!("  {}", line.dimmed());
-                }
-            }
 
             history.push(Message {
                 role: "user".to_string(),
@@ -1563,18 +1749,7 @@ async fn main() -> Result<()> {
 
     // ── Mode 4: Interactive REPL ─────────────────────────────────────────────
     if !cli.quiet {
-        println!();
-        println!("{}", "    ██╗  ██╗██████╗  ██████╗ ███╗   ██╗██╗   ██╗███╗   ███╗ ██████╗ ███████╗".bright_cyan().bold());
-        println!("{}", "    ██║ ██╔╝██╔══██╗██╔═══██╗████╗  ██║██║   ██║████╗ ████║██╔═══██╗██╔════╝".bright_cyan().bold());
-        println!("{}", "    █████╔╝ ██████╔╝██║   ██║██╔██╗ ██║██║   ██║██╔████╔██║██║   ██║███████╗".bright_cyan().bold());
-        println!("{}", "    ██╔═██╗ ██╔══██╗██║   ██║██║╚██╗██║██║   ██║██║╚██╔╝██║██║   ██║╚════██║".bright_cyan().bold());
-        println!("{}", "    ██║  ██╗██║  ██║╚██████╔╝██║ ╚████║╚██████╔╝██║ ╚═╝ ██║╚██████╔╝███████║".bright_cyan().bold());
-        println!("{}", "    ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝ ╚═╝     ╚═╝ ╚═════╝ ╚══════╝".bright_cyan().bold());
-        println!();
-        println!("{}", "                     · K R O N U M O S   K A I R O S ·".cyan().bold());
-        println!("{}", "               Autonomous Code Remediation & SRE Agent • v1.0".bright_white().bold());
-        println!("{}", "               Type /help for help, or ask anything to start.".dimmed());
-        println!();
+        print_kronumos_hud(&workspace_str, &project_type, &cli.backend);
     }
 
     let mut history: Vec<Message> = vec![Message {
@@ -1589,7 +1764,7 @@ async fn main() -> Result<()> {
     let _ = rl.load_history(&history_file);
 
     loop {
-        let prompt_str = format!("{} ", "⚡ kronumos ❯".bright_cyan().bold());
+        let prompt_str = format!("{} ", "◈ kronumos ❯".bright_cyan().bold());
         let readline = rl.readline(&prompt_str);
 
         match readline {
@@ -1631,9 +1806,21 @@ async fn main() -> Result<()> {
                             Ok(o) => {
                                 let diff = String::from_utf8_lossy(&o.stdout);
                                 if diff.trim().is_empty() {
-                                    println!("{}", "  Clean working tree (no uncommitted diffs).".dimmed());
+                                    println!("  {}", "Clean working tree (no uncommitted diffs).".dimmed());
                                 } else {
-                                    println!("{}", diff.bright_yellow());
+                                    println!("{}", "╭─ 🔍 git diff (uncommitted changes) ──────────────────────────".bright_yellow().bold());
+                                    for line in diff.lines() {
+                                        if line.starts_with('+') && !line.starts_with("+++") {
+                                            println!("│ {}", line.bright_green());
+                                        } else if line.starts_with('-') && !line.starts_with("---") {
+                                            println!("│ {}", line.bright_red());
+                                        } else if line.starts_with("@@") {
+                                            println!("│ {}", line.bright_cyan());
+                                        } else {
+                                            println!("│ {}", line.dimmed());
+                                        }
+                                    }
+                                    println!("{}", "╰──────────────────────────────────────────────────────────────".bright_yellow().bold());
                                 }
                             }
                             Err(e) => eprintln!("  error running git diff: {}", e),
@@ -1648,25 +1835,23 @@ async fn main() -> Result<()> {
                             p if p.contains("Go") => "go test ./...",
                             _ => "make test",
                         };
-                        println!("  {} Running `{}`...", "▶".cyan().bold(), test_cmd);
                         let dummy_tool = ToolCall {
                             name: "run_command".to_string(),
                             args: json!({ "command": test_cmd }),
                         };
-                        let result = execute_tool(&dummy_tool, &workspace_str, cli.timeout, false).await;
-                        println!("  {}", result.dimmed());
+                        let _ = execute_tool(&dummy_tool, &workspace_str, cli.timeout, false).await;
                         continue;
                     }
                     "/help" => {
-                        println!("{}", "Commands:".bright_white().bold());
-                        println!("  {}        Autonomous TDD test-and-repair loop", "/fix".bright_yellow());
-                        println!("  {}       Autonomous loop alias", "/loop".bright_yellow());
-                        println!("  {}       Revert uncommitted patches (zero dirty diff)", "/undo".bright_yellow());
-                        println!("  {}       Show uncommitted git diff", "/diff".bright_cyan());
-                        println!("  {}       Run detected project test runner", "/test".bright_green());
-                        println!("  {}      Clear conversation context", "/clear".dimmed());
-                        println!("  {}       Show this help message", "/help".dimmed());
-                        println!("  {}       Exit session", "/exit".dimmed());
+                        println!("{}", "╭─ 💡 Command Cockpit ─────────────────────────────────────╮".bright_cyan().bold());
+                        println!("│  {}  {:<45} │", format!("{:<8}", "/fix").bright_yellow().bold(), "Autonomous TDD test-and-repair loop");
+                        println!("│  {}  {:<45} │", format!("{:<8}", "/undo").bright_yellow().bold(), "Revert uncommitted patches (zero dirty diff)");
+                        println!("│  {}  {:<45} │", format!("{:<8}", "/diff").bright_cyan().bold(), "Inspect current uncommitted git diff");
+                        println!("│  {}  {:<45} │", format!("{:<8}", "/test").bright_green().bold(), "Run project test runner on physical hardware");
+                        println!("│  {}  {:<45} │", format!("{:<8}", "/clear").dimmed(), "Clear conversation context & buffer");
+                        println!("│  {}  {:<45} │", format!("{:<8}", "/help").dimmed(), "Show this command cockpit reference");
+                        println!("│  {}  {:<45} │", format!("{:<8}", "/exit").dimmed(), "Exit interactive session");
+                        println!("{}", "╰──────────────────────────────────────────────────────────╯".bright_cyan().bold());
                         continue;
                     }
                     "/fix" | "/loop" => {
