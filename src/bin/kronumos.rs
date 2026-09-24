@@ -730,8 +730,9 @@ async fn main() -> Result<()> {
     println!("{}", "    ██║  ██╗██║  ██║╚██████╔╝██║ ╚████║╚██████╔╝██║ ╚═╝ ██║╚██████╔╝███████║".bright_cyan().bold());
     println!("{}", "    ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝ ╚═╝     ╚═╝ ╚═════╝ ╚══════╝".bright_cyan().bold());
     println!();
-    println!("{}", "                 Autonomous Code Remediation & SRE Agent • v1.0".bright_white().bold());
-    println!("{}", "                 Type /help for help, or ask anything to start.".dimmed());
+    println!("{}", "                     · K R O N U M O S   K A I R O S ·".cyan().bold());
+    println!("{}", "               Autonomous Code Remediation & SRE Agent • v1.0".bright_white().bold());
+    println!("{}", "               Type /help for help, or ask anything to start.".dimmed());
     println!();
 
 
