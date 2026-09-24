@@ -19,8 +19,8 @@ use serde_json::{Value, json};
 use std::{
     fs,
     io::{self, IsTerminal, Read, Write},
-    path::PathBuf,
-    time::Duration,
+    path::{Path, PathBuf},
+    time::{Duration, Instant},
 };
 use tokenectomy::redact_secrets;
 use tokio::process::Command as TokioCommand;
@@ -94,6 +94,137 @@ struct Cli {
     /// Target workspace directory (default: current directory)
     #[arg(long, default_value = ".")]
     workspace: String,
+
+    /// Automatically rollback unsuccessful patches if tests remain failing (zero dirty diff)
+    #[arg(long)]
+    auto_rollback: bool,
+
+    /// Automatically commit verified patch to git once tests pass
+    #[arg(long)]
+    commit: bool,
+
+    /// Automatically create and switch to a new branch for the fix
+    #[arg(long)]
+    branch: Option<String>,
+
+    /// Output results in structured JSON format (machine-to-machine / CI/CD)
+    #[arg(long)]
+    json: bool,
+}
+
+// ── Persistent Configuration File (.kronumos.toml & ~/.config/kronumos/config.toml) ──
+
+#[derive(Debug, Default, Deserialize)]
+struct ConfigFile {
+    backend: Option<String>,
+    cf_url: Option<String>,
+    cf_key: Option<String>,
+    ollama_model: Option<String>,
+    ollama_host: Option<String>,
+    openai_url: Option<String>,
+    openai_key: Option<String>,
+    openai_model: Option<String>,
+    timeout: Option<u64>,
+    max_iterations: Option<usize>,
+    auto_rollback: Option<bool>,
+    commit: Option<bool>,
+    branch: Option<String>,
+}
+
+fn load_config(workspace: &str) -> ConfigFile {
+    let mut config = ConfigFile::default();
+
+    // 1. Try global user config ~/.config/kronumos/config.toml
+    if let Some(config_dir) = dirs::config_dir() {
+        let global_path = config_dir.join("kronumos").join("config.toml");
+        if global_path.exists() {
+            if let Ok(content) = fs::read_to_string(&global_path) {
+                if let Ok(parsed) = toml::from_str::<ConfigFile>(&content) {
+                    config = parsed;
+                }
+            }
+        }
+    }
+
+    // 2. Try project-level config .kronumos.toml (takes precedence over global config)
+    let project_path = PathBuf::from(workspace).join(".kronumos.toml");
+    if project_path.exists() {
+        if let Ok(content) = fs::read_to_string(&project_path) {
+            if let Ok(parsed) = toml::from_str::<ConfigFile>(&content) {
+                if parsed.backend.is_some() { config.backend = parsed.backend; }
+                if parsed.cf_url.is_some() { config.cf_url = parsed.cf_url; }
+                if parsed.cf_key.is_some() { config.cf_key = parsed.cf_key; }
+                if parsed.ollama_model.is_some() { config.ollama_model = parsed.ollama_model; }
+                if parsed.ollama_host.is_some() { config.ollama_host = parsed.ollama_host; }
+                if parsed.openai_url.is_some() { config.openai_url = parsed.openai_url; }
+                if parsed.openai_key.is_some() { config.openai_key = parsed.openai_key; }
+                if parsed.openai_model.is_some() { config.openai_model = parsed.openai_model; }
+                if parsed.timeout.is_some() { config.timeout = parsed.timeout; }
+                if parsed.max_iterations.is_some() { config.max_iterations = parsed.max_iterations; }
+                if parsed.auto_rollback.is_some() { config.auto_rollback = parsed.auto_rollback; }
+                if parsed.commit.is_some() { config.commit = parsed.commit; }
+                if parsed.branch.is_some() { config.branch = parsed.branch; }
+            }
+        }
+    }
+
+    config
+}
+
+impl Cli {
+    fn merge_with_config(&mut self, config: ConfigFile) {
+        if self.backend == "cloudflare" && config.backend.is_some() {
+            self.backend = config.backend.unwrap();
+        }
+        if self.cf_url.is_none() {
+            self.cf_url = config.cf_url;
+        }
+        if self.cf_key.is_none() {
+            self.cf_key = config.cf_key;
+        }
+        if let Some(m) = config.ollama_model {
+            if self.ollama_model == "hf.co/NadevA23/Kronumos-GGUF:Q4_K_M" {
+                self.ollama_model = m;
+            }
+        }
+        if let Some(h) = config.ollama_host {
+            if self.ollama_host == "http://localhost:11434" {
+                self.ollama_host = h;
+            }
+        }
+        if self.openai_key.is_none() {
+            self.openai_key = config.openai_key;
+        }
+        if let Some(u) = config.openai_url {
+            if self.openai_url == "https://api.openai.com/v1" {
+                self.openai_url = u;
+            }
+        }
+        if let Some(m) = config.openai_model {
+            if self.openai_model == "gpt-4o-mini" {
+                self.openai_model = m;
+            }
+        }
+        if let Some(t) = config.timeout {
+            if self.timeout == 120 {
+                self.timeout = t;
+            }
+        }
+        if let Some(mi) = config.max_iterations {
+            if self.max_iterations == 10 {
+                self.max_iterations = mi;
+            }
+        }
+        if !self.auto_rollback && config.auto_rollback.unwrap_or(false) {
+            self.auto_rollback = true;
+        }
+        if !self.commit && config.commit.unwrap_or(false) {
+            self.commit = true;
+        }
+        if self.branch.is_none() {
+            self.branch = config.branch;
+        }
+    }
 }
 
 // ── Message Types ────────────────────────────────────────────────────────────
@@ -143,16 +274,25 @@ Available Tools — when you decide to take an action, output ONLY a JSON object
    {"name": "view_file", "arguments": {"path": "<relative file path>", "start_line": <int>, "end_line": <int>}}
    Inspects the exact source lines of a file before attempting any modification.
 
-3. apply_patch
+3. search_code
+   {"name": "search_code", "arguments": {"pattern": "<text or symbol to search>", "path": "<optional subpath>"}}
+   Searches the codebase for a text pattern or symbol definition across all project files.
+
+4. list_files
+   {"name": "list_files", "arguments": {"path": "<optional subpath>", "max_depth": <int>}}
+   Lists the project file structure and directories up to max_depth (default: 2).
+
+5. apply_patch
    {"name": "apply_patch", "arguments": {"path": "<relative file path>", "original": "<exact lines to replace>", "replacement": "<new lines>"}}
    Performs a surgical, character-exact replacement in the target file.
 
-4. git_action
+6. git_action
    {"name": "git_action", "arguments": {"action": "branch|commit|diff|status", "message": "<commit message>", "branch": "<branch name>"}}
    Manages git branches and commits verified changes.
 
 Guidelines:
 - Always run tests or view files first to gather grounded facts before proposing changes.
+- Use search_code and list_files to explore unfamiliar projects and locate symbol definitions.
 - Never guess code contents: inspect using view_file before editing.
 - Ensure patches are minimal, surgical, and maintain zero dirty diffs in unrelated code.
 - Re-run tests immediately after patching to verify regression-free status.
@@ -212,6 +352,112 @@ fn is_command_safe(cmd: &str) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+// ── Search & File Exploration Helpers ────────────────────────────────────────
+
+fn search_code_in_dir(
+    dir: &Path,
+    pattern: &str,
+    max_results: usize,
+    results: &mut Vec<String>,
+    ws_path: &Path,
+) {
+    if results.len() >= max_results {
+        return;
+    }
+
+    let entries = match fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+
+    let ignored_names = [
+        ".git", "node_modules", "target", ".cargo", "vendor", "dist",
+        "build", "__pycache__", ".venv", "venv", ".idea", ".vscode",
+    ];
+
+    for entry in entries.flatten() {
+        if results.len() >= max_results {
+            break;
+        }
+        let path = entry.path();
+        let file_name = entry.file_name().to_string_lossy().to_string();
+
+        if ignored_names.iter().any(|&ign| ign == file_name) {
+            continue;
+        }
+
+        if path.is_dir() {
+            search_code_in_dir(&path, pattern, max_results, results, ws_path);
+        } else if path.is_file() {
+            if let Ok(meta) = path.metadata() {
+                if meta.len() > 500_000 {
+                    continue;
+                }
+            }
+            if let Ok(content) = fs::read_to_string(&path) {
+                let rel_path = path.strip_prefix(ws_path).unwrap_or(&path).to_string_lossy();
+                let lower_pat = pattern.to_lowercase();
+                for (idx, line) in content.lines().enumerate() {
+                    if line.to_lowercase().contains(&lower_pat) {
+                        results.push(format!("{}:{}: {}", rel_path, idx + 1, line.trim()));
+                        if results.len() >= max_results {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn list_files_in_dir(
+    dir: &Path,
+    current_depth: usize,
+    max_depth: usize,
+    lines: &mut Vec<String>,
+    ws_path: &Path,
+) {
+    if current_depth > max_depth || lines.len() >= 100 {
+        return;
+    }
+
+    let entries = match fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+
+    let ignored_names = [
+        ".git", "node_modules", "target", ".cargo", "vendor", "dist",
+        "build", "__pycache__", ".venv", "venv", ".idea", ".vscode",
+    ];
+
+    let mut dir_entries = Vec::new();
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().to_string();
+        if ignored_names.iter().any(|&ign| ign == name) {
+            continue;
+        }
+        dir_entries.push(entry);
+    }
+    dir_entries.sort_by_key(|e| e.file_name());
+
+    for entry in dir_entries {
+        if lines.len() >= 100 {
+            break;
+        }
+        let path = entry.path();
+        let name = entry.file_name().to_string_lossy().to_string();
+        let indent = "  ".repeat(current_depth);
+
+        if path.is_dir() {
+            lines.push(format!("{}[DIR]  {}/", indent, name));
+            list_files_in_dir(&path, current_depth + 1, max_depth, lines, ws_path);
+        } else {
+            lines.push(format!("{}[FILE] {}", indent, name));
+        }
+    }
 }
 
 // ── Async Tool Executor with Timeout Guard ───────────────────────────────────
@@ -311,6 +557,85 @@ async fn execute_tool(tool: &ToolCall, workspace: &str, timeout_secs: u64, quiet
                         .join("\n")
                 }
                 Err(e) => format!("error reading file {}: {}", path, e),
+            }
+        }
+
+        "search_code" => {
+            let pattern = tool.args["pattern"].as_str().unwrap_or("");
+            let subpath = tool.args["path"].as_str().unwrap_or(".");
+            if pattern.is_empty() {
+                return "error: 'pattern' argument is required for search_code".to_string();
+            }
+
+            let search_dir = match is_safe_workspace_path(subpath, workspace) {
+                Ok(p) => p,
+                Err(e) => {
+                    if !quiet {
+                        eprintln!("  {} {}", "🛡️ Security Block:".bright_red().bold(), e);
+                    }
+                    return e;
+                }
+            };
+
+            if !quiet {
+                println!(
+                    "  {} '{}' in {}",
+                    "🔍 search_code:".cyan().bold(),
+                    pattern.bright_white(),
+                    subpath.dimmed()
+                );
+            }
+
+            let ws_path = match fs::canonicalize(workspace) {
+                Ok(p) => p,
+                Err(e) => return format!("error resolving workspace: {}", e),
+            };
+
+            let mut matches = Vec::new();
+            search_code_in_dir(&search_dir, pattern, 25, &mut matches, &ws_path);
+
+            if matches.is_empty() {
+                format!("No occurrences of '{}' found in '{}'", pattern, subpath)
+            } else {
+                format!("Found {} matches for '{}':\n{}", matches.len(), pattern, matches.join("\n"))
+            }
+        }
+
+        "list_files" => {
+            let subpath = tool.args["path"].as_str().unwrap_or(".");
+            let max_depth = tool.args["max_depth"].as_u64().unwrap_or(2).min(4) as usize;
+
+            let target_dir = match is_safe_workspace_path(subpath, workspace) {
+                Ok(p) => p,
+                Err(e) => {
+                    if !quiet {
+                        eprintln!("  {} {}", "🛡️ Security Block:".bright_red().bold(), e);
+                    }
+                    return e;
+                }
+            };
+
+            if !quiet {
+                println!(
+                    "  {} {} (max_depth: {})",
+                    "📂 list_files:".cyan().bold(),
+                    subpath.bright_white(),
+                    max_depth
+                );
+            }
+
+            let ws_path = match fs::canonicalize(workspace) {
+                Ok(p) => p,
+                Err(e) => return format!("error resolving workspace: {}", e),
+            };
+
+            let mut lines = Vec::new();
+            list_files_in_dir(&target_dir, 0, max_depth, &mut lines, &ws_path);
+
+            if lines.is_empty() {
+                format!("Directory '{}' is empty or contained only ignored files.", subpath)
+            } else {
+                format!("Directory structure of '{}':\n{}", subpath, lines.join("\n"))
             }
         }
 
@@ -653,6 +978,22 @@ async fn stream_openai_compat(
     Ok(full_text)
 }
 
+// ── Context Sliding Window & Token Budgeting ─────────────────────────────────
+
+fn compact_history(history: &mut Vec<Message>, max_messages: usize) {
+    if history.len() > max_messages {
+        let preserve_recent = 6;
+        if history.len() > 2 + preserve_recent {
+            let prune_count = history.len() - 2 - preserve_recent;
+            history.drain(2..2 + prune_count);
+            history.insert(2, Message {
+                role: "system".to_string(),
+                content: format!("[Context Compaction: {} intermediate debugging steps pruned to preserve token limits]", prune_count),
+            });
+        }
+    }
+}
+
 // ── Autonomous Self-Healing Closed Loop Engine ───────────────────────────────
 
 async fn run_autonomous_loop(
@@ -721,6 +1062,7 @@ async fn run_autonomous_loop(
     let mut last_error = baseline_res.clone();
 
     while iteration < max_iter {
+        compact_history(&mut history, 12);
         iteration += 1;
         if !quiet {
             println!(
@@ -853,6 +1195,36 @@ async fn run_autonomous_loop(
                         Err(_) => String::new(),
                     };
 
+                    // Auto Branch Delivery
+                    if let Some(ref b) = cli.branch {
+                        let _ = TokioCommand::new("git")
+                            .args(["checkout", "-b", b])
+                            .current_dir(workspace)
+                            .output()
+                            .await;
+                        if !quiet {
+                            println!("  {} Switched to branch `{}`", "🌿".bright_green().bold(), b.bright_white());
+                        }
+                    }
+
+                    // Auto Commit Delivery
+                    if cli.commit {
+                        let _ = TokioCommand::new("git")
+                            .args(["add", "-A"])
+                            .current_dir(workspace)
+                            .output()
+                            .await;
+                        let commit_msg = format!("fix(remediation): verified tests green via Kronumos (round {})", iteration);
+                        let _ = TokioCommand::new("git")
+                            .args(["commit", "-m", &commit_msg])
+                            .current_dir(workspace)
+                            .output()
+                            .await;
+                        if !quiet {
+                            println!("  {} Fix committed cleanly: `{}`", "💾".bright_green().bold(), commit_msg.bright_white());
+                        }
+                    }
+
                     if !quiet {
                         println!("\n{}", "🎉 ────────────────────────────────────────────────────────────".bright_green().bold());
                         println!("{}", format!("✓ Fix Verified! All tests passed in round {}.", iteration).bright_green().bold());
@@ -897,6 +1269,28 @@ async fn run_autonomous_loop(
                     Ok(o) => String::from_utf8_lossy(&o.stdout).trim().to_string(),
                     Err(_) => String::new(),
                 };
+
+                if let Some(ref b) = cli.branch {
+                    let _ = TokioCommand::new("git")
+                        .args(["checkout", "-b", b])
+                        .current_dir(workspace)
+                        .output()
+                        .await;
+                }
+                if cli.commit {
+                    let _ = TokioCommand::new("git")
+                        .args(["add", "-A"])
+                        .current_dir(workspace)
+                        .output()
+                        .await;
+                    let commit_msg = format!("fix(remediation): verified tests green via Kronumos (round {})", iteration);
+                    let _ = TokioCommand::new("git")
+                        .args(["commit", "-m", &commit_msg])
+                        .current_dir(workspace)
+                        .output()
+                        .await;
+                }
+
                 return Ok(FixStatus::Resolved {
                     iterations: iteration,
                     diff_stat,
@@ -911,6 +1305,17 @@ async fn run_autonomous_loop(
             format!("⚠ Autonomous loop completed {} iterations without resolving all failing tests.", max_iter)
                 .bright_yellow().bold()
         );
+    }
+
+    if cli.auto_rollback {
+        let _ = TokioCommand::new("git")
+            .args(["restore", "."])
+            .current_dir(workspace)
+            .output()
+            .await;
+        if !quiet {
+            eprintln!("  {}", "🛡️ Auto-rollback: Unsuccessful patches reverted. Zero dirty diff preserved.".bright_yellow().bold());
+        }
     }
 
     Ok(FixStatus::Unresolved {
@@ -939,6 +1344,7 @@ async fn process_turn(
     let mut iterations = 0;
 
     loop {
+        compact_history(history, 12);
         if iterations >= max_iter {
             if !quiet {
                 println!(
@@ -1050,15 +1456,24 @@ fn detect_project_type(workspace: &str) -> String {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let cli = Cli::parse();
+    let mut cli = Cli::parse();
     let workspace = cli.workspace.clone();
+    let workspace_abs = fs::canonicalize(&workspace)
+        .unwrap_or_else(|_| PathBuf::from(&workspace));
+    let workspace_str = workspace_abs.to_string_lossy().to_string();
+
+    // Load persistent config and merge with CLI arguments
+    let config = load_config(&workspace_str);
+    cli.merge_with_config(config);
+
+    if cli.json {
+        cli.quiet = true;
+    }
+
     let client = Client::builder()
         .timeout(Duration::from_secs(180))
         .build()?;
 
-    let workspace_abs = fs::canonicalize(&workspace)
-        .unwrap_or_else(|_| PathBuf::from(&workspace));
-    let workspace_str = workspace_abs.to_string_lossy().to_string();
     let project_type = detect_project_type(&workspace_str);
 
     // ── Mode 1: Piped Stdin Execution (cat error.log | kronumos) ────────────
@@ -1100,10 +1515,41 @@ async fn main() -> Result<()> {
 
     // ── Mode 3: Headless Autonomous Loop (--fix or --loop) ───────────────────
     if cli.fix || cli.r#loop {
+        let start_time = Instant::now();
         let status = run_autonomous_loop(
             &client, &cli, &workspace_str, &project_type,
             cli.max_iterations, cli.timeout, cli.quiet
         ).await?;
+        let duration_secs = (start_time.elapsed().as_millis() as f64) / 1000.0;
+
+        if cli.json {
+            let json_val = match &status {
+                FixStatus::AlreadyPassing => json!({
+                    "status": "already_passing",
+                    "project_type": project_type,
+                    "iterations": 0,
+                    "tests_passed": true,
+                    "duration_seconds": duration_secs,
+                }),
+                FixStatus::Resolved { iterations, diff_stat } => json!({
+                    "status": "resolved",
+                    "project_type": project_type,
+                    "iterations": iterations,
+                    "diff_stat": diff_stat,
+                    "tests_passed": true,
+                    "duration_seconds": duration_secs,
+                }),
+                FixStatus::Unresolved { iterations, last_error } => json!({
+                    "status": "unresolved",
+                    "project_type": project_type,
+                    "iterations": iterations,
+                    "last_error": last_error,
+                    "tests_passed": false,
+                    "duration_seconds": duration_secs,
+                }),
+            };
+            println!("{}", serde_json::to_string_pretty(&json_val)?);
+        }
 
         match status {
             FixStatus::AlreadyPassing | FixStatus::Resolved { .. } => {
@@ -1163,6 +1609,18 @@ async fn main() -> Result<()> {
                         println!("{}", "✓ Conversation buffer cleared.".dimmed());
                         continue;
                     }
+                    "/undo" => {
+                        let out = TokioCommand::new("git")
+                            .args(["restore", "."])
+                            .current_dir(&workspace_str)
+                            .output()
+                            .await;
+                        match out {
+                            Ok(_) => println!("{}", "✓ Last uncommitted patches reverted. Working tree restored.".bright_yellow()),
+                            Err(e) => eprintln!("  error reverting changes: {}", e),
+                        }
+                        continue;
+                    }
                     "/diff" => {
                         let out = TokioCommand::new("git")
                             .arg("diff")
@@ -1203,6 +1661,7 @@ async fn main() -> Result<()> {
                         println!("{}", "Commands:".bright_white().bold());
                         println!("  {}        Autonomous TDD test-and-repair loop", "/fix".bright_yellow());
                         println!("  {}       Autonomous loop alias", "/loop".bright_yellow());
+                        println!("  {}       Revert uncommitted patches (zero dirty diff)", "/undo".bright_yellow());
                         println!("  {}       Show uncommitted git diff", "/diff".bright_cyan());
                         println!("  {}       Run detected project test runner", "/test".bright_green());
                         println!("  {}      Clear conversation context", "/clear".dimmed());
