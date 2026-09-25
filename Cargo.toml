@@ -62,7 +62,3 @@ path = "src/bin/tokenectomy-razor.rs"
 name = "mend"
 path = "src/bin/mend.rs"
 
-[[bin]]
-name = "kronumos"
-path = "src/bin/kronumos.rs"
-
